@@ -135,6 +135,20 @@ func TestResolveFormatInfersMarkdownOnlyForMarkdownExtensions(t *testing.T) {
 	}
 }
 
+func TestFaroReplaySourceInference(t *testing.T) {
+	for _, path := range []string{
+		"fixtures/faro/workflow.json",
+		"fixtures/collect/browser.json",
+	} {
+		if got := sourceFromPath(path); got != event.SourceFaro {
+			t.Fatalf("sourceFromPath(%q) = %q, want %q", path, got, event.SourceFaro)
+		}
+	}
+	if got := endpointFor(event.SourceFaro); got != "/collect" {
+		t.Fatalf("endpointFor(faro) = %q, want /collect", got)
+	}
+}
+
 func TestReplayUsesFixtureMetadataRequest(t *testing.T) {
 	dir := t.TempDir()
 	fixturePath := filepath.Join(dir, "rum-browser.json")

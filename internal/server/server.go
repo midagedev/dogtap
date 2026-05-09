@@ -167,6 +167,9 @@ func (a *App) Handler() http.Handler {
 	a.registerIntake(mux, "/v1/traces", event.SourceOTLP)
 	a.registerIntake(mux, "/v1/logs", event.SourceOTLP)
 	a.registerIntake(mux, "/v1/metrics", event.SourceOTLP)
+	a.registerIntake(mux, "/faro", event.SourceFaro)
+	a.registerIntake(mux, "/collect", event.SourceFaro)
+	a.registerIntake(mux, "/collect/", event.SourceFaro)
 	mux.Handle("/", a.assets)
 	return mux
 }
@@ -272,7 +275,8 @@ func (a *App) registerIntake(mux *http.ServeMux, pattern string, source event.So
 func setIntakeCORSHeaders(w http.ResponseWriter) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, PUT, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "content-type, content-encoding, dd-api-key, dd-evp-origin, dd-evp-origin-version, x-datadog-origin, x-datadog-parent-id, x-datadog-sampling-priority, x-datadog-trace-id")
+	w.Header().Set("Access-Control-Allow-Headers", "content-type, content-encoding, dd-api-key, dd-evp-origin, dd-evp-origin-version, x-api-key, x-datadog-origin, x-datadog-parent-id, x-datadog-sampling-priority, x-datadog-trace-id, x-faro-session-id")
+	w.Header().Set("Access-Control-Expose-Headers", "x-faro-session-status")
 	w.Header().Set("Access-Control-Max-Age", "600")
 }
 

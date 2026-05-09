@@ -25,6 +25,12 @@ Run the automated check from the repository root:
 make smoke-external-injection
 ```
 
+Run the Faro SDK compatibility smoke from the repository root:
+
+```bash
+make smoke-faro
+```
+
 Prerequisites:
 
 - Docker with Compose v2
@@ -42,3 +48,21 @@ This proves:
   endpoints
 - the profile includes one intentional missing-context RUM validation failure
 - removing the override restores the base Compose shape
+
+## Faro SDK Smoke
+
+The frontend also exposes a `/faro` workflow for Grafana Faro SDK compatibility
+smoke testing. The workflow loads the Faro Web SDK bundle, initializes it with a
+collector URL that points at Dogtap, and sends a sanitized event, measurement,
+and log with representative user, account, workspace, case, session, and route
+context.
+
+Dogtap's native Faro intake endpoints for this smoke are:
+
+- `POST /faro`
+- `POST /collect`
+- `POST /collect/`
+
+This native Faro path is experimental and intended for local/CI integration
+smoke only. For production-grade Faro collection, route the Faro SDK through
+Grafana Alloy `faro.receiver` and export OTLP to Dogtap for inspection.

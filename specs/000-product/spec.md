@@ -105,6 +105,8 @@ Acceptance criteria:
 - FR-003: Accept Datadog logs HTTP intake payloads for JSON, text, gzip, and logplex-like inputs.
 - FR-004: Accept OTLP HTTP and gRPC for traces, logs, and metrics.
 - FR-005: Preserve request headers, endpoint path, query parameters, content encoding, and body size metadata.
+- FR-006: Accept Grafana Faro SDK payloads on experimental native Faro intake
+  endpoints for integration smoke validation only.
 
 ### Normalization
 
@@ -164,6 +166,13 @@ Acceptance criteria:
 - FR-064: Clearly distinguish supported endpoint redirection from unsupported
   Datadog Agent behaviors such as container log tailing, DogStatsD, and Agent
   integrations unless those behaviors receive fixture-backed support.
+- FR-065: Provide an experimental Faro SDK compatibility smoke that runs the
+  external-injection frontend at `/faro`, sends Faro SDK telemetry to Dogtap's
+  native `/faro`, `/collect`, or `/collect/` intake, and can be verified with
+  `make smoke-faro`.
+- FR-066: Document that production-grade Faro adoption should prefer Grafana
+  Alloy `faro.receiver` into OTLP until Dogtap has a fixture-backed production
+  Faro compatibility contract.
 
 ## Non-Functional Requirements
 
@@ -184,6 +193,7 @@ Acceptance criteria:
 - Monitor evaluation engine
 - Datadog billing estimator beyond heuristic hints
 - Full private Datadog endpoint compatibility in MVP
+- Production-grade native Grafana Faro collector parity
 
 ## Success Metrics
 

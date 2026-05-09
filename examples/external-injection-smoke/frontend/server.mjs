@@ -1,4 +1,5 @@
 import http from "node:http";
+import { createReadStream, existsSync, statSync } from "node:fs";
 import { deflateSync } from "node:zlib";
 
 const port = Number(process.env.PORT || 3000);
@@ -6,6 +7,8 @@ const service = process.env.DD_SERVICE || process.env.SERVICE_NAME || "external-
 const env = process.env.DD_ENV || process.env.ENVIRONMENT || "ci";
 const version = process.env.DD_VERSION || process.env.VERSION || "base";
 const backendURL = process.env.BACKEND_URL || "http://backend:3001";
+const faroCollectorURL = process.env.FARO_COLLECTOR_URL || "";
+const faroSDKBundle = process.env.FARO_SDK_BUNDLE || "";
 
 function json(res, status, body) {
   const encoded = JSON.stringify(body);
@@ -14,6 +17,25 @@ function json(res, status, body) {
     "content-length": Buffer.byteLength(encoded),
   });
   res.end(encoded);
+}
+
+function sendHTML(res, body) {
+  res.writeHead(200, {
+    "content-type": "text/html",
+    "content-length": Buffer.byteLength(body),
+  });
+  res.end(body);
+}
+
+function serveFile(res, path, contentType) {
+  if (!path || !existsSync(path) || !statSync(path).isFile()) {
+    json(res, 404, { error: "file not found" });
+    return;
+  }
+  res.writeHead(200, {
+    "content-type": contentType,
+  });
+  createReadStream(path).pipe(res);
 }
 
 async function postJSON(url, body) {
@@ -255,18 +277,90 @@ async function exercise(_req, res) {
 }
 
 const server = http.createServer((req, res) => {
-  if (req.url === "/healthz") {
+  const url = new URL(req.url || "/", "http://localhost");
+  if (url.pathname === "/healthz") {
     json(res, 200, { status: "ok", service });
     return;
   }
-  if (req.url === "/exercise") {
+  if (url.pathname === "/exercise") {
     exercise(req, res).catch((err) => {
       json(res, 500, { error: err.message });
     });
     return;
   }
-  if (req.url === "/") {
-    const html = `<!doctype html>
+  if (url.pathname === "/vendor/faro-web-sdk.iife.js") {
+    serveFile(res, faroSDKBundle, "application/javascript");
+    return;
+  }
+  if (url.pathname === "/faro") {
+    const htmlBody = `<!doctype html>
+<html>
+  <head>
+    <title>Dogtap Faro SDK smoke</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+  </head>
+  <body>
+    <main>
+      <h1>Faro SDK workflow</h1>
+      <button id="run">Run Faro workflow</button>
+      <pre id="result"></pre>
+    </main>
+    <script src="/vendor/faro-web-sdk.iife.js"></script>
+    <script>
+      const collectorUrl = ${JSON.stringify(faroCollectorURL)};
+      const result = document.getElementById("result");
+      const sdk = window.GrafanaFaroWebSdk;
+      if (!collectorUrl || !sdk) {
+        result.textContent = "Faro SDK unavailable";
+      } else {
+        window.faro = sdk.initializeFaro({
+          url: collectorUrl,
+          app: {
+            name: "faro-smoke-frontend",
+            version: "dev",
+            environment: "local"
+          },
+          user: {
+            id: "faro-user-1",
+            attributes: {
+              accountId: "faro-account-1",
+              workspaceId: "faro-workspace-1",
+              caseId: "faro-case-1"
+            }
+          },
+          instrumentations: [...sdk.getWebInstrumentations()],
+          sessionTracking: {
+            generateSessionId: () => "faro-session-1"
+          },
+          batching: {
+            enabled: false
+          }
+        });
+        document.getElementById("run").onclick = () => {
+          window.faro.api.pushMeasurement({
+            type: "faro.workflow.duration",
+            values: { duration: 42.5 },
+            context: { route: "/faro" }
+          });
+          window.faro.api.pushEvent("faro.workflow.run", {
+            route: "/faro",
+            caseId: "faro-case-1"
+          });
+          window.faro.api.pushLog(["Faro workflow log"], {
+            level: "info",
+            context: { route: "/faro" }
+          });
+          result.textContent = "Faro SDK telemetry sent";
+        };
+      }
+    </script>
+  </body>
+</html>`;
+    sendHTML(res, htmlBody);
+    return;
+  }
+  if (url.pathname === "/") {
+    const htmlBody = `<!doctype html>
 <html>
   <head><title>Dogtap external injection smoke</title></head>
   <body>
@@ -281,11 +375,7 @@ const server = http.createServer((req, res) => {
     </script>
   </body>
 </html>`;
-    res.writeHead(200, {
-      "content-type": "text/html",
-      "content-length": Buffer.byteLength(html),
-    });
-    res.end(html);
+    sendHTML(res, htmlBody);
     return;
   }
   json(res, 404, { error: "not found" });

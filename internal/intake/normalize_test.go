@@ -31,6 +31,170 @@ func TestNormalizeRUMContext(t *testing.T) {
 	}
 }
 
+func TestCaptureFaroPayloads(t *testing.T) {
+	tests := []struct {
+		name        string
+		body        string
+		wantKind    string
+		wantMetric  string
+		wantMessage string
+	}{
+		{
+			name:     "event",
+			wantKind: "event",
+			body: `{
+				"meta": {
+					"app": {"name": "faro-smoke-frontend", "version": "dev", "environment": "local"},
+					"user": {
+						"id": "faro-user-1",
+						"attributes": {
+							"accountId": "faro-account-1",
+							"workspaceId": "faro-workspace-1",
+							"caseId": "faro-case-1"
+						}
+					},
+					"session": {"id": "faro-session-1"},
+					"page": {"url": "http://localhost/faro"}
+				},
+				"events": [{
+					"name": "faro.workflow.run",
+					"attributes": {"route": "/faro", "caseId": "faro-case-1"},
+					"timestamp": "2026-05-09T12:00:00Z"
+				}]
+			}`,
+		},
+		{
+			name:       "metric",
+			wantKind:   "metric",
+			wantMetric: "faro.workflow.duration",
+			body: `{
+				"meta": {
+					"app": {"name": "faro-smoke-frontend", "version": "dev", "environment": "local"},
+					"user": {
+						"id": "faro-user-1",
+						"attributes": {
+							"accountId": "faro-account-1",
+							"workspaceId": "faro-workspace-1",
+							"caseId": "faro-case-1"
+						}
+					},
+					"session": {"id": "faro-session-1"},
+					"page": {"url": "http://localhost/faro"}
+				},
+				"measurements": [{
+					"type": "faro.workflow.duration",
+					"values": {"duration": 42.5},
+					"timestamp": "2026-05-09T12:00:01Z",
+					"context": {"route": "/faro"}
+				}]
+			}`,
+		},
+		{
+			name:        "log",
+			wantKind:    "log",
+			wantMessage: "Faro workflow log",
+			body: `{
+				"meta": {
+					"app": {"name": "faro-smoke-frontend", "version": "dev", "environment": "local"},
+					"user": {
+						"id": "faro-user-1",
+						"attributes": {
+							"accountId": "faro-account-1",
+							"workspaceId": "faro-workspace-1",
+							"caseId": "faro-case-1"
+						}
+					},
+					"session": {"id": "faro-session-1"},
+					"page": {"url": "http://localhost/faro"}
+				},
+				"logs": [{
+					"message": "Faro workflow log",
+					"level": "info",
+					"context": {"route": "/faro"},
+					"timestamp": "2026-05-09T12:00:02Z"
+				}]
+			}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/collect/faro-smoke", bytes.NewBufferString(tt.body))
+			req.Header.Set("Content-Type", "application/json")
+			result, err := CaptureRequest(req, CaptureOptions{
+				Source:           event.SourceFaro,
+				AllowRawPayloads: false,
+				MaxBodyBytes:     1 << 20,
+				ForwardMode:      "local",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result.Event.PayloadKind != tt.wantKind {
+				t.Fatalf("payload kind = %q, want %q", result.Event.PayloadKind, tt.wantKind)
+			}
+			n := result.Event.Normalized
+			if n.Service != "faro-smoke-frontend" || n.Env != "local" || n.Version != "dev" || n.UserID != "faro-user-1" || n.AccountID != "faro-account-1" || n.WorkspaceID != "faro-workspace-1" || n.CaseID != "faro-case-1" || n.Route != "/faro" || n.SessionID != "faro-session-1" {
+				t.Fatalf("unexpected Faro normalization: %#v", n)
+			}
+			if tt.wantMetric != "" {
+				if result.Event.Details == nil || len(result.Event.Details.Metrics) == 0 || result.Event.Details.Metrics[0].Name != tt.wantMetric || result.Event.Details.Metrics[0].Value != 42.5 {
+					t.Fatalf("unexpected Faro metric details: %#v", result.Event.Details)
+				}
+			}
+			if tt.wantMessage != "" {
+				if result.Event.Details == nil || len(result.Event.Details.Logs) == 0 || result.Event.Details.Logs[0].Message != tt.wantMessage {
+					t.Fatalf("unexpected Faro log details: %#v", result.Event.Details)
+				}
+			}
+		})
+	}
+}
+
+func TestNormalizeFaroTraceContext(t *testing.T) {
+	decoded := map[string]any{
+		"meta": map[string]any{
+			"app":     map[string]any{"environment": "local", "version": "dev"},
+			"session": map[string]any{"id": "faro-session-1"},
+		},
+		"traces": map[string]any{
+			"resourceSpans": []any{
+				map[string]any{
+					"resource": map[string]any{
+						"attributes": []any{
+							attribute("service.name", "faro-trace-frontend"),
+						},
+					},
+					"scopeSpans": []any{
+						map[string]any{
+							"spans": []any{
+								map[string]any{
+									"traceId":      "trace-1",
+									"spanId":       "span-1",
+									"parentSpanId": "parent-1",
+									"attributes": []any{
+										attribute("http.request.method", "GET"),
+										attribute("http.response.status_code", 202),
+										attribute("url.path", "/api/faro"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	n := Normalize(event.SourceFaro, decoded)
+	if n.Service != "faro-trace-frontend" || n.TraceID != "trace-1" || n.SpanID != "span-1" || n.ParentSpanID != "parent-1" {
+		t.Fatalf("unexpected Faro trace normalization: %#v", n)
+	}
+	if n.Method != "GET" || n.StatusCode != 202 || n.Route != "/api/faro" || n.SessionID != "faro-session-1" {
+		t.Fatalf("unexpected Faro HTTP/session normalization: %#v", n)
+	}
+}
+
 func TestCaptureRUMTextBatchAndProxyTags(t *testing.T) {
 	body := bytes.NewBufferString(`{"service":"web-frontend","version":"g1-fixture","usr":{"id":"user-1"},"context":{"account":{"id":"account-1"},"workspace":{"id":"workspace-1"}}}` + "\n" +
 		`{"service":"web-frontend","version":"g1-fixture","usr":{"id":"user-1"},"context":{"account":{"id":"account-1"},"workspace":{"id":"workspace-1"}}}`)
@@ -168,6 +332,22 @@ func TestNormalizeTags(t *testing.T) {
 	})
 	if n.Service != "api" || n.Env != "local" || n.Version != "dev" {
 		t.Fatalf("unexpected tag normalization: %#v", n)
+	}
+}
+
+func attribute(key string, value any) map[string]any {
+	encoded := map[string]any{}
+	switch typed := value.(type) {
+	case string:
+		encoded["stringValue"] = typed
+	case int:
+		encoded["intValue"] = typed
+	default:
+		encoded["stringValue"] = typed
+	}
+	return map[string]any{
+		"key":   key,
+		"value": encoded,
 	}
 }
 

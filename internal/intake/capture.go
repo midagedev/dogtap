@@ -66,6 +66,7 @@ func CaptureRequest(r *http.Request, opts CaptureOptions) (CaptureResult, error)
 			"text":        string(decodedBytes),
 		}
 	}
+	payloadKind = refinePayloadKind(opts.Source, payloadKind, decoded)
 
 	normalized := Normalize(opts.Source, decoded)
 	normalized.Source = opts.Source
@@ -125,6 +126,8 @@ func CaptureRequest(r *http.Request, opts CaptureOptions) (CaptureResult, error)
 
 func detectPayloadKind(source event.Source, path string, query url.Values) string {
 	switch source {
+	case event.SourceFaro:
+		return "faro"
 	case event.SourceRUM:
 		if forwardedPath(query, "/api/v2/replay") || strings.Contains(path, "replay") {
 			return "replay"
@@ -146,6 +149,31 @@ func detectPayloadKind(source event.Source, path string, query url.Values) strin
 	default:
 		return string(source)
 	}
+}
+
+func refinePayloadKind(source event.Source, current string, decoded any) string {
+	if source != event.SourceFaro {
+		return current
+	}
+	switch {
+	case hasArray(decoded, "traces"):
+		return "trace"
+	case hasArray(decoded, "measurements"):
+		return "metric"
+	case hasArray(decoded, "logs"):
+		return "log"
+	case hasArray(decoded, "exceptions"):
+		return "log"
+	case hasArray(decoded, "events"):
+		return "event"
+	default:
+		return "faro"
+	}
+}
+
+func hasArray(root any, path string) bool {
+	items, ok := findAny(root, path).([]any)
+	return ok && len(items) > 0
 }
 
 func forwardedPath(query url.Values, want string) bool {

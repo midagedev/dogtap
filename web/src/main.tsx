@@ -21,7 +21,7 @@ import { Replayer } from "@rrweb/replay";
 import "@rrweb/replay/dist/style.css";
 import "./styles.css";
 
-type Source = "rum" | "apm" | "logs" | "otlp" | "unknown";
+type Source = "rum" | "apm" | "logs" | "otlp" | "faro" | "unknown";
 
 type ValidationRule = {
   ruleId: string;
@@ -211,7 +211,7 @@ type Report = {
   };
 };
 
-const sources: Array<Source | ""> = ["", "rum", "logs", "apm", "otlp"];
+const sources: Array<Source | ""> = ["", "rum", "logs", "apm", "otlp", "faro"];
 const correlationFields = [
   { key: "traceId", label: "Trace" },
   { key: "userId", label: "User" },
@@ -1792,6 +1792,10 @@ function buildObservabilityOverview(
       {
         label: "RUM",
         count: events.filter((event) => event.source === "rum").length,
+      },
+      {
+        label: "Faro",
+        count: events.filter((event) => event.source === "faro").length,
       },
       {
         label: "Logs",

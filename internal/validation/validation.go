@@ -60,7 +60,7 @@ func (v Validator) ValidateBatch(events []event.EventEnvelope) []event.EventEnve
 	for i := 1; i < len(out); i++ {
 		prev := out[i-1]
 		curr := out[i]
-		if !sameRUMSession(prev, curr) {
+		if !sameBrowserSession(prev, curr) {
 			continue
 		}
 		extra := make([]event.ValidationRuleResult, 0, 2)
@@ -150,7 +150,7 @@ func mergeValidation(result event.ValidationResult, extra []event.ValidationRule
 
 func (v Validator) requiredFieldsFor(source event.Source) []string {
 	switch source {
-	case event.SourceRUM:
+	case event.SourceRUM, event.SourceFaro:
 		return v.cfg.Required.RUM
 	case event.SourceLogs:
 		return v.cfg.Required.Logs
@@ -545,13 +545,17 @@ func isDatadogTransportQueryKey(key string) bool {
 	}
 }
 
-func sameRUMSession(prev, curr event.EventEnvelope) bool {
-	if prev.Source != event.SourceRUM || curr.Source != event.SourceRUM {
+func sameBrowserSession(prev, curr event.EventEnvelope) bool {
+	if !isBrowserSessionSource(prev.Source) || !isBrowserSessionSource(curr.Source) {
 		return false
 	}
 	prevSession := strings.TrimSpace(prev.Normalized.SessionID)
 	currSession := strings.TrimSpace(curr.Normalized.SessionID)
 	return prevSession != "" && prevSession == currSession
+}
+
+func isBrowserSessionSource(source event.Source) bool {
+	return source == event.SourceRUM || source == event.SourceFaro
 }
 
 func isLogoutSignal(e event.EventEnvelope) bool {

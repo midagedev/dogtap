@@ -1,4 +1,4 @@
-.PHONY: build test web-build run replay smoke-adoption smoke-external-injection demo-seed demo-visual-check shell-check
+.PHONY: build test web-build run replay smoke-adoption smoke-external-injection smoke-faro demo-seed demo-visual-check shell-check
 
 build:
 	npm --prefix web run build
@@ -21,6 +21,9 @@ smoke-adoption:
 
 smoke-external-injection:
 	bash scripts/external-injection/smoke.sh
+
+smoke-faro:
+	bash scripts/faro/smoke.sh
 
 demo-seed:
 	bash scripts/demo/seed.sh
