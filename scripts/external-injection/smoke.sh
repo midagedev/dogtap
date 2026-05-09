@@ -127,7 +127,13 @@ assert_events() {
     '"source":"logs"' \
     '"source":"apm"' \
     '"source":"otlp"' \
+    '"payloadKind":"replay"' \
     '"payloadKind":"metric"' \
+    '"segmentEncoding":"zlib"' \
+    '"status":"fail"' \
+    'required.rum.userId' \
+    'External Injection Workflow' \
+    'external_injection.workflow.duration' \
     '"service":"external-smoke-frontend"' \
     '"service":"external-smoke-backend"'; do
     if ! printf '%s' "${events}" | grep -q "${expected}"; then
@@ -161,7 +167,7 @@ main() {
   compose_base up -d --quiet-pull
   wait_for_frontend
   base_response="$(exercise_frontend)"
-  if ! printf '%s' "${base_response}" | grep -q '"frontendTelemetry":false'; then
+  if ! printf '%s' "${base_response}" | grep -q '"frontendTelemetryEnabled":false'; then
     echo "Base frontend should run without Dogtap telemetry." >&2
     printf '%s\n' "${base_response}" >&2
     exit 1
@@ -189,7 +195,7 @@ main() {
   wait_for_frontend
 
   injected_response="$(exercise_frontend)"
-  if ! printf '%s' "${injected_response}" | grep -q '"frontendTelemetry":true'; then
+  if ! printf '%s' "${injected_response}" | grep -q '"frontendTelemetryEnabled":true'; then
     echo "Injected frontend should send RUM telemetry." >&2
     printf '%s\n' "${injected_response}" >&2
     exit 1

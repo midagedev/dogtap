@@ -196,13 +196,13 @@ Gate:
 
 ## Phase 9: Reference Adoption Profile
 
-- [ ] T090 Configure a browser frontend to point RUM to Dogtap in local mode.
-- [ ] T091 Configure a backend service to emit traces to Dogtap in local mode.
-- [ ] T092 Configure backend logs to reach Dogtap in local mode.
-- [ ] T093 Configure OTLP metrics to reach Dogtap in local mode.
-- [ ] T094 Create a validation profile for representative login, workspace,
-  object detail, export, and logout workflows.
-- [ ] T095 Capture sanitized local telemetry evidence from a realistic
+- [x] T090 Configure a browser frontend to point RUM to Dogtap in local mode.
+- [x] T091 Configure a backend service to emit traces to Dogtap in local mode.
+- [x] T092 Configure backend logs to reach Dogtap in local mode.
+- [x] T093 Configure OTLP metrics to reach Dogtap in local mode.
+- [x] T094 Create a validation profile for representative identity, workspace,
+  object detail, export, and missing-context workflows.
+- [x] T095 Capture sanitized local telemetry evidence from a realistic
   application profile.
 
 Notes:
@@ -219,7 +219,14 @@ Suggested agents:
 
 Gate:
 
-- [ ] G8 Release Candidate adoption profile subset
+- [x] G8 Release Candidate adoption profile subset
+
+Evidence note 2026-05-09:
+
+- Phase 9 is satisfied by the public sanitized external-injection profile
+  rather than a private project-specific profile.
+- Evidence is recorded in `docs/gates/G8_SANITIZED_ADOPTION_PROFILE.md`.
+  Raw/private long-running adoption notes remain under `.private/adoption/`.
 
 ## Phase 10: Generic Adoption Kit
 
@@ -271,12 +278,12 @@ Evidence note 2026-05-08:
   with Datadog primary and Dogtap inspection as a sampled secondary path.
 - [x] T118 Add a RUM proxy canary runbook with Browser SDK version, raw-body,
   header stripping, allowlist, and rollback requirements.
-- [ ] T119 Capture a realistic sanitized adoption profile and publish only the
+- [x] T119 Capture a realistic sanitized adoption profile and publish only the
   safe summary under `docs/gates/`.
 
 Gate:
 
-- [ ] G8 Release Candidate external injection subset
+- [x] G8 Release Candidate external injection subset
 
 Evidence note 2026-05-09:
 
@@ -286,3 +293,9 @@ Evidence note 2026-05-09:
   upstream URLs.
 - Forwarding tests cover `ddforward` query preservation, sensitive inbound
   header stripping, replay path preservation, and unsafe URL rejection.
+- Sanitized adoption profile evidence added at
+  `docs/gates/G8_SANITIZED_ADOPTION_PROFILE.md`.
+- `make smoke-external-injection` now validates normal RUM, multipart Session
+  Replay with a decoded rrweb DOM snapshot, logs, APM traces, OTLP traces,
+  OTLP metrics, one required-context validation failure, and configuration-only
+  rollback.

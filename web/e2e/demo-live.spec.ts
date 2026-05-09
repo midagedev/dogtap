@@ -43,6 +43,10 @@ test("seeded demo dashboard shows the public telemetry workflow", async ({
   const replayFrame = page.frameLocator(".replay-dom-stage iframe").first();
   await expect(replayFrame.getByText("Case #123")).toBeVisible();
   await expect(replayFrame.getByRole("button", { name: "Export" })).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath(`dogtap-demo-replay-${testInfo.project.name}.png`),
+    fullPage: true,
+  });
 
   await page.getByPlaceholder("Filter payloads").fill("case export failed");
   await page.locator(".event-row").filter({ hasText: "log" }).first().click();

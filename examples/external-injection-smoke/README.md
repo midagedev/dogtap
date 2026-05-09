@@ -36,7 +36,9 @@ This proves:
 - the frontend and backend can run without Dogtap
 - the base Compose file has no Dogtap service or telemetry endpoint overrides
 - the override adds Dogtap and injects standard Datadog/OTLP settings
-- the frontend workflow sends RUM through the injected proxy
+- the frontend workflow sends RUM and multipart Session Replay through the
+  injected proxy
 - the backend workflow sends logs, APM traces, and OTLP metrics through injected
   endpoints
+- the profile includes one intentional missing-context RUM validation failure
 - removing the override restores the base Compose shape
