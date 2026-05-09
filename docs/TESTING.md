@@ -43,6 +43,23 @@ Each fixture should assert:
 
 Replay captured fixtures into Dogtap and compare reports. Replay tests protect against parser drift.
 
+### Live diagnostics
+
+Use `dogtap diagnose` when a local dev server, isolated E2E stack, or external
+app adoption run is already sending telemetry to a running Dogtap instance:
+
+```bash
+go run ./cmd/dogtap diagnose \
+  -base-url http://127.0.0.1:8080 \
+  -output .dogtap/diagnostics/local-dev \
+  -expect-source rum,logs,apm,otlp \
+  -expect-payload-kind replay,metric
+```
+
+The command writes `summary.md`, `assertions.json`, `events.json`,
+`report.json`, `debug-bundle.json`, and `metrics.txt` so humans and agents can
+triage missing telemetry without scraping console output.
+
 ### Integration tests
 
 Run sample apps against Dogtap:
@@ -119,6 +136,8 @@ Required fields by workflow should live in a separate validation config.
 - Confirm all appear in dashboard.
 - Run `make demo-seed` to populate replay, logs, spans, metrics, service map,
   traffic, and validation failure examples.
+- Run `go run ./cmd/dogtap diagnose -expect-non-empty` and inspect
+  `.dogtap/diagnostics/*/summary.md`.
 - Confirm missing service tags fail validation.
 - Confirm email and token-like values are redacted.
 - Confirm generated Datadog search queries are usable.

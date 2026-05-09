@@ -23,6 +23,9 @@ Implemented CI surface:
   per-event context.
 - CI usage can build the `dogtap` binary, replay fixtures, and upload
   JSON/Markdown artifacts while preserving the validation exit status.
+- Live diagnostics can capture a running Dogtap instance into an artifact
+  directory with `summary.md`, `assertions.json`, `events.json`,
+  `report.json`, `debug-bundle.json`, and `metrics.txt`.
 
 ## Verification
 
@@ -39,3 +42,6 @@ go run ./cmd/dogtap replay -output /tmp/dogtap-report.md fixtures/rum/missing-co
 
 The missing-context replay is expected to write the Markdown report and exit
 with validation failure status.
+
+The smoke and demo commands capture `dogtap diagnose` artifacts when
+`DOGTAP_ARTIFACT_DIR` is set.

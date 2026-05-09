@@ -14,6 +14,7 @@ import (
 
 type Request struct {
 	Source      event.Source `json:"source,omitempty"`
+	PayloadKind string       `json:"payloadKind,omitempty"`
 	Service     string       `json:"service,omitempty"`
 	Env         string       `json:"env,omitempty"`
 	UserID      string       `json:"userId,omitempty"`
@@ -21,6 +22,8 @@ type Request struct {
 	WorkspaceID string       `json:"workspaceId,omitempty"`
 	CaseID      string       `json:"caseId,omitempty"`
 	TraceID     string       `json:"traceId,omitempty"`
+	SessionID   string       `json:"sessionId,omitempty"`
+	ViewID      string       `json:"viewId,omitempty"`
 	Route       string       `json:"route,omitempty"`
 	Status      string       `json:"status,omitempty"`
 	Limit       int          `json:"limit,omitempty"`

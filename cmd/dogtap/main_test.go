@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -95,6 +97,60 @@ func TestReplayWritesReportBeforeReturningValidationFailure(t *testing.T) {
 	got := readFile(t, output)
 	if !strings.Contains(got, "required.rum.accountId") || !strings.Contains(got, "required.rum.workspaceId") {
 		t.Fatalf("expected validation findings in report, got:\n%s", got)
+	}
+}
+
+func TestDiagnoseCommandWritesBundle(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/healthz":
+			_, _ = w.Write([]byte(`{"status":"ok"}`))
+		case "/readyz":
+			_, _ = w.Write([]byte(`{"status":"ready"}`))
+		case "/api/events":
+			_, _ = w.Write([]byte(`[{
+				"id":"rum-1",
+				"receivedAt":"2026-05-09T12:00:00Z",
+				"source":"rum",
+				"payloadKind":"event",
+				"endpoint":"/datadog-intake-proxy",
+				"method":"POST",
+				"normalized":{"source":"rum","service":"web","env":"local","sessionId":"session-1"},
+				"validation":{"status":"pass"}
+			}]`))
+		case "/api/reports/latest":
+			_, _ = w.Write([]byte(`{"summary":{"total":1,"passed":1,"failed":0},"events":[]}`))
+		case "/api/debug-bundles":
+			_, _ = w.Write([]byte(`{"summary":{"total":1},"events":[]}`))
+		case "/metrics":
+			w.Header().Set("Content-Type", "text/plain")
+			_, _ = w.Write([]byte("dogtap_store_events 1\n"))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(server.Close)
+	output := filepath.Join(t.TempDir(), "diagnostics")
+
+	err := run([]string{
+		"diagnose",
+		"-base-url", server.URL,
+		"-output", output,
+		"-expect-non-empty",
+		"-expect-source", "rum",
+		"-expect-session", "session-1",
+	})
+	if err != nil {
+		t.Fatalf("run diagnose: %v", err)
+	}
+
+	assertions := readFile(t, filepath.Join(output, "assertions.json"))
+	if !strings.Contains(assertions, `"status": "pass"`) {
+		t.Fatalf("expected passing assertions, got:\n%s", assertions)
+	}
+	if !strings.Contains(readFile(t, filepath.Join(output, "summary.md")), "session:session-1") {
+		t.Fatalf("expected session assertion in summary")
 	}
 }
 

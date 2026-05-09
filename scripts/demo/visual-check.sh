@@ -77,6 +77,22 @@ main() {
     DOGTAP_DEMO_OTLP_URL="http://127.0.0.1:${otlp_http_port}" \
     bash "${script_dir}/seed.sh"
 
+  diagnostics_dir="${DOGTAP_ARTIFACT_DIR:-${repo_root}/.dogtap/diagnostics/demo}"
+  (
+    cd "${repo_root}"
+    go run ./cmd/dogtap diagnose \
+      -base-url "${base_url}" \
+      -output "${diagnostics_dir}" \
+      -expect-non-empty \
+      -expect-source rum,logs,apm,otlp \
+      -expect-payload-kind replay,metric \
+      -expect-service web-frontend,api-service,edge-gateway \
+      -expect-session session-123 \
+      -expect-trace 123456789 \
+      -expect-metric http.server.request.duration
+  )
+  cp "${log_file}" "${diagnostics_dir}/dogtap.log"
+
   (
     cd "${repo_root}"
     DOGTAP_LIVE_E2E=1 \
@@ -86,6 +102,7 @@ main() {
 
   echo "Dogtap demo visual check passed."
   echo "Screenshots: ${repo_root}/web/test-results"
+  echo "Diagnostics: ${diagnostics_dir}"
 }
 
 main "$@"

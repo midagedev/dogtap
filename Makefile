@@ -1,4 +1,4 @@
-.PHONY: build test web-build run replay smoke-adoption smoke-external-injection smoke-faro demo-seed demo-visual-check shell-check
+.PHONY: build test web-build run replay diagnose smoke-adoption smoke-external-injection smoke-faro demo-seed demo-visual-check shell-check
 
 build:
 	npm --prefix web run build
@@ -15,6 +15,9 @@ run:
 
 replay:
 	go run ./cmd/dogtap replay fixtures/rum/login.json fixtures/logs/json-log.json fixtures/apm/trace.json fixtures/otlp/traces.json
+
+diagnose:
+	go run ./cmd/dogtap diagnose
 
 smoke-adoption:
 	bash scripts/generic/smoke.sh

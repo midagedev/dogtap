@@ -209,6 +209,20 @@ main() {
   events="$(curl -fsS "http://127.0.0.1:${http_port}/api/events?limit=100")"
   assert_events "${events}"
 
+  diagnostics_dir="${DOGTAP_ARTIFACT_DIR:-${tmp_dir}/diagnostics}"
+  (
+    cd "${repo_root}"
+    go run ./cmd/dogtap diagnose \
+      -base-url "http://127.0.0.1:${http_port}" \
+      -output "${diagnostics_dir}" \
+      -expect-non-empty \
+      -expect-source rum,logs,apm,otlp \
+      -expect-payload-kind replay,metric \
+      -expect-service external-smoke-frontend,external-smoke-backend \
+      -expect-metric external_injection.workflow.duration
+  )
+  compose_injected logs dogtap frontend backend >"${diagnostics_dir}/compose.log" 2>&1 || true
+
   compose_injected down -v --remove-orphans >/dev/null
 
   compose_base config --services >"${tmp_dir}/rollback-services.txt"
@@ -222,6 +236,7 @@ main() {
   echo "Base stack: frontend and backend run without Dogtap-specific settings."
   echo "Injected stack: override adds Dogtap plus standard Datadog/OTLP endpoints."
   echo "Rollback: omitting the override removes Dogtap and endpoint overrides."
+  echo "Diagnostics: ${diagnostics_dir}"
 }
 
 main "$@"
