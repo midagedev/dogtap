@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +12,20 @@ import (
 
 	"github.com/midagedev/dogtap/internal/report"
 )
+
+func TestVersionCommandPrintsBuildMetadata(t *testing.T) {
+	output := captureStdout(t, func() {
+		if err := run([]string{"version"}); err != nil {
+			t.Fatalf("run version: %v", err)
+		}
+	})
+
+	for _, expected := range []string{"dogtap dev", "commit: none", "built: unknown"} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("expected %q in version output, got:\n%s", expected, output)
+		}
+	}
+}
 
 func TestReplayOutputInfersMarkdownFromOutputExtension(t *testing.T) {
 	clearDogtapEnv(t)
@@ -125,4 +141,30 @@ func clearDogtapEnv(t *testing.T) {
 	} {
 		t.Setenv(key, "")
 	}
+}
+
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+
+	original := os.Stdout
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe stdout: %v", err)
+	}
+	os.Stdout = writer
+	defer func() {
+		os.Stdout = original
+	}()
+
+	fn()
+
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close stdout writer: %v", err)
+	}
+
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, reader); err != nil {
+		t.Fatalf("read stdout: %v", err)
+	}
+	return buf.String()
 }

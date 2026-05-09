@@ -1,0 +1,183 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  artifacts:
+    name: Build release artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dashboard dependencies
+        run: npm --prefix web ci
+
+      - name: Build dashboard
+        run: npm --prefix web run build
+
+      - name: Test
+        run: |
+          set -euo pipefail
+          go test ./...
+          make shell-check
+          make smoke-adoption
+
+      - name: Build binaries
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME:-dev}"
+          if [ "${GITHUB_REF_TYPE:-}" != "tag" ]; then
+            version="dev-${GITHUB_SHA::12}"
+          fi
+          commit="$(git rev-parse --short=12 HEAD)"
+          built="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          ldflags="-s -w -X main.version=${version} -X main.commit=${commit} -X main.date=${built}"
+
+          mkdir -p dist
+          build_one() {
+            local goos="$1"
+            local goarch="$2"
+            local ext=""
+            if [ "${goos}" = "windows" ]; then
+              ext=".exe"
+            fi
+
+            local name="dogtap_${version}_${goos}_${goarch}"
+            local work="dist/${name}"
+            mkdir -p "${work}"
+
+            GOOS="${goos}" GOARCH="${goarch}" CGO_ENABLED=0 \
+              go build -trimpath -ldflags "${ldflags}" -o "${work}/dogtap${ext}" ./cmd/dogtap
+
+            cp README.md LICENSE CHANGELOG.md "${work}/"
+            if [ "${goos}" = "windows" ]; then
+              (cd dist && zip -qr "${name}.zip" "${name}")
+            else
+              tar -C dist -czf "dist/${name}.tar.gz" "${name}"
+            fi
+            rm -rf "${work}"
+          }
+
+          build_one linux amd64
+          build_one linux arm64
+          build_one darwin amd64
+          build_one darwin arm64
+          build_one windows amd64
+
+          (cd dist && shasum -a 256 -- ./*.tar.gz ./*.zip > checksums.txt)
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dogtap-release-artifacts
+          path: dist/*
+
+  container:
+    name: Publish container image
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Capture build metadata
+        id: build-meta
+        run: echo "built=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            DOGTAP_VERSION=${{ github.ref_name }}
+            DOGTAP_COMMIT=${{ github.sha }}
+            DOGTAP_DATE=${{ steps.build-meta.outputs.built }}
+
+  release:
+    name: Publish GitHub Release
+    if: github.ref_type == 'tag'
+    needs:
+      - artifacts
+      - container
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dogtap-release-artifacts
+          path: dist
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cat > /tmp/release-notes.md <<'EOF'
+          Dogtap release artifacts:
+
+          - cross-platform `dogtap` CLI/server binaries
+          - SHA-256 checksums
+          - GHCR container image: `ghcr.io/${{ github.repository }}:${{ github.ref_name }}`
+
+          See `CHANGELOG.md` and `README.md` for supported intake surfaces and limitations.
+          EOF
+
+          if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" dist/* \
+              --repo "${GITHUB_REPOSITORY}" \
+              --clobber
+            gh release edit "${GITHUB_REF_NAME}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "${GITHUB_REF_NAME}" \
+              --notes-file /tmp/release-notes.md
+          else
+            gh release create "${GITHUB_REF_NAME}" dist/* \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "${GITHUB_REF_NAME}" \
+              --notes-file /tmp/release-notes.md
+          fi

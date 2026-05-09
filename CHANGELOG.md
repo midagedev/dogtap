@@ -16,9 +16,12 @@ All notable changes to Dogtap will be documented in this file.
 - Fixture replay command with JSON and Markdown reports.
 - Generic adoption kit under `examples/adoption-kit/`.
 - Generic adoption smoke script through `make smoke-adoption`.
+- Release workflow for GitHub Release binaries and GHCR container images.
+- Build metadata in `dogtap version`.
 
 ### Notes
 
-- No official container image or binary release is published yet.
+- Official container images and binary archives are published from version tags;
+  stable tags also update the `latest` image tag.
 - APM forwarding is deferred; RUM/log forwarding and safety accounting are
   implemented for the current scope.

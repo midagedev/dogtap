@@ -40,7 +40,7 @@ docker run --rm \
   -e DOGTAP_STORAGE_KIND=file \
   -e DOGTAP_STORAGE_PATH=/data/events.json \
   -v dogtap-data:/data \
-  dogtap/dogtap:latest
+  ghcr.io/midagedev/dogtap:latest
 ```
 
 ## Configure RUM
