@@ -1,6 +1,7 @@
 # Local Development Runbook
 
-This is the target runbook. It will become executable after implementation starts.
+This runbook covers working on Dogtap itself. For applying Dogtap to another
+application, use `docs/runbooks/ADOPTING_DOGTAP.md`.
 
 ## Start Dogtap
 
@@ -13,10 +14,12 @@ make run
 Or with a config file:
 
 ```bash
-go run ./cmd/dogtap serve -config dogtap.example.yaml
+go run ./cmd/dogtap serve -config configs/generic-local.yaml
 ```
 
-The example config stores recent events in `.dogtap/events.json`, so local sessions survive process restarts until TTL/count retention removes them.
+The generic local config stores recent events in `.dogtap/generic-events.json`,
+so local sessions survive process restarts until TTL/count retention removes
+them.
 
 With Docker Compose:
 
@@ -26,7 +29,7 @@ docker compose up --build
 
 The compose setup mounts a named `dogtap-data` volume at `/data` and writes `/data/events.json`.
 
-Target Docker shape:
+Equivalent Docker shape:
 
 ```bash
 docker run --rm \
@@ -77,4 +80,10 @@ Replay bundled fixtures:
 
 ```bash
 make replay
+```
+
+Run the generic adoption smoke:
+
+```bash
+make smoke-adoption
 ```

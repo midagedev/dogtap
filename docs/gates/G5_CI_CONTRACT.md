@@ -4,8 +4,9 @@
 
 Passed locally.
 
-The sample GitHub Actions workflow has not run in GitHub yet, but the command,
-report formats, and exit policy are covered by local tests.
+The command, report formats, and exit policy are covered by local tests. A
+published GitHub Actions workflow is intentionally deferred until release
+automation is added.
 
 ## Evidence
 
@@ -19,7 +20,7 @@ Implemented CI surface:
   `.md` output paths.
 - Reports include summary counts, failing rule IDs, field paths, messages, and
   per-event context.
-- `.github/workflows/dogtap-replay.yml` builds, replays fixtures, and uploads
+- CI usage can build the `dogtap` binary, replay fixtures, and upload
   JSON/Markdown artifacts while preserving the validation exit status.
 
 ## Verification

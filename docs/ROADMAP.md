@@ -70,7 +70,7 @@ Status: locally complete
 - fixture replay
 - JSON and Markdown reports
 - exit code policy
-- sample GitHub Actions workflow
+- CI replay/report shape
 
 Gate:
 
@@ -116,7 +116,7 @@ Goal: make the project useful outside one company.
 Status: generic adoption quickstart subset complete; release candidate remains
 blocked pending one realistic sanitized adoption profile.
 
-- public docs site
+- public documentation cleanup
 - sample apps
 - validation profile examples
 - OpenTelemetry Collector recipes

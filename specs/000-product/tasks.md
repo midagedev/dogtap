@@ -144,7 +144,7 @@ Evidence note 2026-05-08:
 - [x] T062 Add JSON report output
 - [x] T063 Add Markdown report output
 - [x] T064 Add exit code policy
-- [x] T065 Add sample GitHub Actions workflow
+- [x] T065 Document CI replay command shape
 
 Suggested agents:
 

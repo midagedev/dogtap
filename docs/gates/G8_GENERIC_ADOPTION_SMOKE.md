@@ -44,9 +44,8 @@ Results:
 - Dashboard E2E passed on desktop Chromium and mobile.
 - Generic config replay passed with four passing fixture events.
 
-Visual evidence:
-
-- `web/test-results/generic-adoption-empty-state.png`
+Visual evidence was inspected locally through a Playwright screenshot during
+development. Generated screenshots are not committed.
 
 ## Gate Status
 
