@@ -52,26 +52,42 @@ func replayDetail(decoded any, normalized event.NormalizedTelemetry, contentType
 }
 
 func logDetails(decoded any, normalized event.NormalizedTelemetry) []event.LogEntry {
+	rows := []map[string]any{}
+	collectLogRows(decoded, &rows)
+	if len(rows) > 0 {
+		entries := make([]event.LogEntry, 0, len(rows))
+		for _, row := range rows {
+			entries = append(entries, logEntry(row, normalized))
+		}
+		return entries
+	}
+
 	items := eventItems(decoded)
 	if len(items) == 0 {
 		items = []any{decoded}
 	}
 	entries := make([]event.LogEntry, 0, len(items))
 	for _, item := range items {
-		row := item
-		level := coalesce(findString(row, "status", "level", "severity"), "info")
-		message := coalesce(findString(row, "message", "msg", "error.message", "error"), scalarString(row))
-		if message == "" {
-			message = "log payload"
-		}
-		entries = append(entries, event.LogEntry{
-			Timestamp: coalesce(findString(row, "timestamp", "date", "time"), normalized.Timestamp),
-			Level:     strings.ToUpper(level),
-			Message:   message,
-			TraceID:   coalesce(findString(row, "trace_id", "traceId", "dd.trace_id", "trace.id"), normalized.TraceID),
-		})
+		entries = append(entries, logEntry(item, normalized))
 	}
 	return entries
+}
+
+func logEntry(row any, normalized event.NormalizedTelemetry) event.LogEntry {
+	level := coalesce(findString(row, "status", "level", "severityText", "severity"), "info")
+	message := coalesce(
+		findString(row, "message", "msg", "body.stringValue", "body", "error.message", "error"),
+		scalarString(row),
+	)
+	if message == "" {
+		message = "log payload"
+	}
+	return event.LogEntry{
+		Timestamp: coalesce(findString(row, "timestamp", "date", "time", "timeUnixNano", "observedTimeUnixNano"), normalized.Timestamp),
+		Level:     strings.ToUpper(level),
+		Message:   message,
+		TraceID:   coalesce(findString(row, "trace_id", "traceId", "dd.trace_id", "trace.id"), normalized.TraceID),
+	}
 }
 
 func traceDetail(decoded any, normalized event.NormalizedTelemetry) *event.TraceDetail {
@@ -136,6 +152,27 @@ func collectTraceRows(value any, rows *[]map[string]any) {
 		}
 		for _, item := range typed {
 			collectTraceRows(item, rows)
+		}
+	}
+}
+
+func collectLogRows(value any, rows *[]map[string]any) {
+	switch typed := value.(type) {
+	case []any:
+		for _, item := range typed {
+			collectLogRows(item, rows)
+		}
+	case map[string]any:
+		if _, ok := typed["logRecords"]; ok {
+			collectLogRows(typed["logRecords"], rows)
+			return
+		}
+		if _, ok := typed["body"]; ok {
+			*rows = append(*rows, typed)
+			return
+		}
+		for _, item := range typed {
+			collectLogRows(item, rows)
 		}
 	}
 }
