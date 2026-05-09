@@ -6,10 +6,11 @@ Date: 2026-05-09
 
 Partial.
 
-Dogtap now has a documented Datadog-preserving external injection strategy and
-copyable first-pass templates. This subset is not complete until executable
-fixtures prove that a normal app can enable and remove Dogtap by changing only
-external overlays.
+Dogtap now has a documented Datadog-preserving external injection strategy,
+copyable templates, executable external-injection smoke coverage, an
+OpenTelemetry Collector tee recipe, and a RUM proxy canary runbook. This subset
+is not complete until one realistic sanitized adoption profile is captured and
+published as safe gate evidence.
 
 ## Goal
 
@@ -46,11 +47,17 @@ The target workflow is:
   `examples/adoption-kit/otel-collector-tee.yaml`,
   `examples/adoption-kit/compose.otel-collector-tee.yaml`, and
   `examples/adoption-kit/otel-collector-tee.md`
+- RUM proxy canary runbook:
+  `docs/runbooks/RUM_PROXY_CANARY.md`
 
 ## Source-Backed Compatibility Notes
 
 - Datadog Browser RUM supports a `proxy` init option and routes the intake path
   through `ddforward`.
+- Datadog recommends Browser SDK `4.34.0` or later for proxy configuration.
+- Dogtap RUM/replay forwarding preserves safe relative `ddforward` path/query
+  values for `/api/v2/rum` and `/api/v2/replay`, strips sensitive inbound
+  headers, and rejects absolute upstream URLs.
 - Datadog Java tracer supports `DD_TRACE_AGENT_URL`; it takes precedence over
   `DD_AGENT_HOST` and `DD_TRACE_AGENT_PORT`.
 - Datadog Docker and Kubernetes log collection are Agent behaviors based on log
@@ -65,13 +72,10 @@ Reference links are collected in `docs/references/datadog.md`.
 
 ## Remaining Tasks
 
-- Add a RUM proxy canary guide covering Browser SDK version, raw-body
-  preservation, sensitive header stripping, origin allowlisting, and rollback.
 - Capture one realistic sanitized adoption profile and publish only safe
   summaries, commands, and screenshots.
 
 ## Gate Decision
 
-G8 remains blocked. This subset improves the adoption contract and now includes
-a frontend/backend Compose smoke, but it does not replace the required
-realistic sanitized adoption evidence.
+G8 remains blocked. This subset improves the adoption contract, but it does not
+replace the required realistic sanitized adoption evidence.

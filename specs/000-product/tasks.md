@@ -115,7 +115,8 @@ Gate:
 - [x] T054 Add correlation view
 - [x] T055 Add copyable Datadog search query builder
 - [x] T056 Add debug bundle export API
-- [x] T057 Add RUM Session Replay payload timeline viewer
+- [x] T057 Add RUM Session Replay DOM replay viewer with payload timeline
+  fallback
 - [x] T058 Add structured log viewer
 - [x] T059 Add trace/span viewer
 
@@ -131,6 +132,8 @@ Evidence note 2026-05-08:
 
 - Dashboard source-specific inspectors were added for RUM Session Replay
   payloads, logs, and trace spans.
+- Session Replay now renders decoded rrweb full snapshot records in an iframe
+  DOM replay and keeps the payload timeline fallback for partial payloads.
 - RUM replay intake recognizes `/datadog-intake-proxy?ddforward=/api/v2/replay`
   and direct `/api/v2/replay`, including Browser SDK multipart payloads with
   `event` metadata and `segment` attachments.
@@ -266,7 +269,7 @@ Evidence note 2026-05-08:
   enabled and removed by changing only override files.
 - [x] T117 Add an OpenTelemetry Collector tee example for traces/logs/metrics
   with Datadog primary and Dogtap inspection as a sampled secondary path.
-- [ ] T118 Add a RUM proxy canary runbook with Browser SDK version, raw-body,
+- [x] T118 Add a RUM proxy canary runbook with Browser SDK version, raw-body,
   header stripping, allowlist, and rollback requirements.
 - [ ] T119 Capture a realistic sanitized adoption profile and publish only the
   safe summary under `docs/gates/`.
@@ -274,3 +277,12 @@ Evidence note 2026-05-08:
 Gate:
 
 - [ ] G8 Release Candidate external injection subset
+
+Evidence note 2026-05-09:
+
+- RUM proxy canary runbook added at `docs/runbooks/RUM_PROXY_CANARY.md`.
+- RUM/replay forwarding now preserves safe relative `ddforward` path/query
+  values for `/api/v2/rum` and `/api/v2/replay` while rejecting absolute
+  upstream URLs.
+- Forwarding tests cover `ddforward` query preservation, sensitive inbound
+  header stripping, replay path preservation, and unsafe URL rejection.

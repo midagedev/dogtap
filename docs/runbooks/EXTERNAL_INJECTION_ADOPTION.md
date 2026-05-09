@@ -126,6 +126,11 @@ If the app hardcodes RUM initialization, make one preparatory change to read the
 proxy from runtime config. After that, Dogtap can be enabled or removed without
 more application code changes.
 
+Before canarying this outside a local-only environment, use
+`docs/runbooks/RUM_PROXY_CANARY.md`. It covers the Browser SDK version floor,
+raw-body forwarding, sensitive header stripping, `ddforward` allowlisting, and
+configuration-only rollback checks.
+
 ### Datadog APM Traces
 
 Prefer `DD_TRACE_AGENT_URL` when the tracer supports it because it is explicit:

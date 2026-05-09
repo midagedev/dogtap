@@ -10,11 +10,15 @@ Datadog Browser RUM supports proxying browser intake data through a custom endpo
 
 Useful details:
 
+- Datadog recommends Browser SDK `4.34.0` or later for proxy
+  configurations.
 - The Browser SDK `proxy` initialization parameter routes RUM requests through a
   proxy endpoint.
 - The SDK includes the original intake path and query in `ddforward`.
 - Proxy implementations should preserve the raw body and strip sensitive
   headers.
+- Proxy implementations must avoid open-proxy behavior by allowing only the
+  expected Datadog intake origins and paths.
 
 ## Browser Session Replay
 

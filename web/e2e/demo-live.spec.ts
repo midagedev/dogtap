@@ -39,12 +39,10 @@ test("seeded demo dashboard shows the public telemetry workflow", async ({
   await expect(
     page.getByRole("heading", { name: "Session Replay" }),
   ).toBeVisible();
-  await expect(page.getByLabel("Replay frame")).toHaveValue("0");
-  await expect(
-    page
-      .getByLabel("Replay payload preview")
-      .getByText("http://localhost/cases/case-123"),
-  ).toBeVisible();
+  await expect(page.getByText("DOM replay")).toBeVisible();
+  const replayFrame = page.frameLocator(".replay-dom-stage iframe").first();
+  await expect(replayFrame.getByText("Case #123")).toBeVisible();
+  await expect(replayFrame.getByRole("button", { name: "Export" })).toBeVisible();
 
   await page.getByPlaceholder("Filter payloads").fill("case export failed");
   await page.locator(".event-row").filter({ hasText: "log" }).first().click();

@@ -75,3 +75,7 @@ make smoke-external-injection
 For applications that already send OTLP to an OpenTelemetry Collector, use
 `otel-collector-tee.md` to keep Datadog as the primary exporter while sending a
 bounded inspection copy to Dogtap.
+
+Before routing Browser RUM or Session Replay through Dogtap outside a local-only
+environment, follow `docs/runbooks/RUM_PROXY_CANARY.md` for Browser SDK version,
+raw-body, header stripping, `ddforward` allowlist, and rollback checks.
