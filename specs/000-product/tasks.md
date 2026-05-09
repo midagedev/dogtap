@@ -347,3 +347,29 @@ Evidence note 2026-05-09:
 - Session timeline groups events by browser session and related correlation
   fields so frontend, log, trace, and metric signals can be inspected as one
   workflow.
+
+## Phase 14: Agent-Readable Live Diagnostics
+
+- [x] T140 Add a `dogtap diagnose` command that captures live Dogtap state into
+  a single artifact directory.
+- [x] T141 Add expectation assertions for source, payload kind, service,
+  session, trace, route, metric, case, and endpoint presence.
+- [x] T142 Add practical missing-signal hints for common frontend/backend local
+  dev and isolated E2E configuration mistakes.
+- [x] T143 Document how agents should use diagnostics artifacts while keeping
+  project-specific evidence under private, ignored paths.
+
+Gate:
+
+- [x] G5 CI Contract diagnostics subset
+
+Evidence note 2026-05-09:
+
+- `dogtap diagnose` captures `healthz`, `readyz`, retained events, latest
+  report, debug bundle, metrics, `assertions.json`, and `summary.md` into one
+  artifact directory.
+- Smoke and demo workflows can write diagnostics through `DOGTAP_ARTIFACT_DIR`;
+  CI uploads smoke/demo diagnostics artifacts.
+- `docs/runbooks/AGENT_TELEMETRY_TRIAGE.md` explains local dev and isolated E2E
+  triage patterns while keeping private adoption evidence out of the public
+  repository.

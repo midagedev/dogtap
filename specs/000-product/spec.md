@@ -178,6 +178,11 @@ Acceptance criteria:
 - FR-066: Document that production-grade Faro adoption should prefer Grafana
   Alloy `faro.receiver` into OTLP until Dogtap has a fixture-backed production
   Faro compatibility contract.
+- FR-067: Provide an agent-readable live diagnostics bundle for local dev,
+  isolated E2E, and external app adoption runs. The bundle must capture Dogtap
+  health, retained events, latest validation report, debug bundle, metrics,
+  expectation assertions, and practical hints for missing logs, traces,
+  metrics, RUM sessions, and session replay.
 
 ## Non-Functional Requirements
 

@@ -137,8 +137,24 @@ main() {
 
   assert_events
 
+  diagnostics_dir="${DOGTAP_ARTIFACT_DIR:-${tmp_dir}/diagnostics}"
+  (
+    cd "${repo_root}"
+    go run ./cmd/dogtap diagnose \
+      -base-url "${base_url}" \
+      -output "${diagnostics_dir}" \
+      -expect-non-empty \
+      -expect-source rum,logs,apm,otlp \
+      -expect-payload-kind metric \
+      -expect-service web-frontend,api-service,quickstart-backend \
+      -expect-trace 123456789 \
+      -expect-metric http.server.request.duration
+  )
+  cp "${log_file}" "${diagnostics_dir}/dogtap.log"
+
   echo "Dogtap generic adoption smoke passed."
   echo "Dashboard: ${base_url}"
+  echo "Diagnostics: ${diagnostics_dir}"
 }
 
 main "$@"

@@ -540,6 +540,45 @@ func TestDebugBundleIncludesFailuresAndQueries(t *testing.T) {
 	}
 }
 
+func TestDebugBundleSupportsSessionAndPayloadKindFilters(t *testing.T) {
+	app := newTestApp(t, config.ModeLocal)
+	for _, body := range []string{
+		`{"service":"web","env":"local","session":{"id":"session-1"},"usr":{"id":"user-1"},"context":{"account":{"id":"acct-1"},"workspace":{"id":"ws-1"}}}`,
+		`{"service":"web","env":"local","session":{"id":"session-2"},"usr":{"id":"user-2"},"context":{"account":{"id":"acct-2"},"workspace":{"id":"ws-2"}}}`,
+	} {
+		req := httptest.NewRequest(http.MethodPost, "/rum", bytes.NewBufferString(body))
+		req.Header.Set("Content-Type", "application/json")
+		app.Handler().ServeHTTP(httptest.NewRecorder(), req)
+	}
+
+	bundleReq := httptest.NewRequest(
+		http.MethodPost,
+		"/api/debug-bundles",
+		bytes.NewBufferString(`{"source":"rum","payloadKind":"rum","sessionId":"session-1"}`),
+	)
+	bundleRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(bundleRec, bundleReq)
+
+	if bundleRec.Code != http.StatusOK {
+		t.Fatalf("got status %d: %s", bundleRec.Code, bundleRec.Body.String())
+	}
+	var got struct {
+		Summary struct {
+			Total int `json:"total"`
+		} `json:"summary"`
+		Events []event.EventEnvelope `json:"events"`
+	}
+	if err := json.Unmarshal(bundleRec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Summary.Total != 1 || len(got.Events) != 1 {
+		t.Fatalf("unexpected filtered bundle: %#v", got.Summary)
+	}
+	if got.Events[0].Normalized.SessionID != "session-1" {
+		t.Fatalf("unexpected session in bundle: %#v", got.Events[0].Normalized)
+	}
+}
+
 func TestMetricsExposeRetainedEvents(t *testing.T) {
 	app := newTestApp(t, config.ModeLocal)
 	req := httptest.NewRequest(http.MethodPost, "/rum", bytes.NewBufferString(`{"service":"web","env":"local"}`))

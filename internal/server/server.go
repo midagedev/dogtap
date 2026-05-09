@@ -560,6 +560,7 @@ func (a *App) handleCreateDebugBundle(w http.ResponseWriter, r *http.Request) {
 	}
 	events, err := a.store.List(r.Context(), store.Query{
 		Source:      req.Source,
+		PayloadKind: req.PayloadKind,
 		Service:     req.Service,
 		Env:         req.Env,
 		UserID:      req.UserID,
@@ -567,6 +568,8 @@ func (a *App) handleCreateDebugBundle(w http.ResponseWriter, r *http.Request) {
 		WorkspaceID: req.WorkspaceID,
 		CaseID:      req.CaseID,
 		TraceID:     req.TraceID,
+		SessionID:   req.SessionID,
+		ViewID:      req.ViewID,
 		Route:       req.Route,
 		Status:      req.Status,
 		Limit:       limit,

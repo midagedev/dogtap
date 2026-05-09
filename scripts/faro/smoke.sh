@@ -140,9 +140,25 @@ main() {
   events="$(curl -fsS "${base_url}/api/events?source=faro&limit=100")"
   assert_events "${events}"
 
+  diagnostics_dir="${DOGTAP_ARTIFACT_DIR:-${tmp_dir}/diagnostics}"
+  (
+    cd "${repo_root}"
+    go run ./cmd/dogtap diagnose \
+      -base-url "${base_url}" \
+      -output "${diagnostics_dir}" \
+      -expect-non-empty \
+      -expect-source faro \
+      -expect-service faro-smoke-frontend \
+      -expect-endpoint /collect/faro-smoke \
+      -filter-source faro
+  )
+  cp "${dogtap_log}" "${diagnostics_dir}/dogtap.log"
+  cp "${frontend_log}" "${diagnostics_dir}/frontend.log"
+
   echo "Dogtap Faro SDK smoke passed."
   echo "Frontend: ${frontend_url}/faro"
   echo "Collector: ${base_url}/collect/faro-smoke"
+  echo "Diagnostics: ${diagnostics_dir}"
 }
 
 main "$@"

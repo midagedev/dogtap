@@ -10,6 +10,7 @@ public release.
 | --- | --- | --- | --- |
 | `local` | Supported | Local payload inspection and demo workflows | Raw payloads are visible by default for debugging. |
 | `ci` | Supported | Fixture replay and validation reports | Use `dogtap replay`; the dashboard is not required. |
+| live diagnostics | Supported | Local dev, isolated E2E, and external app triage | Use `dogtap diagnose` to capture health, events, reports, debug bundle, metrics, assertions, and missing-signal hints. |
 | `forward` | Partial | Bounded RUM/log forwarding experiments | APM forwarding is deferred. |
 | `tee` | Experimental | Limited production diagnostic tap | Requires explicit sampling, retention, and fail-open review. |
 | `redact-only` | Experimental | Policy enforcement before forwarding | Treat as a controlled rollout mode, not a default path. |
