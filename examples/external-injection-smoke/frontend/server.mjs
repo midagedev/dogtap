@@ -1,4 +1,5 @@
 import http from "node:http";
+import { deflateSync } from "node:zlib";
 
 const port = Number(process.env.PORT || 3000);
 const service = process.env.DD_SERVICE || process.env.SERVICE_NAME || "external-smoke-frontend";
@@ -23,6 +24,38 @@ async function postJSON(url, body) {
       "x-datadog-origin": "rum",
     },
     body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw new Error(`${url} returned ${response.status}`);
+  }
+}
+
+async function postMultipartReplay(url, metadata, records) {
+  const encodedRecords = Buffer.from(JSON.stringify(records));
+  const compressedSegment = deflateSync(encodedRecords);
+  const form = new FormData();
+
+  form.append(
+    "event",
+    JSON.stringify({
+      ...metadata,
+      records_count: records.length,
+      raw_segment_size: encodedRecords.byteLength,
+      compressed_segment_size: compressedSegment.byteLength,
+    }),
+  );
+  form.append(
+    "segment",
+    new Blob([compressedSegment], { type: "application/octet-stream" }),
+    `${metadata.session.id}-${metadata.start}`,
+  );
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "x-datadog-origin": "rum",
+    },
+    body: form,
   });
   if (!response.ok) {
     throw new Error(`${url} returned ${response.status}`);
@@ -62,8 +95,149 @@ async function emitRUM() {
   return true;
 }
 
+async function emitReplay() {
+  const proxy = process.env.DATADOG_RUM_PROXY_URL;
+  if (!proxy) return false;
+
+  const records = [
+    {
+      type: 4,
+      timestamp: 1778206500000,
+      data: {
+        href: "http://external-smoke.local/external-injection",
+        width: 1024,
+        height: 720,
+      },
+    },
+    {
+      type: 2,
+      timestamp: 1778206500100,
+      data: {
+        node: {
+          type: 0,
+          id: 1,
+          childNodes: [
+            { type: 1, id: 2, name: "html", publicId: "", systemId: "" },
+            {
+              type: 2,
+              id: 3,
+              tagName: "html",
+              attributes: {},
+              childNodes: [
+                {
+                  type: 2,
+                  id: 4,
+                  tagName: "head",
+                  attributes: {},
+                  childNodes: [
+                    {
+                      type: 2,
+                      id: 5,
+                      tagName: "style",
+                      attributes: {},
+                      childNodes: [
+                        {
+                          type: 3,
+                          id: 6,
+                          textContent:
+                            "body{margin:0;font:16px system-ui;background:#f8fafc;color:#172026}.workflow{padding:28px}.run{border:0;border-radius:6px;background:#2563eb;color:white;padding:10px 14px}",
+                        },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  type: 2,
+                  id: 7,
+                  tagName: "body",
+                  attributes: {},
+                  childNodes: [
+                    {
+                      type: 2,
+                      id: 8,
+                      tagName: "main",
+                      attributes: { class: "workflow" },
+                      childNodes: [
+                        {
+                          type: 2,
+                          id: 9,
+                          tagName: "h1",
+                          attributes: {},
+                          childNodes: [
+                            { type: 3, id: 10, textContent: "External Injection Workflow" },
+                          ],
+                        },
+                        {
+                          type: 2,
+                          id: 11,
+                          tagName: "button",
+                          attributes: { class: "run" },
+                          childNodes: [
+                            { type: 3, id: 12, textContent: "Run workflow" },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        initialOffset: { top: 0, left: 0 },
+      },
+    },
+    {
+      type: 5,
+      timestamp: 1778206500200,
+      data: {
+        tagName: "run-workflow-button",
+      },
+    },
+  ];
+
+  await postMultipartReplay(
+    `${proxy}?ddforward=/api/v2/replay`,
+    {
+      service,
+      env,
+      version,
+      session: { id: "external-session-1" },
+      view: { id: "external-view-1" },
+      start: "1778206500000",
+      end: "1778206500200",
+    },
+    records,
+  );
+  return true;
+}
+
+async function emitMissingContextRUM() {
+  const proxy = process.env.DATADOG_RUM_PROXY_URL;
+  if (!proxy) return false;
+
+  await postJSON(`${proxy}?ddforward=/api/v2/rum`, {
+    service,
+    env,
+    version,
+    type: "view",
+    session: {
+      id: "external-session-missing-context",
+    },
+    view: {
+      id: "external-view-missing-context",
+      url_path: "/external-injection/missing-context",
+    },
+  });
+  return true;
+}
+
 async function exercise(_req, res) {
-  const frontendTelemetry = await emitRUM();
+  const frontendTelemetry = {
+    rum: await emitRUM(),
+    replay: await emitReplay(),
+    missingContext: await emitMissingContextRUM(),
+  };
   const backendResponse = await fetch(`${backendURL}/api/workflow`);
   const backend = await backendResponse.json();
   if (!backendResponse.ok) {
@@ -75,6 +249,7 @@ async function exercise(_req, res) {
     env,
     version,
     frontendTelemetry,
+    frontendTelemetryEnabled: Object.values(frontendTelemetry).some(Boolean),
     backend,
   });
 }

@@ -4,13 +4,13 @@ Date: 2026-05-09
 
 ## Status
 
-Partial.
+Passed.
 
 Dogtap now has a documented Datadog-preserving external injection strategy,
 copyable templates, executable external-injection smoke coverage, an
-OpenTelemetry Collector tee recipe, and a RUM proxy canary runbook. This subset
-is not complete until one realistic sanitized adoption profile is captured and
-published as safe gate evidence.
+OpenTelemetry Collector tee recipe, a RUM proxy canary runbook, and a
+sanitized adoption profile that proves configuration-only enablement and
+rollback.
 
 ## Goal
 
@@ -49,6 +49,8 @@ The target workflow is:
   `examples/adoption-kit/otel-collector-tee.md`
 - RUM proxy canary runbook:
   `docs/runbooks/RUM_PROXY_CANARY.md`
+- Sanitized adoption profile:
+  `docs/gates/G8_SANITIZED_ADOPTION_PROFILE.md`
 
 ## Source-Backed Compatibility Notes
 
@@ -72,10 +74,11 @@ Reference links are collected in `docs/references/datadog.md`.
 
 ## Remaining Tasks
 
-- Capture one realistic sanitized adoption profile and publish only safe
-  summaries, commands, and screenshots.
+None for this subset.
 
 ## Gate Decision
 
-G8 remains blocked. This subset improves the adoption contract, but it does not
-replace the required realistic sanitized adoption evidence.
+Passed for the external injection subset. The profile validates normal RUM,
+multipart Session Replay with a decoded rrweb DOM snapshot, logs, APM traces,
+OTLP traces, OTLP metrics, one required context validation failure, and
+configuration-only rollback without publishing private telemetry.

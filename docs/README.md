@@ -55,9 +55,11 @@ Current release-candidate state:
 - [G8 Generic Adoption Smoke](gates/G8_GENERIC_ADOPTION_SMOKE.md): generic
   quickstart subset passed
 - [G8 External Injection Adoption](gates/G8_EXTERNAL_INJECTION_ADOPTION.md):
-  Datadog-preserving strategy and templates partial
-- [G8 Release Candidate](gates/G8_RELEASE_CANDIDATE.md): blocked pending one
-  realistic sanitized adoption profile
+  Datadog-preserving strategy and sanitized adoption profile passed
+- [G8 Sanitized Adoption Profile](gates/G8_SANITIZED_ADOPTION_PROFILE.md):
+  public-safe frontend/backend adoption evidence
+- [G8 Release Candidate](gates/G8_RELEASE_CANDIDATE.md): first public
+  release-candidate evidence passed
 
 ## Decisions
 

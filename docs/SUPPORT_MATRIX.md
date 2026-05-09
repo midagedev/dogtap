@@ -82,5 +82,5 @@ go run ./cmd/dogtap replay \
   fixtures/otlp/traces.json
 ```
 
-G8 is not complete until one realistic sanitized adoption profile validates
-successfully and the result is recorded under `docs/gates/`.
+G8 release-candidate evidence is recorded under `docs/gates/`, including the
+sanitized adoption profile in `docs/gates/G8_SANITIZED_ADOPTION_PROFILE.md`.

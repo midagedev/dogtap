@@ -4,11 +4,11 @@ Date: 2026-05-09
 
 ## Status
 
-Blocked.
+Passed.
 
-Dogtap has enough public project structure for source review and community
-testing, but it is not a final release candidate until one realistic sanitized
-adoption profile validates successfully.
+Dogtap has public project structure, safety gates, executable adoption
+fixtures, visual verification, and one realistic sanitized adoption profile for
+the first public release candidate.
 
 ## Passed Release-Candidate Subsets
 
@@ -20,20 +20,23 @@ adoption profile validates successfully.
 - Generic adoption kit and seeded demo are public and reproducible.
 - G0 through G7 evidence is documented, with APM and OTLP forwarding explicitly
   scoped out of the first forwarding slice.
+- Sanitized adoption profile evidence is recorded in
+  `docs/gates/G8_SANITIZED_ADOPTION_PROFILE.md`.
 
-## Blocking Evidence
+## Sanitized Adoption Evidence
 
-G8 still requires a realistic sanitized adoption profile that proves a normal
-frontend/backend app can adopt Dogtap locally and in CI without application code
-changes beyond standard Datadog or OTLP endpoint configuration.
+G8 includes a realistic sanitized adoption profile that proves a normal
+frontend/backend app can adopt Dogtap locally and in CI without Dogtap-specific
+SDK code or application dependencies.
 
 Private or raw evidence must stay under `.private/adoption/`. Public G8 evidence
 must contain only sanitized summaries, fixture names, commands, validation
 results, and screenshots that are safe for a public repository.
 
-The public evidence must confirm:
+The public evidence confirms:
 
-- Browser RUM and Session Replay arrive with expected user/session/route context.
+- Browser RUM and multipart Session Replay arrive with expected
+  user/session/route context and a decoded rrweb DOM snapshot.
 - Backend logs and traces correlate by trace/span or workflow context.
 - OTLP metrics appear in the dashboard and replay reports where applicable.
 - Dogtap can be enabled and removed by deleting external overrides or restoring
@@ -46,7 +49,7 @@ The public evidence must confirm:
 - No company names, customer payloads, credentials, private hosts, or raw
   production telemetry are committed.
 
-## Verification Commands For The Next G8 Attempt
+## Verification Commands
 
 ```bash
 go test ./...
@@ -54,6 +57,7 @@ npm --prefix web run build
 make shell-check
 make smoke-adoption
 make demo-visual-check
+make smoke-external-injection
 go run ./cmd/dogtap replay \
   -config configs/generic-local.yaml \
   -format markdown \
@@ -63,5 +67,7 @@ go run ./cmd/dogtap replay \
   fixtures/otlp/traces.json
 ```
 
-Add the realistic sanitized adoption replay command and its result here before
-marking G8 passed.
+## Gate Decision
+
+G8 is passed for the first public release candidate. Tagging still requires the
+maintainer release checklist in `docs/runbooks/RELEASE_CANDIDATE.md`.

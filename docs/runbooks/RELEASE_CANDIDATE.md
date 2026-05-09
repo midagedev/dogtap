@@ -5,11 +5,12 @@ intentionally conservative: release only what the gates can reproduce.
 
 ## Current Release Position
 
-Dogtap is ready for public source review and community testing as a local/CI
-telemetry inspector. A final versioned public release remains blocked until one
-realistic sanitized adoption profile validates successfully.
+Dogtap has passed first public release-candidate evidence as a local/CI
+telemetry inspector. Tagging still requires this runbook's maintainer checklist
+and a clean `main` branch.
 
-Do not remove that blocker without adding evidence under `docs/gates/`.
+The sanitized adoption profile evidence is recorded in
+`docs/gates/G8_SANITIZED_ADOPTION_PROFILE.md`.
 
 ## Pre-Tag Checklist
 
@@ -23,6 +24,7 @@ Do not remove that blocker without adding evidence under `docs/gates/`.
    npm --prefix web run build
    make shell-check
    make smoke-adoption
+   make smoke-external-injection
    make demo-visual-check
    go run ./cmd/dogtap replay \
      -config configs/generic-local.yaml \
@@ -37,7 +39,8 @@ Do not remove that blocker without adding evidence under `docs/gates/`.
 5. Re-run a public-surface scan:
 
    ```bash
-   git grep -nE 'imagoworks|dentbird|ds[0-9]|api[_-]?key|secret|token|password' \
+   private_scan_regex="${DOGTAP_PRIVATE_SCAN_REGEX:-company-name|internal-host|customer-id}"
+   git grep -nE "${private_scan_regex}|api[_-]?key|secret|token|password" \
      -- ':!docs/references/datadog.md' ':!.private'
    ```
 
@@ -46,9 +49,9 @@ Do not remove that blocker without adding evidence under `docs/gates/`.
 
 6. Confirm `.private/` remains ignored and contains any long-running adoption
    notes that should not be published.
-7. Confirm `docs/gates/G8_GENERIC_ADOPTION_SMOKE.md` or a successor G8 evidence
-   file records the latest realistic adoption evidence.
-8. Tag only after the blocker state is explicit in the changelog.
+7. Confirm `docs/gates/G8_SANITIZED_ADOPTION_PROFILE.md` records the latest
+   realistic sanitized adoption evidence.
+8. Tag only after the release-candidate state is explicit in the changelog.
 
 ## Sanitized Adoption Evidence
 

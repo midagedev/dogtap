@@ -113,8 +113,8 @@ Gate:
 
 Goal: make the project useful outside one company.
 
-Status: generic adoption quickstart subset complete; release candidate remains
-blocked pending one realistic sanitized adoption profile.
+Status: release-candidate evidence complete for the first public release
+candidate.
 
 - public documentation cleanup
 - sample apps
@@ -134,10 +134,9 @@ blocked pending one realistic sanitized adoption profile.
 - release binary and container publishing workflow: complete
 - seeded dashboard demo and live visual verification: complete
 - public support matrix and release candidate runbook: complete
-- realistic sanitized adoption profile
+- realistic sanitized adoption profile: complete
 
 Gate:
 
-- G8 Release Candidate: blocked until sanitized local RUM/APM/log/metric
-  evidence from one realistic application profile validates successfully
+- G8 Release Candidate: passed for first public release-candidate evidence
   (`docs/gates/G8_RELEASE_CANDIDATE.md`)
