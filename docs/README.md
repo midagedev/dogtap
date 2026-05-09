@@ -8,6 +8,7 @@ Dogtap.
 - [Concept](CONCEPT.md): product positioning and core loop
 - [Architecture](ARCHITECTURE.md): runtime shape and module boundaries
 - [Adopting Dogtap](runbooks/ADOPTING_DOGTAP.md): generic frontend/backend setup
+- [Support Matrix](SUPPORT_MATRIX.md): supported surfaces and explicit limits
 - [Production Safety](PRODUCTION_SAFETY.md): safety model for forwarding and tee modes
 - [Roadmap](ROADMAP.md): current phase and release blockers
 
@@ -16,6 +17,7 @@ Dogtap.
 - [PRD](PRD.md)
 - [Final Goal](FINAL_GOAL.md)
 - [Testing Strategy](TESTING.md)
+- [Support Matrix](SUPPORT_MATRIX.md)
 - [Agent Orchestration](AGENT_ORCHESTRATION.md)
 
 Canonical spec artifacts live under `specs/000-product/`:
@@ -33,6 +35,7 @@ Canonical spec artifacts live under `specs/000-product/`:
 - [Generic Local Adoption](runbooks/ADOPTING_DOGTAP.md)
 - [Local Development](runbooks/local-dev.md)
 - [Production Deployment](runbooks/PRODUCTION_DEPLOYMENT.md)
+- [Release Candidate](runbooks/RELEASE_CANDIDATE.md)
 
 ## Evidence And Gates
 
@@ -40,6 +43,13 @@ Gate evidence lives under `docs/gates/`.
 
 Fixture evidence lives under `docs/fixtures/`, with promoted fixture payloads
 under `fixtures/`.
+
+Current release-candidate state:
+
+- [G8 Generic Adoption Smoke](gates/G8_GENERIC_ADOPTION_SMOKE.md): generic
+  quickstart subset passed
+- [G8 Release Candidate](gates/G8_RELEASE_CANDIDATE.md): blocked pending one
+  realistic sanitized adoption profile
 
 ## Decisions
 

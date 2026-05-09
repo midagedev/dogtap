@@ -126,9 +126,11 @@ blocked pending one realistic sanitized adoption profile.
 - public CI and community contribution surface: complete
 - release binary and container publishing workflow: complete
 - seeded dashboard demo and live visual verification: complete
+- public support matrix and release candidate runbook: complete
 - realistic sanitized adoption profile
 
 Gate:
 
 - G8 Release Candidate: blocked until sanitized local RUM/APM/log/metric
   evidence from one realistic application profile validates successfully
+  (`docs/gates/G8_RELEASE_CANDIDATE.md`)

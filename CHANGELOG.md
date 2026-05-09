@@ -19,6 +19,7 @@ All notable changes to Dogtap will be documented in this file.
 - Seeded dashboard demo and Playwright visual check through `make demo-visual-check`.
 - Release workflow for GitHub Release binaries and GHCR container images.
 - Build metadata in `dogtap version`.
+- Public support matrix and release candidate runbook.
 
 ### Notes
 
@@ -26,3 +27,7 @@ All notable changes to Dogtap will be documented in this file.
   stable tags also update the `latest` image tag.
 - APM forwarding is deferred; RUM/log forwarding and safety accounting are
   implemented for the current scope.
+- Supported endpoints and current limitations are maintained in
+  `docs/SUPPORT_MATRIX.md`.
+- Full G8 release-candidate status remains blocked until one realistic
+  sanitized adoption profile validates successfully.

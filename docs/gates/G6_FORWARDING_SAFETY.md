@@ -5,8 +5,8 @@
 Passed for RUM and logs forwarding.
 
 APM forwarding is explicitly deferred by
-`docs/decisions/0004-forwarding-strategy.md` until real tracer fixture evidence
-exists.
+`docs/decisions/0004-forwarding-strategy.md` until a separate forwarding
+compatibility contract and safety review exist.
 
 ## Evidence
 
@@ -35,4 +35,5 @@ go test ./...
 
 - Real RUM SDK and logs intake forwarding compatibility still needs to be
   checked with promoted G1 evidence.
-- APM forwarding remains out of scope for the first forwarding slice.
+- APM forwarding remains out of scope for the first forwarding slice; APM intake
+  and dashboard inspection are supported separately.
