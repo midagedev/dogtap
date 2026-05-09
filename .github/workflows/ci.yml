@@ -45,7 +45,7 @@ jobs:
         run: npm --prefix web ci
 
       - name: Install Playwright browser
-        run: npm --prefix web exec playwright install --with-deps chromium
+        run: npm --prefix web exec -- playwright install --with-deps chromium webkit
 
       - name: Build dashboard
         run: npm --prefix web run build
