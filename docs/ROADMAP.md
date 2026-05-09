@@ -125,6 +125,7 @@ blocked pending one realistic sanitized adoption profile.
 - copyable Docker Compose and environment snippets: complete
 - public CI and community contribution surface: complete
 - release binary and container publishing workflow: complete
+- seeded dashboard demo and live visual verification: complete
 - realistic sanitized adoption profile
 
 Gate:

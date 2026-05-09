@@ -182,6 +182,22 @@ Expected evidence:
 - dashboard panels show service map, traffic, replay payloads, logs, trace
   spans, metrics, validation results, and search hints
 
+### 6. Seed The Dashboard Demo
+
+With Dogtap running on the default ports:
+
+```bash
+make demo-seed
+```
+
+The seeded demo exercises the public dashboard path: RUM, Session Replay, logs,
+APM spans, OTLP metrics, service map, traffic, validation failures, and
+correlation. Maintainers can run the isolated browser verification loop with:
+
+```bash
+make demo-visual-check
+```
+
 ## Generic Adoption Kit
 
 Copyable templates live under `examples/adoption-kit/`:
@@ -193,6 +209,10 @@ Copyable templates live under `examples/adoption-kit/`:
 - `backend-otel-grpc.env`: backend OTLP gRPC defaults
 - `backend-datadog-tracer.env`: existing Datadog tracer defaults
 - `logs-http.md`: logs HTTP intake examples
+
+Runnable demo:
+
+- `examples/demo/`: seeded dashboard walkthrough and visual check
 
 Runbook:
 
@@ -285,6 +305,7 @@ Common checks:
 ```bash
 make shell-check
 make smoke-adoption
+make demo-visual-check
 ```
 
 ## Documentation

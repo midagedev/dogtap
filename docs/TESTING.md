@@ -62,6 +62,16 @@ Use browser-driven tests once UI exists:
 - debug bundle can be generated
 - raw payload is hidden in production mode
 
+The live demo visual check starts Dogtap, seeds representative public telemetry,
+and verifies the real dashboard against the real HTTP API:
+
+```bash
+make demo-visual-check
+```
+
+It stores desktop and mobile screenshots under `web/test-results/` for visual
+review and CI artifacts.
+
 ### Production safety tests
 
 Use fault injection:
@@ -107,6 +117,8 @@ Required fields by workflow should live in a separate validation config.
 - Send a trace.
 - Send a log.
 - Confirm all appear in dashboard.
+- Run `make demo-seed` to populate replay, logs, spans, metrics, service map,
+  traffic, and validation failure examples.
 - Confirm missing service tags fail validation.
 - Confirm email and token-like values are redacted.
 - Confirm generated Datadog search queries are usable.

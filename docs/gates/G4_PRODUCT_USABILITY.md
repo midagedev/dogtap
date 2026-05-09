@@ -2,10 +2,7 @@
 
 ## Status
 
-Passed for the smoke fixture-backed MVP dashboard.
-
-Release readiness remains blocked by G1/G3 real fixture evidence, but the G4
-product surface criteria are implemented and locally verified.
+Passed for the smoke fixture-backed MVP dashboard and seeded live demo flow.
 
 ## Evidence
 
@@ -19,12 +16,15 @@ Implemented usability surface:
 - Copyable Datadog search query builder.
 - Debug bundle export API for filtered event evidence.
 - Local mode exposes raw payloads; non-local modes hide raw payloads by default.
+- Seeded demo exercises RUM, Session Replay, logs, APM spans, OTLP metrics,
+  service map, route traffic, and validation failures through the real HTTP API.
 
 ## Verification
 
 ```bash
 npm --prefix web run build
 DOGTAP_E2E_BASE_URL=http://127.0.0.1:4175 npm --prefix web run test:e2e
+make demo-visual-check
 go test ./internal/server
 ```
 
@@ -34,3 +34,4 @@ go test ./internal/server
   checked against promoted G1 evidence.
 - Correlation currently uses the recent event snapshot returned by
   `/api/events?limit=100`.
+- Session Replay remains payload-timeline playback, not full DOM reconstruction.
