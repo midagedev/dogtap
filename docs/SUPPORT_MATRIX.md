@@ -10,7 +10,7 @@ public release.
 | --- | --- | --- | --- |
 | `local` | Supported | Local payload inspection and demo workflows | Raw payloads are visible by default for debugging. |
 | `ci` | Supported | Fixture replay and validation reports | Use `dogtap replay`; the dashboard is not required. |
-| live diagnostics | Supported | Local dev, isolated E2E, and external app triage | Use `dogtap diagnose` to capture health, events, reports, debug bundle, metrics, assertions, and missing-signal hints. |
+| live diagnostics | Supported | Local dev, isolated E2E, Docker Compose, and external app triage | Use `POST /api/diagnostics` for JSON, `POST /api/diagnostics/archive` for a zip bundle, or `dogtap diagnose` for a host-side directory. |
 | `forward` | Partial | Bounded RUM/log forwarding experiments | APM forwarding is deferred. |
 | `tee` | Experimental | Limited production diagnostic tap | Requires explicit sampling, retention, and fail-open review. |
 | `redact-only` | Experimental | Policy enforcement before forwarding | Treat as a controlled rollout mode, not a default path. |
@@ -65,6 +65,7 @@ public release.
 | Trace/span viewer | Supported | Shows decoded spans where available. |
 | Metric viewer | Supported | Shows OTLP metric samples decoded from received payloads. |
 | Session Replay viewer | Partial | Renders decoded rrweb records in an iframe and falls back to payload timeline/metadata when DOM snapshots are unavailable. |
+| Diagnostics API | Supported | `POST /api/diagnostics` and `/api/diagnostics/archive` expose health, retained events, validation report, debug bundle, metrics, assertions, and missing-signal hints. |
 | Datadog search hints | Best effort | Query field names should be checked against the team's Datadog conventions. |
 
 ## Release Evidence Commands

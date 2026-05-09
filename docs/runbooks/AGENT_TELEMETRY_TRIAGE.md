@@ -9,10 +9,53 @@ external app adoption runs where an agent needs to answer:
 - Which expected signals are missing?
 - Which configuration surface is the most likely cause?
 
-## Capture A Live Bundle
+## Query Live Diagnostics By API
 
-Start Dogtap, run the app workflow, then capture diagnostics from the Dogtap HTTP
-port:
+Start Dogtap, run the app workflow, then query diagnostics from the Dogtap HTTP
+port. This is the preferred path for Docker Compose and externally managed
+Dogtap containers because the caller does not need to exec into the container:
+
+```bash
+curl -sS -X POST http://127.0.0.1:8080/api/diagnostics \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "limit": 200,
+    "expect": {
+      "nonEmpty": true,
+      "sources": ["rum", "logs", "apm", "otlp"],
+      "payloadKinds": ["replay", "metric"],
+      "services": ["web-frontend", "api-service"],
+      "sessions": ["session-123"],
+      "metrics": ["http.server.request.duration"]
+    }
+  }' | jq '.assertions'
+```
+
+Use `filter` to scope diagnostics to a failing app, service, session, trace, or
+route:
+
+```bash
+curl -sS -X POST http://127.0.0.1:8080/api/diagnostics \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "filter": {"service": "backend-api", "sessionId": "session-123"},
+    "expect": {"sources": ["logs", "apm"], "services": ["backend-api"]}
+  }'
+```
+
+To download an agent-readable archive:
+
+```bash
+curl -sS -X POST http://127.0.0.1:8080/api/diagnostics/archive \
+  -H 'Content-Type: application/json' \
+  -d '{"expect":{"nonEmpty":true,"sources":["rum","logs","apm","otlp"]}}' \
+  -o dogtap-diagnostics.zip
+```
+
+## Capture A Local Directory
+
+`dogtap diagnose` remains useful when the caller wants a directory of files on
+the host filesystem:
 
 ```bash
 go run ./cmd/dogtap diagnose \
@@ -26,13 +69,14 @@ go run ./cmd/dogtap diagnose \
   -expect-metric http.server.request.duration
 ```
 
-For private or project-specific adoption work, write artifacts under an ignored
-path such as `.private/adoption/` or the target project's own ignored output
-directory. Do not commit raw diagnostics from a real app.
+For private or project-specific adoption work, write CLI artifacts or downloaded
+archives under an ignored path such as `.private/adoption/` or the target
+project's own ignored output directory. Do not commit raw diagnostics from a
+real app.
 
 ## Output Files
 
-`dogtap diagnose` writes one directory with:
+`dogtap diagnose` and `POST /api/diagnostics/archive` both produce:
 
 | File | Purpose |
 | --- | --- |
@@ -53,7 +97,23 @@ the same directory.
 When another repository starts an isolated environment, keep Dogtap diagnostics
 outside that public repository unless the contents are sanitized.
 
-Example shape:
+API-first shape:
+
+```bash
+curl -sS -X POST http://127.0.0.1:18080/api/diagnostics/archive \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "expect": {
+      "nonEmpty": true,
+      "sources": ["rum", "logs", "otlp"],
+      "payloadKinds": ["replay", "metric"],
+      "services": ["frontend-app", "backend-api", "gateway-api"]
+    }
+  }' \
+  -o "$PWD/.tmp/dogtap-diagnostics.zip"
+```
+
+CLI directory shape:
 
 ```bash
 DOGTAP_ARTIFACT_DIR="$PWD/.tmp/dogtap-diagnostics" \
@@ -65,16 +125,16 @@ DOGTAP_ARTIFACT_DIR="$PWD/.tmp/dogtap-diagnostics" \
     -expect-service frontend-app,backend-api,gateway-api
 ```
 
-Use `-filter-*` flags to narrow the debug bundle for a failing workflow:
+Use API `filter` or CLI `-filter-*` flags to narrow the evidence for a failing
+workflow:
 
 ```bash
-go run ./cmd/dogtap diagnose \
-  -base-url http://127.0.0.1:18080 \
-  -output .private/adoption/dogtap-last-run \
-  -filter-session-id "$SESSION_ID" \
-  -filter-service backend-api \
-  -expect-session "$SESSION_ID" \
-  -expect-source rum,logs,otlp
+curl -sS -X POST http://127.0.0.1:18080/api/diagnostics \
+  -H 'Content-Type: application/json' \
+  -d "{
+    \"filter\": {\"service\":\"backend-api\",\"sessionId\":\"$SESSION_ID\"},
+    \"expect\": {\"sessions\":[\"$SESSION_ID\"],\"sources\":[\"logs\",\"apm\"]}
+  }"
 ```
 
 ## Local Dev Server Pattern
@@ -85,8 +145,11 @@ For a manually running frontend/backend:
 2. Point frontend RUM or Faro collector config at Dogtap.
 3. Point backend traces/logs/metrics at Dogtap or an OTLP bridge.
 4. Exercise one workflow in the browser or API client.
-5. Run `dogtap diagnose` with expectations for that workflow.
-6. Open `summary.md` first, then inspect `events.json` and `debug-bundle.json`.
+5. Query `POST /api/diagnostics` with expectations for that workflow.
+6. If a file artifact is needed, download `POST /api/diagnostics/archive` or run
+   `dogtap diagnose`.
+7. Open `summary.md` first, then inspect `events.json` and
+   `debug-bundle.json`.
 
 ## Reading Failures
 

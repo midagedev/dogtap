@@ -71,6 +71,7 @@ Status: complete with local and GitHub Actions verification
 - JSON and Markdown reports
 - exit code policy
 - CI replay/report shape
+- API-first live diagnostics for Docker Compose and external agents
 
 Gate:
 

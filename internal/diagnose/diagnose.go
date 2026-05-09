@@ -29,6 +29,13 @@ type Options struct {
 	Client       *http.Client
 }
 
+type Request struct {
+	Limit        int            `json:"limit,omitempty"`
+	Expect       Expectations   `json:"expect,omitempty"`
+	Expectations Expectations   `json:"expectations,omitempty"`
+	Filter       bundle.Request `json:"filter,omitempty"`
+}
+
 type Expectations struct {
 	NonEmpty     bool     `json:"nonEmpty,omitempty"`
 	Sources      []string `json:"sources,omitempty"`
@@ -40,6 +47,41 @@ type Expectations struct {
 	Routes       []string `json:"routes,omitempty"`
 	Metrics      []string `json:"metrics,omitempty"`
 	Endpoints    []string `json:"endpoints,omitempty"`
+}
+
+type Snapshot struct {
+	CreatedAt   time.Time             `json:"createdAt"`
+	BaseURL     string                `json:"baseUrl,omitempty"`
+	Limit       int                   `json:"limit"`
+	Filter      bundle.Request        `json:"filter"`
+	Health      map[string]string     `json:"healthz"`
+	Readiness   map[string]string     `json:"readyz"`
+	Events      []event.EventEnvelope `json:"events"`
+	Report      report.Report         `json:"report"`
+	DebugBundle bundle.DebugBundle    `json:"debugBundle"`
+	Metrics     string                `json:"metrics"`
+	Assertions  AssertionReport       `json:"assertions"`
+}
+
+type SnapshotInput struct {
+	CreatedAt   time.Time
+	BaseURL     string
+	Request     Request
+	Health      map[string]string
+	Readiness   map[string]string
+	Events      []event.EventEnvelope
+	Report      report.Report
+	DebugBundle bundle.DebugBundle
+	Metrics     string
+	Probes      map[string]bool
+}
+
+type Artifact struct {
+	Name        string
+	Filename    string
+	ContentType string
+	StatusCode  int
+	Body        []byte
 }
 
 type Result struct {
@@ -157,7 +199,7 @@ func Collect(ctx context.Context, opt Options) (Result, error) {
 	})
 
 	writeJSONFile(&result, "assertions", "assertions.json", result.Assertions, http.StatusOK)
-	writeTextFile(&result, "summary", "summary.md", renderSummary(result), http.StatusOK)
+	writeTextFile(&result, "summary", "summary.md", RenderSummary(result), http.StatusOK)
 	writeManifestFile(&result)
 
 	if result.Assertions.Status == "fail" {
@@ -182,6 +224,132 @@ func normalizeOptions(opt Options) Options {
 	}
 	opt.Expectations = normalizeExpectations(opt.Expectations)
 	return opt
+}
+
+func NormalizeRequest(req Request, defaultLimit int) Request {
+	if expectationIsEmpty(req.Expect) {
+		req.Expect = req.Expectations
+	}
+	req.Expect = normalizeExpectations(req.Expect)
+	if req.Limit <= 0 && req.Filter.Limit > 0 {
+		req.Limit = req.Filter.Limit
+	}
+	if req.Limit <= 0 {
+		req.Limit = defaultLimit
+	}
+	if req.Limit <= 0 {
+		req.Limit = 200
+	}
+	if req.Filter.Limit <= 0 {
+		req.Filter.Limit = req.Limit
+	}
+	req.Expectations = Expectations{}
+	return req
+}
+
+func NewSnapshot(input SnapshotInput) Snapshot {
+	createdAt := input.CreatedAt
+	if createdAt.IsZero() {
+		createdAt = time.Now().UTC()
+	}
+	req := NormalizeRequest(input.Request, len(input.Events))
+	probes := input.Probes
+	if probes == nil {
+		probes = map[string]bool{}
+	}
+	return Snapshot{
+		CreatedAt:   createdAt,
+		BaseURL:     strings.TrimRight(input.BaseURL, "/"),
+		Limit:       req.Limit,
+		Filter:      req.Filter,
+		Health:      input.Health,
+		Readiness:   input.Readiness,
+		Events:      input.Events,
+		Report:      input.Report,
+		DebugBundle: input.DebugBundle,
+		Metrics:     input.Metrics,
+		Assertions:  BuildAssertions(input.Events, req.Expect, probes),
+	}
+}
+
+func SnapshotArtifacts(snapshot Snapshot, outputDir string) []Artifact {
+	artifacts := []Artifact{
+		jsonArtifact("healthz", "healthz.json", snapshot.Health),
+		jsonArtifact("readyz", "readyz.json", snapshot.Readiness),
+		jsonArtifact("events", "events.json", snapshot.Events),
+		jsonArtifact("report", "report.json", snapshot.Report),
+		jsonArtifact("debug-bundle", "debug-bundle.json", snapshot.DebugBundle),
+		textArtifact("metrics", "metrics.txt", snapshot.Metrics),
+		jsonArtifact("assertions", "assertions.json", snapshot.Assertions),
+	}
+
+	files := make(map[string]File, len(artifacts)+2)
+	for _, artifact := range artifacts {
+		files[artifact.Name] = File{
+			Path:       artifactPath(outputDir, artifact.Filename),
+			Content:    artifact.ContentType,
+			StatusCode: artifact.StatusCode,
+		}
+	}
+	files["summary"] = File{Path: artifactPath(outputDir, "summary.md"), Content: "text/markdown", StatusCode: http.StatusOK}
+	files["manifest"] = File{Path: artifactPath(outputDir, "manifest.json"), Content: "application/json", StatusCode: http.StatusOK}
+
+	result := Result{
+		CreatedAt:  snapshot.CreatedAt,
+		BaseURL:    snapshot.BaseURL,
+		OutputDir:  outputDir,
+		Files:      files,
+		Assertions: snapshot.Assertions,
+	}
+
+	return append(artifacts,
+		textArtifact("summary", "summary.md", RenderSummary(result)),
+		jsonArtifact("manifest", "manifest.json", result),
+	)
+}
+
+func expectationIsEmpty(exp Expectations) bool {
+	return !exp.NonEmpty &&
+		len(exp.Sources) == 0 &&
+		len(exp.PayloadKinds) == 0 &&
+		len(exp.Services) == 0 &&
+		len(exp.Sessions) == 0 &&
+		len(exp.Traces) == 0 &&
+		len(exp.Cases) == 0 &&
+		len(exp.Routes) == 0 &&
+		len(exp.Metrics) == 0 &&
+		len(exp.Endpoints) == 0
+}
+
+func artifactPath(outputDir, filename string) string {
+	if strings.TrimSpace(outputDir) == "" {
+		return filename
+	}
+	return filepath.Join(outputDir, filename)
+}
+
+func jsonArtifact(name, filename string, value any) Artifact {
+	body, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		body = []byte(`{"error":"marshal diagnostics artifact"}`)
+	}
+	return Artifact{
+		Name:        name,
+		Filename:    filename,
+		ContentType: "application/json",
+		StatusCode:  http.StatusOK,
+		Body:        append(body, '\n'),
+	}
+}
+
+func textArtifact(name, filename, value string) Artifact {
+	return Artifact{
+		Name:        name,
+		Filename:    filename,
+		ContentType: contentLabel("text/plain", filename),
+		StatusCode:  http.StatusOK,
+		Body:        []byte(value),
+	}
 }
 
 func normalizeExpectations(exp Expectations) Expectations {
@@ -511,7 +679,7 @@ func missingPayloadKindHint(kind string) string {
 	}
 }
 
-func renderSummary(result Result) string {
+func RenderSummary(result Result) string {
 	var b strings.Builder
 	fmt.Fprintln(&b, "# Dogtap Diagnostics")
 	fmt.Fprintln(&b)

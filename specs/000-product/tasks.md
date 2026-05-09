@@ -373,3 +373,29 @@ Evidence note 2026-05-09:
 - `docs/runbooks/AGENT_TELEMETRY_TRIAGE.md` explains local dev and isolated E2E
   triage patterns while keeping private adoption evidence out of the public
   repository.
+
+## Phase 15: API-First Live Diagnostics
+
+- [x] T150 Add `POST /api/diagnostics` for JSON diagnostics with retained
+  events, validation report, debug bundle, metrics, assertions, and practical
+  missing-signal hints.
+- [x] T151 Add `POST /api/diagnostics/archive` for a zip archive containing the
+  same agent-readable files produced by `dogtap diagnose`.
+- [x] T152 Reuse diagnostics assertion and summary rendering between the CLI
+  and server API.
+- [x] T153 Document Docker Compose and local dev usage through the diagnostics
+  API, with CLI capture remaining available for artifact directories.
+
+Gate:
+
+- [x] G5 CI Contract diagnostics API subset
+
+Evidence note 2026-05-10:
+
+- Server tests cover scoped diagnostics assertions and archive file contents.
+- Diagnostics API requests support `limit`, `filter`, and `expect` fields so
+  agents can ask whether a specific app, service, session, trace, route, metric,
+  source, or endpoint was observed.
+- The archive endpoint returns `summary.md`, `assertions.json`, `events.json`,
+  `report.json`, `debug-bundle.json`, `metrics.txt`, `healthz.json`,
+  `readyz.json`, and `manifest.json`.

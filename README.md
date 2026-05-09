@@ -204,7 +204,30 @@ Expected evidence:
 - dashboard panels show service map, traffic, replay payloads, logs, trace
   spans, metrics, validation results, and search hints
 
-### 6. Seed The Dashboard Demo
+### 6. Capture Live Diagnostics
+
+For Docker Compose or another externally managed Dogtap container, use the HTTP
+API:
+
+```bash
+curl -sS -X POST http://localhost:8080/api/diagnostics \
+  -H 'Content-Type: application/json' \
+  -d '{"expect":{"nonEmpty":true,"sources":["rum","logs","apm","otlp"]}}'
+```
+
+Download the same evidence as a zip archive:
+
+```bash
+curl -sS -X POST http://localhost:8080/api/diagnostics/archive \
+  -H 'Content-Type: application/json' \
+  -d '{"expect":{"nonEmpty":true}}' \
+  -o dogtap-diagnostics.zip
+```
+
+Use `go run ./cmd/dogtap diagnose` when a host-side diagnostics directory is
+more convenient than an API response.
+
+### 7. Seed The Dashboard Demo
 
 With Dogtap running on the default ports:
 

@@ -1,11 +1,13 @@
 package server
 
 import (
+	"archive/zip"
 	"bytes"
 	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -20,6 +22,7 @@ import (
 	resourcev1 "go.opentelemetry.io/proto/otlp/resource/v1"
 
 	"github.com/midagedev/dogtap/internal/config"
+	"github.com/midagedev/dogtap/internal/diagnose"
 	"github.com/midagedev/dogtap/internal/event"
 	"github.com/midagedev/dogtap/internal/store"
 )
@@ -576,6 +579,116 @@ func TestDebugBundleSupportsSessionAndPayloadKindFilters(t *testing.T) {
 	}
 	if got.Events[0].Normalized.SessionID != "session-1" {
 		t.Fatalf("unexpected session in bundle: %#v", got.Events[0].Normalized)
+	}
+}
+
+func TestDiagnosticsAPIReturnsScopedAssertions(t *testing.T) {
+	app := newTestApp(t, config.ModeLocal)
+	body := `{
+		"service":"web",
+		"env":"local",
+		"version":"dev",
+		"usr":{"id":"user-1"},
+		"context":{"account":{"id":"acct-1"},"workspace":{"id":"ws-1"},"case":{"id":"case-1"}},
+		"view":{"url_path":"/cases/case-1"}
+	}`
+	req := httptest.NewRequest(http.MethodPost, "/rum", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	app.Handler().ServeHTTP(httptest.NewRecorder(), req)
+
+	diagReq := httptest.NewRequest(http.MethodPost, "/api/diagnostics", bytes.NewBufferString(`{
+		"limit": 50,
+		"filter": {"service":"web"},
+		"expect": {
+			"nonEmpty": true,
+			"sources": ["rum"],
+			"services": ["web"],
+			"routes": ["/cases/case-1"],
+			"cases": ["case-1"],
+			"endpoints": ["/rum"]
+		}
+	}`))
+	diagReq.Header.Set("Content-Type", "application/json")
+	diagRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(diagRec, diagReq)
+
+	if diagRec.Code != http.StatusOK {
+		t.Fatalf("got status %d: %s", diagRec.Code, diagRec.Body.String())
+	}
+	var got diagnose.Snapshot
+	if err := json.Unmarshal(diagRec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Assertions.Status != "pass" {
+		t.Fatalf("diagnostics assertions = %s: %#v", got.Assertions.Status, got.Assertions.Checks)
+	}
+	if len(got.Events) != 1 || got.DebugBundle.Summary.Total != 1 {
+		t.Fatalf("expected scoped diagnostics event and bundle: events=%d bundle=%#v", len(got.Events), got.DebugBundle.Summary)
+	}
+	if !strings.Contains(got.Metrics, "dogtap_store_events 1") {
+		t.Fatalf("expected metrics in diagnostics response:\n%s", got.Metrics)
+	}
+}
+
+func TestDiagnosticsArchiveReturnsAgentReadableFiles(t *testing.T) {
+	app := newTestApp(t, config.ModeLocal)
+	req := httptest.NewRequest(http.MethodPost, "/rum", bytes.NewBufferString(`{
+		"service":"web",
+		"env":"local",
+		"usr":{"id":"user-1"},
+		"context":{"account":{"id":"acct-1"},"workspace":{"id":"ws-1"}}
+	}`))
+	req.Header.Set("Content-Type", "application/json")
+	app.Handler().ServeHTTP(httptest.NewRecorder(), req)
+
+	archiveReq := httptest.NewRequest(http.MethodPost, "/api/diagnostics/archive", bytes.NewBufferString(`{
+		"expect": {"nonEmpty": true, "sources": ["rum"], "services": ["web"]}
+	}`))
+	archiveReq.Header.Set("Content-Type", "application/json")
+	archiveRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(archiveRec, archiveReq)
+
+	if archiveRec.Code != http.StatusOK {
+		t.Fatalf("got status %d: %s", archiveRec.Code, archiveRec.Body.String())
+	}
+	if got := archiveRec.Header().Get("Content-Type"); got != "application/zip" {
+		t.Fatalf("content type = %q, want application/zip", got)
+	}
+
+	reader, err := zip.NewReader(bytes.NewReader(archiveRec.Body.Bytes()), int64(archiveRec.Body.Len()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := map[string]string{}
+	for _, file := range reader.File {
+		rc, err := file.Open()
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, err := io.ReadAll(rc)
+		_ = rc.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		files[file.Name] = string(body)
+	}
+	for _, name := range []string{
+		"healthz.json",
+		"readyz.json",
+		"events.json",
+		"report.json",
+		"debug-bundle.json",
+		"metrics.txt",
+		"assertions.json",
+		"summary.md",
+		"manifest.json",
+	} {
+		if _, ok := files[name]; !ok {
+			t.Fatalf("archive missing %s; got %v", name, files)
+		}
+	}
+	if !strings.Contains(files["summary.md"], "source:rum") || !strings.Contains(files["assertions.json"], `"status": "pass"`) {
+		t.Fatalf("archive diagnostics missing expected assertion evidence:\n%s\n%s", files["summary.md"], files["assertions.json"])
 	}
 }
 
