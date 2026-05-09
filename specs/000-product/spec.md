@@ -183,6 +183,11 @@ Acceptance criteria:
   health, retained events, latest validation report, debug bundle, metrics,
   expectation assertions, and practical hints for missing logs, traces,
   metrics, RUM sessions, and session replay.
+- FR-068: Expose live diagnostics through Dogtap's HTTP API so Docker Compose,
+  local dev servers, isolated E2E stacks, and external agents can request JSON
+  diagnostics or a downloadable archive without shelling into the Dogtap
+  container. The API must reuse the same assertion and missing-signal hint
+  semantics as `dogtap diagnose`.
 
 ## Non-Functional Requirements
 

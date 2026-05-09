@@ -26,11 +26,16 @@ Implemented CI surface:
 - Live diagnostics can capture a running Dogtap instance into an artifact
   directory with `summary.md`, `assertions.json`, `events.json`,
   `report.json`, `debug-bundle.json`, and `metrics.txt`.
+- Live diagnostics are also available over HTTP through
+  `POST /api/diagnostics` and `POST /api/diagnostics/archive`, allowing Docker
+  Compose and external agents to collect the same assertion evidence without
+  shell access to the Dogtap container.
 
 ## Verification
 
 ```bash
 go test ./cmd/dogtap ./internal/report
+go test ./internal/diagnose ./internal/server
 go test ./...
 npm --prefix web run build
 DOGTAP_E2E_BASE_URL=http://127.0.0.1:4175 npm --prefix web run test:e2e

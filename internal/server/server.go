@@ -1,10 +1,13 @@
 package server
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -16,6 +19,7 @@ import (
 
 	"github.com/midagedev/dogtap/internal/bundle"
 	"github.com/midagedev/dogtap/internal/config"
+	"github.com/midagedev/dogtap/internal/diagnose"
 	"github.com/midagedev/dogtap/internal/event"
 	"github.com/midagedev/dogtap/internal/forwarding"
 	"github.com/midagedev/dogtap/internal/intake"
@@ -213,6 +217,8 @@ func (a *App) registerCommon(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/validation/failures", a.handleValidationFailures)
 	mux.HandleFunc("GET /api/reports/latest", a.handleLatestReport)
 	mux.HandleFunc("POST /api/debug-bundles", a.handleCreateDebugBundle)
+	mux.HandleFunc("POST /api/diagnostics", a.handleCreateDiagnostics)
+	mux.HandleFunc("POST /api/diagnostics/archive", a.handleCreateDiagnosticsArchive)
 	mux.HandleFunc("POST /api/replay", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusNotImplemented, map[string]string{"error": "use dogtap replay for fixture replay"})
 	})
@@ -470,12 +476,150 @@ func (a *App) handleLatestReport(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, report.FromEvents(events))
 }
 
+func (a *App) handleCreateDiagnostics(w http.ResponseWriter, r *http.Request) {
+	snapshot, ok := a.diagnosticsSnapshot(w, r)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusOK, snapshot)
+}
+
+func (a *App) handleCreateDiagnosticsArchive(w http.ResponseWriter, r *http.Request) {
+	snapshot, ok := a.diagnosticsSnapshot(w, r)
+	if !ok {
+		return
+	}
+
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	for _, artifact := range diagnose.SnapshotArtifacts(snapshot, "") {
+		header := &zip.FileHeader{
+			Name:   artifact.Filename,
+			Method: zip.Deflate,
+		}
+		header.SetModTime(snapshot.CreatedAt)
+		header.SetMode(0o644)
+		writer, err := zw.CreateHeader(header)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+		if _, err := writer.Write(artifact.Body); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+	}
+	if err := zw.Close(); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", `attachment; filename="dogtap-diagnostics.zip"`)
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(buf.Bytes())
+}
+
+func (a *App) diagnosticsSnapshot(w http.ResponseWriter, r *http.Request) (diagnose.Snapshot, bool) {
+	req, ok := decodeDiagnosticsRequest(w, r)
+	if !ok {
+		return diagnose.Snapshot{}, false
+	}
+	req = diagnose.NormalizeRequest(req, a.cfg.Storage.MaxEvents)
+	events, err := a.store.List(r.Context(), diagnosticsQuery(req))
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return diagnose.Snapshot{}, false
+	}
+	filter := req.Filter
+	filter.Limit = req.Limit
+	debugBundle := bundle.New(filter, events)
+	snapshot := diagnose.NewSnapshot(diagnose.SnapshotInput{
+		CreatedAt:   time.Now().UTC(),
+		BaseURL:     requestBaseURL(r),
+		Request:     req,
+		Health:      map[string]string{"status": "ok"},
+		Readiness:   map[string]string{"status": "ready"},
+		Events:      events,
+		Report:      report.FromEvents(events),
+		DebugBundle: debugBundle,
+		Metrics:     a.metricsText(events),
+		Probes: map[string]bool{
+			"healthz":      true,
+			"readyz":       true,
+			"events":       true,
+			"report":       true,
+			"metrics":      true,
+			"debug-bundle": true,
+		},
+	})
+	return snapshot, true
+}
+
+func decodeDiagnosticsRequest(w http.ResponseWriter, r *http.Request) (diagnose.Request, bool) {
+	if r.Body == nil || r.ContentLength == 0 {
+		return diagnose.Request{}, true
+	}
+	var req diagnose.Request
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if errors.Is(err, io.EOF) {
+			return diagnose.Request{}, true
+		}
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid diagnostics request"})
+		return diagnose.Request{}, false
+	}
+	return req, true
+}
+
+func diagnosticsQuery(req diagnose.Request) store.Query {
+	filter := req.Filter
+	return store.Query{
+		Source:      filter.Source,
+		PayloadKind: filter.PayloadKind,
+		Service:     filter.Service,
+		Env:         filter.Env,
+		UserID:      filter.UserID,
+		AccountID:   filter.AccountID,
+		WorkspaceID: filter.WorkspaceID,
+		CaseID:      filter.CaseID,
+		TraceID:     filter.TraceID,
+		SessionID:   filter.SessionID,
+		ViewID:      filter.ViewID,
+		Route:       filter.Route,
+		Status:      filter.Status,
+		Limit:       req.Limit,
+	}
+}
+
+func requestBaseURL(r *http.Request) string {
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	if forwardedProto := strings.TrimSpace(r.Header.Get("X-Forwarded-Proto")); forwardedProto != "" {
+		scheme = strings.Split(forwardedProto, ",")[0]
+	}
+	host := r.Host
+	if forwardedHost := strings.TrimSpace(r.Header.Get("X-Forwarded-Host")); forwardedHost != "" {
+		host = strings.Split(forwardedHost, ",")[0]
+	}
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	return scheme + "://" + strings.TrimSpace(host)
+}
+
 func (a *App) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	events, err := a.store.List(r.Context(), store.Query{Limit: a.cfg.Storage.MaxEvents})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
+	fmt.Fprint(w, a.metricsText(events))
+}
+
+func (a *App) metricsText(events []event.EventEnvelope) string {
 	bySource := map[event.Source]int{}
 	byValidation := map[string]int{}
 	failures := 0
@@ -491,61 +635,62 @@ func (a *App) handleMetrics(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
-	fmt.Fprintln(w, "# HELP dogtap_store_events Current retained event count.")
-	fmt.Fprintln(w, "# TYPE dogtap_store_events gauge")
-	fmt.Fprintf(w, "dogtap_store_events %d\n", len(events))
-	fmt.Fprintln(w, "# HELP dogtap_events_by_source Current retained event count by source.")
-	fmt.Fprintln(w, "# TYPE dogtap_events_by_source gauge")
+	var b strings.Builder
+	fmt.Fprintln(&b, "# HELP dogtap_store_events Current retained event count.")
+	fmt.Fprintln(&b, "# TYPE dogtap_store_events gauge")
+	fmt.Fprintf(&b, "dogtap_store_events %d\n", len(events))
+	fmt.Fprintln(&b, "# HELP dogtap_events_by_source Current retained event count by source.")
+	fmt.Fprintln(&b, "# TYPE dogtap_events_by_source gauge")
 	for source, count := range bySource {
-		fmt.Fprintf(w, "dogtap_events_by_source{source=%q} %d\n", source, count)
+		fmt.Fprintf(&b, "dogtap_events_by_source{source=%q} %d\n", source, count)
 	}
-	fmt.Fprintln(w, "# HELP dogtap_events_by_validation Current retained event count by validation status.")
-	fmt.Fprintln(w, "# TYPE dogtap_events_by_validation gauge")
+	fmt.Fprintln(&b, "# HELP dogtap_events_by_validation Current retained event count by validation status.")
+	fmt.Fprintln(&b, "# TYPE dogtap_events_by_validation gauge")
 	for status, count := range byValidation {
-		fmt.Fprintf(w, "dogtap_events_by_validation{status=%q} %d\n", status, count)
+		fmt.Fprintf(&b, "dogtap_events_by_validation{status=%q} %d\n", status, count)
 	}
-	fmt.Fprintln(w, "# HELP dogtap_validation_failures Current retained validation failure count.")
-	fmt.Fprintln(w, "# TYPE dogtap_validation_failures gauge")
-	fmt.Fprintf(w, "dogtap_validation_failures %d\n", failures)
+	fmt.Fprintln(&b, "# HELP dogtap_validation_failures Current retained validation failure count.")
+	fmt.Fprintln(&b, "# TYPE dogtap_validation_failures gauge")
+	fmt.Fprintf(&b, "dogtap_validation_failures %d\n", failures)
 
 	if a.safety != nil {
-		fmt.Fprintln(w, "# HELP dogtap_intake_in_flight Current in-flight intake requests admitted by Dogtap.")
-		fmt.Fprintln(w, "# TYPE dogtap_intake_in_flight gauge")
-		fmt.Fprintf(w, "dogtap_intake_in_flight %d\n", a.safety.inFlight.Load())
-		fmt.Fprintln(w, "# HELP dogtap_intake_accepted_total Intake payloads accepted after safety controls.")
-		fmt.Fprintln(w, "# TYPE dogtap_intake_accepted_total counter")
-		fmt.Fprintf(w, "dogtap_intake_accepted_total %d\n", a.safety.accepted.Load())
-		fmt.Fprintln(w, "# HELP dogtap_intake_sample_drops_total Intake payloads dropped by sampling.")
-		fmt.Fprintln(w, "# TYPE dogtap_intake_sample_drops_total counter")
-		fmt.Fprintf(w, "dogtap_intake_sample_drops_total %d\n", a.safety.sampleDrops.Load())
-		fmt.Fprintln(w, "# HELP dogtap_intake_backpressure_drops_total Intake payloads dropped because the Dogtap queue was full.")
-		fmt.Fprintln(w, "# TYPE dogtap_intake_backpressure_drops_total counter")
-		fmt.Fprintf(w, "dogtap_intake_backpressure_drops_total %d\n", a.safety.backpressureDrops.Load())
-		fmt.Fprintln(w, "# HELP dogtap_intake_storage_drops_total Intake payloads dropped because Dogtap storage failed.")
-		fmt.Fprintln(w, "# TYPE dogtap_intake_storage_drops_total counter")
-		fmt.Fprintf(w, "dogtap_intake_storage_drops_total %d\n", a.safety.storageDrops.Load())
+		fmt.Fprintln(&b, "# HELP dogtap_intake_in_flight Current in-flight intake requests admitted by Dogtap.")
+		fmt.Fprintln(&b, "# TYPE dogtap_intake_in_flight gauge")
+		fmt.Fprintf(&b, "dogtap_intake_in_flight %d\n", a.safety.inFlight.Load())
+		fmt.Fprintln(&b, "# HELP dogtap_intake_accepted_total Intake payloads accepted after safety controls.")
+		fmt.Fprintln(&b, "# TYPE dogtap_intake_accepted_total counter")
+		fmt.Fprintf(&b, "dogtap_intake_accepted_total %d\n", a.safety.accepted.Load())
+		fmt.Fprintln(&b, "# HELP dogtap_intake_sample_drops_total Intake payloads dropped by sampling.")
+		fmt.Fprintln(&b, "# TYPE dogtap_intake_sample_drops_total counter")
+		fmt.Fprintf(&b, "dogtap_intake_sample_drops_total %d\n", a.safety.sampleDrops.Load())
+		fmt.Fprintln(&b, "# HELP dogtap_intake_backpressure_drops_total Intake payloads dropped because the Dogtap queue was full.")
+		fmt.Fprintln(&b, "# TYPE dogtap_intake_backpressure_drops_total counter")
+		fmt.Fprintf(&b, "dogtap_intake_backpressure_drops_total %d\n", a.safety.backpressureDrops.Load())
+		fmt.Fprintln(&b, "# HELP dogtap_intake_storage_drops_total Intake payloads dropped because Dogtap storage failed.")
+		fmt.Fprintln(&b, "# TYPE dogtap_intake_storage_drops_total counter")
+		fmt.Fprintf(&b, "dogtap_intake_storage_drops_total %d\n", a.safety.storageDrops.Load())
 	}
 
 	stats := a.forwarder.Stats()
-	fmt.Fprintln(w, "# HELP dogtap_forwarding_payloads_total Forwarding payloads handled by Dogtap.")
-	fmt.Fprintln(w, "# TYPE dogtap_forwarding_payloads_total counter")
-	fmt.Fprintf(w, "dogtap_forwarding_payloads_total %d\n", stats.Payloads)
-	fmt.Fprintln(w, "# HELP dogtap_forwarding_attempts_total Forwarding HTTP attempts made by Dogtap.")
-	fmt.Fprintln(w, "# TYPE dogtap_forwarding_attempts_total counter")
-	fmt.Fprintf(w, "dogtap_forwarding_attempts_total %d\n", stats.Attempts)
-	fmt.Fprintln(w, "# HELP dogtap_forwarding_retries_total Forwarding retries made by Dogtap.")
-	fmt.Fprintln(w, "# TYPE dogtap_forwarding_retries_total counter")
-	fmt.Fprintf(w, "dogtap_forwarding_retries_total %d\n", stats.Retries)
-	fmt.Fprintln(w, "# HELP dogtap_forwarding_successes_total Successful forwarded payloads.")
-	fmt.Fprintln(w, "# TYPE dogtap_forwarding_successes_total counter")
-	fmt.Fprintf(w, "dogtap_forwarding_successes_total %d\n", stats.Successes)
-	fmt.Fprintln(w, "# HELP dogtap_forwarding_failures_total Forwarding failures.")
-	fmt.Fprintln(w, "# TYPE dogtap_forwarding_failures_total counter")
-	fmt.Fprintf(w, "dogtap_forwarding_failures_total %d\n", stats.Failures)
-	fmt.Fprintln(w, "# HELP dogtap_forwarding_drops_total Forwarding drops after validation or retry policy.")
-	fmt.Fprintln(w, "# TYPE dogtap_forwarding_drops_total counter")
-	fmt.Fprintf(w, "dogtap_forwarding_drops_total %d\n", stats.Drops)
+	fmt.Fprintln(&b, "# HELP dogtap_forwarding_payloads_total Forwarding payloads handled by Dogtap.")
+	fmt.Fprintln(&b, "# TYPE dogtap_forwarding_payloads_total counter")
+	fmt.Fprintf(&b, "dogtap_forwarding_payloads_total %d\n", stats.Payloads)
+	fmt.Fprintln(&b, "# HELP dogtap_forwarding_attempts_total Forwarding HTTP attempts made by Dogtap.")
+	fmt.Fprintln(&b, "# TYPE dogtap_forwarding_attempts_total counter")
+	fmt.Fprintf(&b, "dogtap_forwarding_attempts_total %d\n", stats.Attempts)
+	fmt.Fprintln(&b, "# HELP dogtap_forwarding_retries_total Forwarding retries made by Dogtap.")
+	fmt.Fprintln(&b, "# TYPE dogtap_forwarding_retries_total counter")
+	fmt.Fprintf(&b, "dogtap_forwarding_retries_total %d\n", stats.Retries)
+	fmt.Fprintln(&b, "# HELP dogtap_forwarding_successes_total Successful forwarded payloads.")
+	fmt.Fprintln(&b, "# TYPE dogtap_forwarding_successes_total counter")
+	fmt.Fprintf(&b, "dogtap_forwarding_successes_total %d\n", stats.Successes)
+	fmt.Fprintln(&b, "# HELP dogtap_forwarding_failures_total Forwarding failures.")
+	fmt.Fprintln(&b, "# TYPE dogtap_forwarding_failures_total counter")
+	fmt.Fprintf(&b, "dogtap_forwarding_failures_total %d\n", stats.Failures)
+	fmt.Fprintln(&b, "# HELP dogtap_forwarding_drops_total Forwarding drops after validation or retry policy.")
+	fmt.Fprintln(&b, "# TYPE dogtap_forwarding_drops_total counter")
+	fmt.Fprintf(&b, "dogtap_forwarding_drops_total %d\n", stats.Drops)
+	return b.String()
 }
 
 func (a *App) handleCreateDebugBundle(w http.ResponseWriter, r *http.Request) {

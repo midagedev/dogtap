@@ -69,6 +69,66 @@ Returns:
 - `datadogQueries`
 - `redactionReport`
 
+### `POST /api/diagnostics`
+
+Creates a live diagnostics snapshot for agents, CI jobs, local dev servers, and
+Docker Compose users.
+
+Request body:
+
+- `limit`: maximum retained events to inspect
+- `filter`: same fields as `POST /api/debug-bundles`; scopes returned events,
+  report, debug bundle, metrics, and assertions
+- `expect`: assertion expectations for observed telemetry
+
+`expect` fields:
+
+- `nonEmpty`
+- `sources`
+- `payloadKinds`
+- `services`
+- `sessions`
+- `traces`
+- `cases`
+- `routes`
+- `metrics`
+- `endpoints`
+
+Returns:
+
+- `healthz`
+- `readyz`
+- `events`
+- `report`
+- `debugBundle`
+- `metrics`
+- `assertions`
+
+Expectation failures are represented in `assertions.status` and do not turn the
+HTTP response into an error. This lets agents parse missing-signal hints without
+special HTTP status handling.
+
+### `POST /api/diagnostics/archive`
+
+Creates a downloadable zip archive with the same diagnostic evidence as
+`POST /api/diagnostics`.
+
+Request body:
+
+- same as `POST /api/diagnostics`
+
+Returns `application/zip` containing:
+
+- `summary.md`
+- `assertions.json`
+- `events.json`
+- `report.json`
+- `debug-bundle.json`
+- `metrics.txt`
+- `healthz.json`
+- `readyz.json`
+- `manifest.json`
+
 ## RUM Intake
 
 ### `POST /rum`

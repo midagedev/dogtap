@@ -45,8 +45,26 @@ Replay captured fixtures into Dogtap and compare reports. Replay tests protect a
 
 ### Live diagnostics
 
-Use `dogtap diagnose` when a local dev server, isolated E2E stack, or external
-app adoption run is already sending telemetry to a running Dogtap instance:
+Use the diagnostics API when a local dev server, isolated E2E stack, Docker
+Compose environment, or external app adoption run is already sending telemetry
+to a running Dogtap instance:
+
+```bash
+curl -sS -X POST http://127.0.0.1:8080/api/diagnostics \
+  -H 'Content-Type: application/json' \
+  -d '{"expect":{"nonEmpty":true,"sources":["rum","logs","apm","otlp"],"payloadKinds":["replay","metric"]}}'
+```
+
+Download the same evidence as an archive:
+
+```bash
+curl -sS -X POST http://127.0.0.1:8080/api/diagnostics/archive \
+  -H 'Content-Type: application/json' \
+  -d '{"expect":{"nonEmpty":true}}' \
+  -o dogtap-diagnostics.zip
+```
+
+Use `dogtap diagnose` when a host-side artifact directory is more convenient:
 
 ```bash
 go run ./cmd/dogtap diagnose \
@@ -56,9 +74,9 @@ go run ./cmd/dogtap diagnose \
   -expect-payload-kind replay,metric
 ```
 
-The command writes `summary.md`, `assertions.json`, `events.json`,
-`report.json`, `debug-bundle.json`, and `metrics.txt` so humans and agents can
-triage missing telemetry without scraping console output.
+The API archive and CLI command write `summary.md`, `assertions.json`,
+`events.json`, `report.json`, `debug-bundle.json`, and `metrics.txt` so humans
+and agents can triage missing telemetry without scraping console output.
 
 ### Integration tests
 
@@ -136,8 +154,9 @@ Required fields by workflow should live in a separate validation config.
 - Confirm all appear in dashboard.
 - Run `make demo-seed` to populate replay, logs, spans, metrics, service map,
   traffic, and validation failure examples.
+- Query `POST /api/diagnostics` with `expect.nonEmpty=true`.
 - Run `go run ./cmd/dogtap diagnose -expect-non-empty` and inspect
-  `.dogtap/diagnostics/*/summary.md`.
+  `.dogtap/diagnostics/*/summary.md` when a directory artifact is needed.
 - Confirm missing service tags fail validation.
 - Confirm email and token-like values are redacted.
 - Confirm generated Datadog search queries are usable.
