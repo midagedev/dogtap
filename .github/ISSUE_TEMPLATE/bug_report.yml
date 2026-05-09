@@ -1,0 +1,54 @@
+name: Bug report
+description: Report a Dogtap behavior that looks incorrect.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include secrets, raw production telemetry, customer data, or private adoption details.
+        Use redacted or synthetic fixtures.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened, and what did you expect instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - RUM intake
+        - Session Replay payloads
+        - Logs intake
+        - APM traces
+        - OTLP
+        - Validation rules
+        - Dashboard
+        - Replay/report CLI
+        - Forwarding or production safety
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: Minimal commands, config, fixture, or app setup that reproduces the issue.
+      placeholder: |
+        go run ./cmd/dogtap serve
+        curl ...
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Redacted logs, validation output, screenshot, or report excerpt.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Go version, Node version, Dogtap commit/tag, and browser if relevant.

@@ -1,5 +1,7 @@
 # Dogtap
 
+![CI](https://github.com/midagedev/dogtap/actions/workflows/ci.yml/badge.svg)
+
 Datadog-compatible telemetry intake inspector for local development, CI
 validation, and production-safe forwarding experiments.
 
