@@ -92,6 +92,23 @@ reverse proxy that exposes:
 http://<reachable-dogtap-host>/datadog-intake-proxy
 ```
 
+## OpenTelemetry Collector Tee
+
+If the app already sends OTLP to a Collector, keep the application endpoint
+pointed at the Collector and tee from the Collector instead of pointing the app
+directly at Dogtap.
+
+Use:
+
+- `examples/adoption-kit/otel-collector-tee.yaml`
+- `examples/adoption-kit/compose.otel-collector-tee.yaml`
+- `examples/adoption-kit/otel-collector-tee.md`
+
+This pattern keeps Datadog primary and sends Dogtap a secondary inspection copy.
+The sample applies Collector-level sampling only to the Dogtap trace pipeline
+and relies on Dogtap's own `DOGTAP_SAMPLING_RATE`, TTL, and max event count for
+bounded local retention across all received signals.
+
 ## Signal-Specific Guidance
 
 ### Browser RUM And Session Replay

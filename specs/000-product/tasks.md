@@ -264,7 +264,7 @@ Evidence note 2026-05-08:
   Datadog logs currently depend on Agent-side tailing.
 - [x] T116 Add an executable Compose adoption fixture that proves Dogtap can be
   enabled and removed by changing only override files.
-- [ ] T117 Add an OpenTelemetry Collector tee example for traces/logs/metrics
+- [x] T117 Add an OpenTelemetry Collector tee example for traces/logs/metrics
   with Datadog primary and Dogtap inspection as a sampled secondary path.
 - [ ] T118 Add a RUM proxy canary runbook with Browser SDK version, raw-body,
   header stripping, allowlist, and rollback requirements.

@@ -127,7 +127,7 @@ blocked pending one realistic sanitized adoption profile.
 - Compose and Kubernetes sidecar injection templates: complete
 - frontend/backend Compose external injection smoke: complete
 - log-forwarder bridge guidance: complete
-- OpenTelemetry Collector tee recipe
+- OpenTelemetry Collector tee recipe: complete
 - RUM proxy runtime-config guidance: complete
 - RUM proxy canary guide
 - public CI and community contribution surface: complete
