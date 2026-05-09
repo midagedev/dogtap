@@ -35,6 +35,9 @@ change that restores the original Datadog or OTLP endpoints.
 | `logs-http.md` | Logs HTTP intake examples |
 | `log-forwarder-overrides.md` | Patterns for logs when Datadog Agent or a collector owns log tailing |
 | `kubernetes/deployment-sidecar.template.yaml` | Kubernetes same-pod sidecar fragment |
+| `otel-collector-tee.yaml` | OpenTelemetry Collector config with Datadog primary and Dogtap secondary exporters |
+| `compose.otel-collector-tee.yaml` | Compose wrapper for the Collector tee pattern |
+| `otel-collector-tee.md` | Collector tee usage, sampling, and safety notes |
 
 ## Compose Use
 
@@ -68,3 +71,7 @@ For an executable frontend/backend example of the same pattern, see
 ```bash
 make smoke-external-injection
 ```
+
+For applications that already send OTLP to an OpenTelemetry Collector, use
+`otel-collector-tee.md` to keep Datadog as the primary exporter while sending a
+bounded inspection copy to Dogtap.

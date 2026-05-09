@@ -1,0 +1,69 @@
+# OpenTelemetry Collector tee example.
+#
+# Intent:
+# - Datadog remains the primary exporter.
+# - Dogtap receives a secondary local/CI/staging inspection copy.
+# - Trace sampling applies only to the Dogtap trace pipeline.
+# - Dogtap's own DOGTAP_SAMPLING_RATE should still be used for bounded local
+#   retention across all signals.
+#
+# Requires the OpenTelemetry Collector Contrib distribution because this uses
+# the Datadog exporter and probabilistic_sampler processor.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 512
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+  probabilistic_sampler/dogtap_traces:
+    sampling_percentage: ${env:DOGTAP_TEE_TRACE_SAMPLING_PERCENTAGE}
+    hash_seed: 22
+
+exporters:
+  datadog:
+    api:
+      site: ${env:DD_SITE}
+      key: ${env:DD_API_KEY}
+  otlphttp/dogtap:
+    endpoint: ${env:DOGTAP_OTLP_HTTP_ENDPOINT}
+
+service:
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    traces/datadog:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [datadog]
+    metrics/datadog:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [datadog]
+    logs/datadog:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [datadog]
+
+    traces/dogtap:
+      receivers: [otlp]
+      processors: [memory_limiter, probabilistic_sampler/dogtap_traces, batch]
+      exporters: [otlphttp/dogtap]
+    metrics/dogtap:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/dogtap]
+    logs/dogtap:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/dogtap]

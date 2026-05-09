@@ -1,0 +1,40 @@
+services:
+  dogtap:
+    image: ${DOGTAP_IMAGE:-ghcr.io/midagedev/dogtap:latest}
+    ports:
+      - "${DOGTAP_HTTP_PORT:-8080}:8080"
+    environment:
+      DOGTAP_MODE: tee
+      DOGTAP_STORAGE_KIND: file
+      DOGTAP_STORAGE_PATH: /data/events.json
+      DOGTAP_STORAGE_MAX_EVENTS: ${DOGTAP_STORAGE_MAX_EVENTS:-2000}
+      DOGTAP_STORAGE_TTL: ${DOGTAP_STORAGE_TTL:-2h}
+      DOGTAP_SAMPLING_RATE: ${DOGTAP_SAMPLING_RATE:-0.1}
+      DOGTAP_ALLOW_RAW_PAYLOADS: "false"
+    volumes:
+      - dogtap-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  otel-collector:
+    image: ${OTELCOL_CONTRIB_IMAGE:-otel/opentelemetry-collector-contrib:0.151.0}
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    ports:
+      - "${OTELCOL_OTLP_GRPC_PORT:-4317}:4317"
+      - "${OTELCOL_OTLP_HTTP_PORT:-4318}:4318"
+    environment:
+      DD_API_KEY: ${DD_API_KEY:?set DD_API_KEY for the Datadog primary exporter}
+      DD_SITE: ${DD_SITE:-datadoghq.com}
+      DOGTAP_OTLP_HTTP_ENDPOINT: http://dogtap:4318
+      DOGTAP_TEE_TRACE_SAMPLING_PERCENTAGE: ${DOGTAP_TEE_TRACE_SAMPLING_PERCENTAGE:-10}
+    volumes:
+      - ./otel-collector-tee.yaml:/etc/otelcol-contrib/config.yaml:ro
+    depends_on:
+      dogtap:
+        condition: service_healthy
+
+volumes:
+  dogtap-data:

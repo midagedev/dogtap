@@ -42,6 +42,10 @@ The target workflow is:
 - Executable frontend/backend Compose smoke:
   `examples/external-injection-smoke/` and
   `scripts/external-injection/smoke.sh`
+- OpenTelemetry Collector tee example:
+  `examples/adoption-kit/otel-collector-tee.yaml`,
+  `examples/adoption-kit/compose.otel-collector-tee.yaml`, and
+  `examples/adoption-kit/otel-collector-tee.md`
 
 ## Source-Backed Compatibility Notes
 
@@ -61,8 +65,6 @@ Reference links are collected in `docs/references/datadog.md`.
 
 ## Remaining Tasks
 
-- Add an OTel Collector tee example that keeps Datadog primary and sends a
-  sampled local copy to Dogtap.
 - Add a RUM proxy canary guide covering Browser SDK version, raw-body
   preservation, sensitive header stripping, origin allowlisting, and rollback.
 - Capture one realistic sanitized adoption profile and publish only safe

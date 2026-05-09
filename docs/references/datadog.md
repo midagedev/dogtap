@@ -74,6 +74,8 @@ DogStatsD metrics are typically sent to the Datadog Agent on UDP port `8125`.
 The OpenTelemetry Collector supports agent, sidecar, DaemonSet, and gateway
 deployment patterns that can bridge telemetry to one or more backends.
 
+- https://opentelemetry.io/docs/collector/configuration/
+- https://opentelemetry.io/docs/collector/components/processor/
 - https://opentelemetry.io/docs/collector/deploy/agent/
 - https://opentelemetry.io/docs/platforms/kubernetes/collector/
 - https://docs.datadoghq.com/opentelemetry/setup/collector_exporter/install/
