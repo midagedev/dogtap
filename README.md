@@ -41,6 +41,11 @@ Use two lanes instead of forcing one telemetry path to satisfy every workflow:
 This keeps the common feedback loop fast without pretending that a local
 inspector is a complete Datadog replacement.
 
+For apps that already use Datadog, prefer external injection: add Dogtap as a
+sidecar or service and override standard Datadog/OTLP endpoints from environment
+or runtime config. The app should keep its existing Datadog Browser RUM SDK,
+Datadog tracer, log framework, and OpenTelemetry SDK where possible.
+
 ## Value For Frontend And Backend Teams
 
 Dogtap is most useful when you want to verify:
@@ -118,6 +123,15 @@ go run ./cmd/dogtap serve -config configs/generic-local.yaml
 
 ### 2. Point Browser RUM At Dogtap
 
+Preferred: expose the RUM proxy through runtime config and inject it from the
+outside:
+
+```bash
+DATADOG_RUM_PROXY_URL=http://localhost:8080/datadog-intake-proxy
+```
+
+Then pass that value to the existing Datadog RUM init object:
+
 ```ts
 datadogRum.init({
   applicationId: "local",
@@ -126,9 +140,13 @@ datadogRum.init({
   service: "your-frontend",
   env: "local",
   version: "local",
-  proxy: "http://localhost:8080/datadog-intake-proxy",
+  ...(runtimeRumProxy ? { proxy: runtimeRumProxy } : {}),
 });
 ```
+
+If the app hardcodes Datadog RUM setup, make the proxy value
+runtime-configurable once. Future Dogtap enable/disable operations should then
+be configuration-only.
 
 ### 3. Point Backend Telemetry At Dogtap
 
@@ -147,6 +165,7 @@ export OTEL_METRICS_EXPORTER=otlp
 Existing Datadog tracer, host process:
 
 ```bash
+export DD_TRACE_AGENT_URL=http://localhost:8126
 export DD_AGENT_HOST=localhost
 export DD_TRACE_AGENT_PORT=8126
 export DD_ENV=local
@@ -203,12 +222,19 @@ make demo-visual-check
 Copyable templates live under `examples/adoption-kit/`:
 
 - `compose.dogtap.yaml`: sidecar Compose service
+- `compose.override.template.yaml`: Compose override for injecting Dogtap into
+  existing services
 - `dogtap.local.yaml`: local persistent Dogtap config
+- `datadog-preserve.env`: Datadog-preserving env overlay for existing apps
 - `frontend-rum.md`: Browser RUM proxy snippets
+- `frontend-runtime-config.md`: runtime-config pattern for external RUM proxy
+  injection
 - `backend-otel-http.env`: backend OTLP HTTP defaults
 - `backend-otel-grpc.env`: backend OTLP gRPC defaults
 - `backend-datadog-tracer.env`: existing Datadog tracer defaults
 - `logs-http.md`: logs HTTP intake examples
+- `log-forwarder-overrides.md`: log collection bridge patterns
+- `kubernetes/deployment-sidecar.template.yaml`: Kubernetes sidecar fragment
 
 Runnable demo:
 
@@ -217,6 +243,7 @@ Runnable demo:
 Runbook:
 
 - `docs/runbooks/ADOPTING_DOGTAP.md`
+- `docs/runbooks/EXTERNAL_INJECTION_ADOPTION.md`
 
 ## Runtime Modes
 

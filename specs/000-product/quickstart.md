@@ -26,7 +26,14 @@ go run ./cmd/dogtap serve -config configs/generic-local.yaml
 
 ## Browser RUM Target
 
-Configure Datadog Browser RUM to use Dogtap as a proxy.
+Configure Datadog Browser RUM to use Dogtap as a proxy through runtime config
+where possible.
+
+```bash
+DATADOG_RUM_PROXY_URL=http://localhost:8080/datadog-intake-proxy
+```
+
+Then pass the value to the existing Datadog RUM init object:
 
 ```ts
 datadogRum.init({
@@ -36,7 +43,7 @@ datadogRum.init({
   service: "your-frontend",
   env: "local",
   version: "local",
-  proxy: "http://localhost:8080/datadog-intake-proxy",
+  ...(rumProxy ? { proxy: rumProxy } : {}),
 });
 ```
 
@@ -61,6 +68,7 @@ For Docker Compose containers in the same project, use `http://dogtap:4318`.
 For host processes:
 
 ```bash
+export DD_TRACE_AGENT_URL=http://localhost:8126
 export DD_AGENT_HOST=localhost
 export DD_TRACE_AGENT_PORT=8126
 export DD_ENV=local

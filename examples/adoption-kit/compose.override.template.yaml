@@ -1,0 +1,59 @@
+x-dogtap-datadog-env: &dogtap-datadog-env
+  DD_TRACE_AGENT_URL: http://dogtap:8126
+  DD_AGENT_HOST: dogtap
+  DD_TRACE_AGENT_PORT: "8126"
+  DD_ENV: local
+  DD_SERVICE: your-backend
+  DD_VERSION: local
+  DD_TRACE_SAMPLE_RATE: "1"
+  DD_LOGS_INJECTION: "true"
+
+x-dogtap-otel-env: &dogtap-otel-env
+  OTEL_SERVICE_NAME: your-backend
+  OTEL_RESOURCE_ATTRIBUTES: deployment.environment=local,service.version=local
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://dogtap:4318
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://dogtap:4318/v1/traces
+  OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: http://dogtap:4318/v1/logs
+  OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://dogtap:4318/v1/metrics
+  OTEL_TRACES_EXPORTER: otlp
+  OTEL_LOGS_EXPORTER: otlp
+  OTEL_METRICS_EXPORTER: otlp
+
+services:
+  dogtap:
+    image: ${DOGTAP_IMAGE:-ghcr.io/midagedev/dogtap:latest}
+    # Use this instead of image before a published release:
+    # build:
+    #   context: ${DOGTAP_REPO:-../dogtap}
+    ports:
+      - "${DOGTAP_HTTP_PORT:-8080}:8080"
+      - "${DOGTAP_APM_PORT:-8126}:8126"
+      - "${DOGTAP_OTLP_GRPC_PORT:-4317}:4317"
+      - "${DOGTAP_OTLP_HTTP_PORT:-4318}:4318"
+    environment:
+      DOGTAP_MODE: local
+      DOGTAP_STORAGE_KIND: file
+      DOGTAP_STORAGE_PATH: /data/events.json
+      DOGTAP_STORAGE_MAX_EVENTS: ${DOGTAP_STORAGE_MAX_EVENTS:-2000}
+      DOGTAP_STORAGE_TTL: ${DOGTAP_STORAGE_TTL:-2h}
+    volumes:
+      - dogtap-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Rename this service to match each backend service you want to inspect.
+  # If the service already has environment values, merge these entries instead
+  # of replacing the whole environment block.
+  your-backend:
+    environment:
+      <<: [*dogtap-datadog-env, *dogtap-otel-env]
+    depends_on:
+      dogtap:
+        condition: service_healthy
+
+volumes:
+  dogtap-data:

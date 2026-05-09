@@ -157,6 +157,13 @@ Acceptance criteria:
   Dogtap intake endpoints.
 - FR-062: Provide a smoke verification path that proves RUM, logs, traces, and
   metrics can be received before a team wires a real application.
+- FR-063: Provide a Datadog-preserving external injection adoption profile that
+  documents how Dogtap can be enabled through sidecars, Compose overrides,
+  Kubernetes patches, CI services, and runtime config without adding a
+  Dogtap-specific application SDK.
+- FR-064: Clearly distinguish supported endpoint redirection from unsupported
+  Datadog Agent behaviors such as container log tailing, DogStatsD, and Agent
+  integrations unless those behaviors receive fixture-backed support.
 
 ## Non-Functional Requirements
 
@@ -187,6 +194,9 @@ Acceptance criteria:
 - Production mode can be disabled or bypassed without application downtime.
 - A developer can add Dogtap to a generic frontend plus backend development
   stack without introducing Dogtap-specific runtime code.
+- A team that already uses Datadog can run a local or CI Dogtap lane by
+  applying external endpoint overrides and can roll back by removing those
+  overrides.
 
 ## Open Questions
 

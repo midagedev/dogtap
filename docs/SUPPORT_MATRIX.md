@@ -27,6 +27,18 @@ public release.
 | DogStatsD | none | Not supported | Out of scope for first public release |
 | Profiling | none | Not supported | Out of scope for first public release |
 
+## External Injection Surfaces
+
+| Existing usage | Current Dogtap fit | Notes |
+| --- | --- | --- |
+| Datadog Browser RUM SDK with configurable `proxy` | Supported | Use `/datadog-intake-proxy`; Session Replay arrives through the same proxy path. |
+| Datadog Browser RUM SDK with hardcoded init | Requires one preparatory app change | Make the `proxy` value runtime-configurable, then Dogtap enable/disable is external. |
+| Datadog backend tracer | Supported for local/CI intake | Prefer `DD_TRACE_AGENT_URL`; host/port env works for common tracer setups. |
+| Datadog trace/log correlation | Supported when logs reach Dogtap | Keep `DD_LOGS_INJECTION=true`; Dogtap still needs a log input path. |
+| DD Agent stdout/file log tailing | Not Dogtap-native | Use a collector/log-forwarder bridge to Dogtap logs or OTLP logs. |
+| DogStatsD metrics | Not supported | Keep Datadog Agent for DogStatsD; use OTLP metrics for Dogtap inspection. |
+| OTel Collector sidecar/gateway | Supported as a bridge pattern | Send OTLP traces/logs/metrics to Dogtap in local/CI or sampled tee modes. |
+
 ## Forwarding Surfaces
 
 | Source | Current level | Notes |
