@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "fixtureClass": "g1-real-evidence",
+  "gate": "G1 Fixture Evidence",
+  "source": "apm",
+  "captureStatus": "captured-from-real-datadog-node-tracer",
+  "captureDate": "2026-05-08",
+  "captureCommand": "DD_TRACE_AGENT_URL=http://127.0.0.1:18126 DD_SERVICE=api-service DD_ENV=local DD_VERSION=g1-fixture npm --prefix testdata/apm-node run emit",
+  "sourceEvidencePath": "testdata/g1-evidence/latest/apm/events-store.json",
+  "sanitizedEventPath": "fixtures/apm/node-tracer-event.sanitized.json",
+  "sanitizedDecodedTracePath": "fixtures/apm/node-tracer-decoded-trace.sanitized.json",
+  "wireProtocolObserved": {
+    "endpoint": "/v0.4/traces",
+    "method": "PUT",
+    "contentType": "application/msgpack",
+    "tracer": "dd-trace 5.44.0",
+    "runtime": "node v24.14.0"
+  },
+  "expectedNormalized": {
+    "source": "apm",
+    "service": "api-service",
+    "env": "local",
+    "version": "g1-fixture",
+    "method": "POST",
+    "statusCode": 500,
+    "accountId": "account-123",
+    "workspaceId": "workspace-123",
+    "caseId": "case-123"
+  },
+  "redactionExpectations": [
+    {
+      "field": "decoded[0][0].meta.authorization",
+      "expect": "redacted in promoted fixture"
+    },
+    {
+      "field": "normalized.tags.authorization",
+      "expect": "redacted in promoted fixture"
+    },
+    {
+      "field": "rawBody",
+      "expect": "omitted from promoted fixture because original msgpack contained the fixture bearer token"
+    }
+  ],
+  "validationEvidence": {
+    "requiredServiceTags": "pass",
+    "secretDetection": "failures observed for authorization key, bearer pattern, and raw body before promotion redaction",
+    "cardinality": "warnings observed for account.id, workspace.id, and case.id tags"
+  },
+  "externalDatadogTraffic": "not configured; tracer target was local Dogtap and Dogtap forwarding was disabled",
+  "g1Notes": "This fixture was promoted from a local real Datadog Node tracer flow. It is sanitized and should supersede the handwritten smoke fixture for APM G1 evidence review."
+}

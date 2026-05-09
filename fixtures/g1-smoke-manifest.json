@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "gate": "G1 Fixture Evidence",
+  "status": "smoke-only",
+  "summary": "Bundled fixtures exercise Dogtap replay and normalization plumbing, but they are not real SDK capture evidence.",
+  "fixtures": [
+    {
+      "path": "fixtures/rum/login.json",
+      "metadata": "fixtures/rum/login.meta.json"
+    },
+    {
+      "path": "fixtures/rum/missing-context.json",
+      "metadata": "fixtures/rum/missing-context.meta.json"
+    },
+    {
+      "path": "fixtures/logs/json-log.json",
+      "metadata": "fixtures/logs/json-log.meta.json"
+    },
+    {
+      "path": "fixtures/logs/text-log.txt",
+      "metadata": "fixtures/logs/text-log.meta.json"
+    },
+    {
+      "path": "fixtures/logs/gzip-log.json",
+      "metadata": "fixtures/logs/gzip-log.meta.json"
+    },
+    {
+      "path": "fixtures/apm/trace.json",
+      "metadata": "fixtures/apm/trace.meta.json"
+    },
+    {
+      "path": "fixtures/otlp/traces.json",
+      "metadata": "fixtures/otlp/traces.meta.json"
+    }
+  ],
+  "realEvidenceRequired": [
+    "Datadog Browser RUM SDK payload from a minimal browser app",
+    "Logs HTTP JSON, text, and gzip payloads captured through Dogtap",
+    "Datadog tracer or dd-apm-test-agent reference flow for APM traces",
+    "OpenTelemetry SDK or Collector OTLP HTTP and gRPC payloads"
+  ]
+}
+

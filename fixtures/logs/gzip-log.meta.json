@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "fixtureClass": "smoke",
+  "gate": "G1 Fixture Evidence",
+  "source": "logs",
+  "captureStatus": "handwritten-smoke",
+  "captureScript": "scripts/fixtures/capture-logs.sh",
+  "payloadPath": "fixtures/logs/gzip-log.json",
+  "wireEncoding": "gzip",
+  "expectedArtifactPath": "testdata/g1-evidence/latest/logs/log-gzip.json.gz",
+  "expectedNormalized": {
+    "source": "logs",
+    "service": "api-service",
+    "env": "local",
+    "version": "dev",
+    "traceId": "223456789",
+    "spanId": "887654321",
+    "route": "/api/cases/{caseId}/exports",
+    "errorMessage": "gzip log fixture with unsafe token marker access_token"
+  },
+  "redactionExpectations": [
+    {
+      "field": "decoded.email",
+      "expect": "masked-outside-local-raw-mode"
+    },
+    {
+      "field": "rawBody",
+      "expect": "pii.body.access_token validation failure when raw payload storage is enabled"
+    },
+    {
+      "field": "headers.authorization",
+      "expect": "masked"
+    }
+  ],
+  "g1Notes": "The committed payload is the decoded JSON source. The capture script creates the gzip wire artifact before posting it to Dogtap."
+}
+

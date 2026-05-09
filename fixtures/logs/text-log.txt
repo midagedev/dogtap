@@ -1,0 +1,2 @@
+case export failed status=error service=api-service env=local version=dev trace_id=123456789 span_id=987654321 route=/api/cases/{caseId}/exports user_email=fixture.user@example.com
+

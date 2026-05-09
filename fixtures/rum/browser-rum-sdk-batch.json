@@ -1,0 +1,792 @@
+[
+  {
+    "_dd": {
+      "format_version": 2,
+      "drift": 0,
+      "configuration": {
+        "session_sample_rate": 100,
+        "session_replay_sample_rate": 0
+      },
+      "discarded": false
+    },
+    "application": {
+      "id": "dogtap-fixture-app"
+    },
+    "date": 1778231795696,
+    "service": "web-frontend",
+    "version": "g1-fixture",
+    "source": "browser",
+    "session": {
+      "id": "31f6289e-b24c-4359-b1bc-cb7e77ab7048",
+      "type": "user"
+    },
+    "view": {
+      "id": "feda57f0-fe33-44fc-91f8-6baceae9d41b",
+      "url": "http://127.0.0.1:18081/",
+      "referrer": ""
+    },
+    "action": {
+      "id": []
+    },
+    "display": {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      }
+    },
+    "connectivity": {
+      "status": "connected",
+      "effective_type": "4g"
+    },
+    "resource": {
+      "id": "da75df8e-b355-472e-892c-74f2f88ec33c",
+      "type": "js",
+      "url": "http://127.0.0.1:18081/datadog-rum.js",
+      "status_code": 200,
+      "protocol": "http/1.1",
+      "delivery_type": "other",
+      "duration": 3900000,
+      "render_blocking_status": "blocking",
+      "size": 148064,
+      "encoded_body_size": 148064,
+      "decoded_body_size": 148064,
+      "transfer_size": 148364,
+      "download": {
+        "duration": 500000,
+        "start": 3400000
+      },
+      "first_byte": {
+        "duration": 1300000,
+        "start": 2100000
+      }
+    },
+    "type": "resource",
+    "context": {
+      "account": {
+        "id": "account-123"
+      },
+      "workspace": {
+        "id": "workspace-123"
+      },
+      "case": {
+        "id": "case-123"
+      }
+    },
+    "usr": {
+      "id": "user-123",
+      "email": "[redacted-email]",
+      "anonymous_id": "anonymous-fixture"
+    }
+  },
+  {
+    "_dd": {
+      "format_version": 2,
+      "drift": 0,
+      "configuration": {
+        "session_sample_rate": 100,
+        "session_replay_sample_rate": 0
+      },
+      "discarded": false
+    },
+    "application": {
+      "id": "dogtap-fixture-app"
+    },
+    "date": 1778231795680,
+    "service": "web-frontend",
+    "version": "g1-fixture",
+    "source": "browser",
+    "session": {
+      "id": "31f6289e-b24c-4359-b1bc-cb7e77ab7048",
+      "type": "user"
+    },
+    "view": {
+      "id": "feda57f0-fe33-44fc-91f8-6baceae9d41b",
+      "url": "http://127.0.0.1:18081/",
+      "referrer": ""
+    },
+    "action": {
+      "id": []
+    },
+    "display": {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      }
+    },
+    "connectivity": {
+      "status": "connected",
+      "effective_type": "4g"
+    },
+    "resource": {
+      "id": "19764e07-0d13-4e53-8334-3f586821a7e7",
+      "type": "document",
+      "url": "http://127.0.0.1:18081/",
+      "status_code": 200,
+      "protocol": "http/1.1",
+      "delivery_type": "other",
+      "duration": 8700000,
+      "render_blocking_status": "non-blocking",
+      "size": 2540,
+      "encoded_body_size": 2540,
+      "decoded_body_size": 2540,
+      "transfer_size": 2840,
+      "download": {
+        "duration": 800000,
+        "start": 7900000
+      },
+      "first_byte": {
+        "duration": 500000,
+        "start": 7400000
+      },
+      "connect": {
+        "duration": 400000,
+        "start": 7000000
+      },
+      "dns": {
+        "duration": 0,
+        "start": 7000000
+      }
+    },
+    "type": "resource",
+    "context": {
+      "account": {
+        "id": "account-123"
+      },
+      "workspace": {
+        "id": "workspace-123"
+      },
+      "case": {
+        "id": "case-123"
+      }
+    },
+    "usr": {
+      "id": "user-123",
+      "email": "[redacted-email]",
+      "anonymous_id": "anonymous-fixture"
+    }
+  },
+  {
+    "_dd": {
+      "format_version": 2,
+      "drift": 1,
+      "configuration": {
+        "session_sample_rate": 100,
+        "session_replay_sample_rate": 0
+      },
+      "action": {
+        "target": {
+          "width": 80,
+          "height": 21,
+          "selector": "#case-button"
+        },
+        "position": {
+          "x": 40,
+          "y": 10
+        }
+      }
+    },
+    "application": {
+      "id": "dogtap-fixture-app"
+    },
+    "date": 1778231796251,
+    "service": "web-frontend",
+    "version": "g1-fixture",
+    "source": "browser",
+    "session": {
+      "id": "31f6289e-b24c-4359-b1bc-cb7e77ab7048",
+      "type": "user"
+    },
+    "view": {
+      "id": "feda57f0-fe33-44fc-91f8-6baceae9d41b",
+      "url": "http://127.0.0.1:18081/",
+      "referrer": "",
+      "in_foreground": true
+    },
+    "action": {
+      "id": "3d8c1618-3496-4fd0-9ec0-f5299f900d49",
+      "target": {
+        "name": "Open case"
+      },
+      "type": "click",
+      "loading_time": 1000000,
+      "frustration": {
+        "type": []
+      },
+      "error": {
+        "count": 0
+      },
+      "long_task": {
+        "count": 0
+      },
+      "resource": {
+        "count": 0
+      }
+    },
+    "display": {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      }
+    },
+    "connectivity": {
+      "status": "connected",
+      "effective_type": "4g"
+    },
+    "type": "action",
+    "context": {
+      "account": {
+        "id": "account-123"
+      },
+      "workspace": {
+        "id": "workspace-123"
+      },
+      "case": {
+        "id": "case-123"
+      }
+    },
+    "usr": {
+      "id": "user-123",
+      "email": "[redacted-email]",
+      "anonymous_id": "anonymous-fixture"
+    }
+  },
+  {
+    "_dd": {
+      "format_version": 2,
+      "drift": 0,
+      "configuration": {
+        "session_sample_rate": 100,
+        "session_replay_sample_rate": 0
+      }
+    },
+    "application": {
+      "id": "dogtap-fixture-app"
+    },
+    "date": 1778231796255,
+    "service": "web-frontend",
+    "version": "g1-fixture",
+    "source": "browser",
+    "session": {
+      "id": "31f6289e-b24c-4359-b1bc-cb7e77ab7048",
+      "type": "user"
+    },
+    "view": {
+      "id": "e62f734e-599f-4fd5-91a0-437ac9cfd8f6",
+      "name": "case-detail",
+      "url": "http://127.0.0.1:18081/cases/case-123",
+      "referrer": "http://127.0.0.1:18081/cases/case-123",
+      "in_foreground": true
+    },
+    "action": {
+      "id": "abd5ad56-c6f3-46a5-ba9b-08f5d47caf91",
+      "target": {
+        "name": "dogtap.fixture.open_case"
+      },
+      "type": "custom"
+    },
+    "display": {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      }
+    },
+    "connectivity": {
+      "status": "connected",
+      "effective_type": "4g"
+    },
+    "type": "action",
+    "context": {
+      "account": {
+        "id": "account-123"
+      },
+      "workspace": {
+        "id": "workspace-123"
+      },
+      "case": {
+        "id": "case-123"
+      },
+      "route": "/cases/:caseId",
+      "case_id": "case-123"
+    },
+    "usr": {
+      "id": "user-123",
+      "email": "[redacted-email]",
+      "anonymous_id": "anonymous-fixture"
+    }
+  },
+  {
+    "_dd": {
+      "format_version": 2,
+      "drift": 0,
+      "configuration": {
+        "session_sample_rate": 100,
+        "session_replay_sample_rate": 0
+      }
+    },
+    "application": {
+      "id": "dogtap-fixture-app"
+    },
+    "date": 1778231796255,
+    "service": "web-frontend",
+    "version": "g1-fixture",
+    "source": "browser",
+    "session": {
+      "id": "31f6289e-b24c-4359-b1bc-cb7e77ab7048",
+      "type": "user"
+    },
+    "view": {
+      "id": "e62f734e-599f-4fd5-91a0-437ac9cfd8f6",
+      "name": "case-detail",
+      "url": "http://127.0.0.1:18081/cases/case-123",
+      "referrer": "http://127.0.0.1:18081/cases/case-123",
+      "in_foreground": true
+    },
+    "action": {
+      "id": []
+    },
+    "display": {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      }
+    },
+    "connectivity": {
+      "status": "connected",
+      "effective_type": "4g"
+    },
+    "error": {
+      "id": "e4bcdfd1-95ad-4279-896b-b3024e441813",
+      "message": "fixture frontend error",
+      "source": "custom",
+      "stack": "Error: fixture frontend error\n  at HTMLButtonElement.<anonymous> @ http://127.0.0.1:18081/:59:25",
+      "handling_stack": "Error: \n  at HTMLButtonElement.<anonymous> @ http://127.0.0.1:18081/:59:16",
+      "type": "Error",
+      "handling": "handled",
+      "source_type": "browser"
+    },
+    "type": "error",
+    "context": {
+      "account": {
+        "id": "account-123"
+      },
+      "workspace": {
+        "id": "workspace-123"
+      },
+      "case": {
+        "id": "case-123"
+      },
+      "route": "/cases/:caseId",
+      "case_id": "case-123"
+    },
+    "usr": {
+      "id": "user-123",
+      "email": "[redacted-email]",
+      "anonymous_id": "anonymous-fixture"
+    }
+  },
+  {
+    "_dd": {
+      "format_version": 2,
+      "drift": 0,
+      "configuration": {
+        "session_sample_rate": 100,
+        "session_replay_sample_rate": 0
+      }
+    },
+    "application": {
+      "id": "dogtap-fixture-app"
+    },
+    "date": 1778231796288,
+    "service": "web-frontend",
+    "version": "g1-fixture",
+    "source": "browser",
+    "session": {
+      "id": "31f6289e-b24c-4359-b1bc-cb7e77ab7048",
+      "type": "user"
+    },
+    "view": {
+      "id": "e62f734e-599f-4fd5-91a0-437ac9cfd8f6",
+      "name": "case-detail",
+      "url": "http://127.0.0.1:18081/cases/case-123",
+      "referrer": "http://127.0.0.1:18081/cases/case-123",
+      "in_foreground": true
+    },
+    "action": {
+      "id": "b6a5ab52-fae6-45a8-89e0-ec2156e43fe8",
+      "target": {
+        "name": "dogtap.fixture.logout"
+      },
+      "type": "custom"
+    },
+    "display": {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      }
+    },
+    "connectivity": {
+      "status": "connected",
+      "effective_type": "4g"
+    },
+    "type": "action",
+    "context": {
+      "workspace": {
+        "id": "workspace-123"
+      },
+      "case": {
+        "id": "case-123"
+      },
+      "route": "/logout"
+    },
+    "usr": {
+      "anonymous_id": "anonymous-fixture"
+    }
+  },
+  {
+    "_dd": {
+      "format_version": 2,
+      "drift": 1,
+      "configuration": {
+        "session_sample_rate": 100,
+        "session_replay_sample_rate": 0
+      },
+      "action": {
+        "target": {
+          "width": 57,
+          "height": 21,
+          "selector": "#logout-button"
+        },
+        "position": {
+          "x": 28,
+          "y": 10
+        }
+      }
+    },
+    "application": {
+      "id": "dogtap-fixture-app"
+    },
+    "date": 1778231796288,
+    "service": "web-frontend",
+    "version": "g1-fixture",
+    "source": "browser",
+    "session": {
+      "id": "31f6289e-b24c-4359-b1bc-cb7e77ab7048",
+      "type": "user"
+    },
+    "view": {
+      "id": "e62f734e-599f-4fd5-91a0-437ac9cfd8f6",
+      "name": "case-detail",
+      "url": "http://127.0.0.1:18081/cases/case-123",
+      "referrer": "http://127.0.0.1:18081/cases/case-123",
+      "in_foreground": true
+    },
+    "action": {
+      "id": "826367b2-05f7-472f-8f50-530605a5c0c7",
+      "target": {
+        "name": "Logout"
+      },
+      "type": "click",
+      "frustration": {
+        "type": [
+          "dead_click"
+        ]
+      },
+      "error": {
+        "count": 0
+      },
+      "long_task": {
+        "count": 0
+      },
+      "resource": {
+        "count": 0
+      }
+    },
+    "display": {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      }
+    },
+    "connectivity": {
+      "status": "connected",
+      "effective_type": "4g"
+    },
+    "type": "action",
+    "context": {
+      "workspace": {
+        "id": "workspace-123"
+      },
+      "case": {
+        "id": "case-123"
+      }
+    },
+    "usr": {
+      "anonymous_id": "anonymous-fixture"
+    }
+  },
+  {
+    "_dd": {
+      "format_version": 2,
+      "drift": 0,
+      "configuration": {
+        "session_sample_rate": 100,
+        "session_replay_sample_rate": 0,
+        "start_session_replay_recording_manually": true
+      },
+      "document_version": 2,
+      "page_states": [
+        {
+          "state": "active",
+          "start": -530700000
+        }
+      ]
+    },
+    "application": {
+      "id": "dogtap-fixture-app"
+    },
+    "date": 1778231796253,
+    "service": "web-frontend",
+    "version": "g1-fixture",
+    "source": "browser",
+    "session": {
+      "id": "31f6289e-b24c-4359-b1bc-cb7e77ab7048",
+      "type": "user",
+      "sampled_for_replay": false
+    },
+    "view": {
+      "id": "a80a9b4b-886c-4591-bd3e-3d4296b031ad",
+      "url": "http://127.0.0.1:18081/cases/case-123",
+      "referrer": "http://127.0.0.1:18081/",
+      "action": {
+        "count": 0
+      },
+      "frustration": {
+        "count": 0
+      },
+      "cumulative_layout_shift": 0,
+      "error": {
+        "count": 0
+      },
+      "is_active": false,
+      "loading_type": "route_change",
+      "long_task": {
+        "count": 0
+      },
+      "resource": {
+        "count": 0
+      },
+      "time_spent": 0
+    },
+    "display": {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      }
+    },
+    "connectivity": {
+      "status": "connected",
+      "effective_type": "4g"
+    },
+    "type": "view",
+    "privacy": {
+      "replay_level": "mask-user-input"
+    },
+    "context": {
+      "account": {
+        "id": "account-123"
+      },
+      "workspace": {
+        "id": "workspace-123"
+      },
+      "case": {
+        "id": "case-123"
+      }
+    },
+    "usr": {
+      "id": "user-123",
+      "email": "[redacted-email]",
+      "anonymous_id": "anonymous-fixture"
+    }
+  },
+  {
+    "_dd": {
+      "format_version": 2,
+      "drift": 1,
+      "configuration": {
+        "session_sample_rate": 100,
+        "session_replay_sample_rate": 0,
+        "start_session_replay_recording_manually": true
+      },
+      "document_version": 2,
+      "page_states": [
+        {
+          "state": "active",
+          "start": -531000000
+        }
+      ]
+    },
+    "application": {
+      "id": "dogtap-fixture-app"
+    },
+    "date": 1778231796253,
+    "service": "web-frontend",
+    "version": "g1-fixture",
+    "source": "browser",
+    "session": {
+      "id": "31f6289e-b24c-4359-b1bc-cb7e77ab7048",
+      "type": "user",
+      "sampled_for_replay": false
+    },
+    "view": {
+      "id": "e62f734e-599f-4fd5-91a0-437ac9cfd8f6",
+      "name": "case-detail",
+      "url": "http://127.0.0.1:18081/cases/case-123",
+      "referrer": "http://127.0.0.1:18081/cases/case-123",
+      "action": {
+        "count": 3
+      },
+      "frustration": {
+        "count": 1
+      },
+      "cumulative_layout_shift": 0,
+      "error": {
+        "count": 1
+      },
+      "interaction_to_next_paint": 0,
+      "is_active": true,
+      "loading_type": "route_change",
+      "long_task": {
+        "count": 0
+      },
+      "resource": {
+        "count": 0
+      },
+      "time_spent": 3004000000
+    },
+    "display": {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "scroll": {
+        "max_depth": 720,
+        "max_depth_scroll_top": 0,
+        "max_scroll_height": 720,
+        "max_scroll_height_time": 1004400000
+      }
+    },
+    "connectivity": {
+      "status": "connected",
+      "effective_type": "4g"
+    },
+    "type": "view",
+    "privacy": {
+      "replay_level": "mask-user-input"
+    },
+    "context": {
+      "workspace": {
+        "id": "workspace-123"
+      },
+      "case": {
+        "id": "case-123"
+      }
+    },
+    "usr": {
+      "anonymous_id": "anonymous-fixture"
+    }
+  },
+  {
+    "_dd": {
+      "format_version": 2,
+      "drift": 0,
+      "configuration": {
+        "session_sample_rate": 100,
+        "session_replay_sample_rate": 0,
+        "start_session_replay_recording_manually": true
+      },
+      "document_version": 3,
+      "page_states": [
+        {
+          "state": "active",
+          "start": 41800000
+        }
+      ]
+    },
+    "application": {
+      "id": "dogtap-fixture-app"
+    },
+    "date": 1778231795680,
+    "service": "web-frontend",
+    "version": "g1-fixture",
+    "source": "browser",
+    "session": {
+      "id": "31f6289e-b24c-4359-b1bc-cb7e77ab7048",
+      "type": "user",
+      "sampled_for_replay": false
+    },
+    "view": {
+      "id": "feda57f0-fe33-44fc-91f8-6baceae9d41b",
+      "url": "http://127.0.0.1:18081/",
+      "referrer": "",
+      "action": {
+        "count": 1
+      },
+      "frustration": {
+        "count": 0
+      },
+      "cumulative_layout_shift": 0,
+      "first_byte": 7900000,
+      "dom_complete": 62400000,
+      "dom_content_loaded": 62300000,
+      "dom_interactive": 60700000,
+      "error": {
+        "count": 0
+      },
+      "first_contentful_paint": 92000000,
+      "first_input_delay": 4500000,
+      "first_input_time": 562800000,
+      "first_input_target_selector": "#case-button",
+      "interaction_to_next_paint": 16000000,
+      "interaction_to_next_paint_time": 562800000,
+      "interaction_to_next_paint_target_selector": "#case-button",
+      "is_active": false,
+      "largest_contentful_paint": 92000000,
+      "largest_contentful_paint_target_selector": "BODY>MAIN>H1",
+      "load_event": 62400000,
+      "loading_time": 62400000,
+      "loading_type": "initial_load",
+      "long_task": {
+        "count": 0
+      },
+      "resource": {
+        "count": 2
+      },
+      "time_spent": 572000000
+    },
+    "display": {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      }
+    },
+    "connectivity": {
+      "status": "connected",
+      "effective_type": "4g"
+    },
+    "type": "view",
+    "privacy": {
+      "replay_level": "mask-user-input"
+    },
+    "context": {
+      "workspace": {
+        "id": "workspace-123"
+      },
+      "case": {
+        "id": "case-123"
+      }
+    },
+    "usr": {
+      "anonymous_id": "anonymous-fixture"
+    }
+  }
+]

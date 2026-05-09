@@ -1,0 +1,27 @@
+services:
+  dogtap:
+    build:
+      context: ${DOGTAP_REPO:-../dogtap}
+    # Replace build with an image once your team publishes Dogtap:
+    # image: dogtap/dogtap:latest
+    ports:
+      - "${DOGTAP_HTTP_PORT:-8080}:8080"
+      - "${DOGTAP_APM_PORT:-8126}:8126"
+      - "${DOGTAP_OTLP_GRPC_PORT:-4317}:4317"
+      - "${DOGTAP_OTLP_HTTP_PORT:-4318}:4318"
+    environment:
+      DOGTAP_MODE: local
+      DOGTAP_STORAGE_KIND: file
+      DOGTAP_STORAGE_PATH: /data/events.json
+      DOGTAP_STORAGE_MAX_EVENTS: ${DOGTAP_STORAGE_MAX_EVENTS:-1000}
+      DOGTAP_STORAGE_TTL: ${DOGTAP_STORAGE_TTL:-2h}
+    volumes:
+      - dogtap-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  dogtap-data:

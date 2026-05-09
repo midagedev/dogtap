@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dogtap RUM Fixture</title>
+    <script src="/datadog-rum.js"></script>
+  </head>
+  <body>
+    <main>
+      <h1>Dogtap RUM Fixture</h1>
+      <button id="case-button" type="button">Open case</button>
+      <button id="logout-button" type="button">Logout</button>
+    </main>
+    <script>
+      const DD_RUM = window.DD_RUM;
+      window.__dogtapRumProxyRequests = 0;
+
+      DD_RUM.init({
+        applicationId: 'dogtap-fixture-app',
+        clientToken: 'dogtap-fixture-token',
+        site: 'datadoghq.com',
+        service: 'web-frontend',
+        env: 'local',
+        version: 'g1-fixture',
+        sessionSampleRate: 100,
+        sessionReplaySampleRate: 0,
+        trackUserInteractions: true,
+        trackResources: true,
+        trackLongTasks: false,
+        defaultPrivacyLevel: 'mask-user-input',
+        proxy: function proxy(options) {
+          window.__dogtapRumProxyRequests += 1;
+          const forwardPath = options && options.path ? options.path : 'unknown';
+          const parameters = options && options.parameters ? '?' + options.parameters : '';
+          return '/datadog-intake-proxy?ddforward=' + encodeURIComponent(forwardPath + parameters);
+        }
+      });
+
+      DD_RUM.setUser({
+        id: 'user-123',
+        email: 'rum.fixture@example.com'
+      });
+      DD_RUM.setGlobalContextProperty('account', { id: 'account-123' });
+      DD_RUM.setGlobalContextProperty('workspace', { id: 'workspace-123' });
+      DD_RUM.setGlobalContextProperty('case', { id: 'case-123' });
+
+      document.getElementById('case-button').addEventListener('click', () => {
+        window.history.pushState({}, '', '/cases/case-123?access_token=unsafe');
+        DD_RUM.startView({
+          name: 'case-detail',
+          service: 'web-frontend',
+          version: 'g1-fixture'
+        });
+        DD_RUM.addAction('dogtap.fixture.open_case', {
+          route: '/cases/:caseId',
+          case_id: 'case-123'
+        });
+        DD_RUM.addError(new Error('fixture frontend error'), {
+          route: '/cases/:caseId',
+          case_id: 'case-123'
+        });
+      });
+
+      document.getElementById('logout-button').addEventListener('click', () => {
+        DD_RUM.clearUser();
+        DD_RUM.removeGlobalContextProperty('account');
+        DD_RUM.addAction('dogtap.fixture.logout', {
+          route: '/logout'
+        });
+      });
+    </script>
+  </body>
+</html>

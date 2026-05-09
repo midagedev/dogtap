@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "fixtureClass": "smoke",
+  "gate": "G1 Fixture Evidence",
+  "source": "rum",
+  "captureStatus": "handwritten-smoke",
+  "captureScript": "scripts/fixtures/capture-rum-browser.sh",
+  "payloadPath": "fixtures/rum/missing-context.json",
+  "expectedArtifactPath": "testdata/g1-evidence/latest/rum/events.json",
+  "expectedNormalized": {
+    "source": "rum",
+    "service": "web-frontend",
+    "env": "local",
+    "version": "dev",
+    "viewId": "view-missing-context",
+    "route": "/cases/missing-context"
+  },
+  "expectedMissingNormalized": [
+    "userId",
+    "accountId",
+    "workspaceId"
+  ],
+  "redactionExpectations": [
+    {
+      "field": "query.access_token",
+      "expect": "masked-and-validation-failure"
+    }
+  ],
+  "validationExpectations": [
+    {
+      "ruleId": "required.rum.userId",
+      "status": "fail"
+    },
+    {
+      "ruleId": "required.rum.accountId",
+      "status": "fail"
+    },
+    {
+      "ruleId": "required.rum.workspaceId",
+      "status": "fail"
+    }
+  ],
+  "g1Notes": "This negative fixture covers missing-context smoke behavior only. A real Browser RUM SDK capture should include an equivalent missing-context or unsafe-context case."
+}
+

@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "scripts": {
+    "emit": "node emit-trace.cjs"
+  },
+  "dependencies": {
+    "dd-trace": "5.44.0"
+  }
+}
+

@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+target/
+dist/
+build/
+.venv/
+/dogtap
+
+# Keep the minimal embedded dashboard placeholder tracked; generated assets stay ignored.
+!web/dist/
+!web/dist/index.html
+!web/dist/assets/
+!web/dist/assets/*
+web/node_modules/
+web/test-results/
+web/playwright-report/
+web/*.tsbuildinfo
+web/vite.config.d.ts
+web/vite.config.js
+
+# Local runtime data
+.dogtap/
+.private/
+data/
+snapshots/
+tmp/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS and editor
+.DS_Store
+.idea/
+.vscode/

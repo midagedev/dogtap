@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "fixtureClass": "smoke",
+  "gate": "G1 Fixture Evidence",
+  "source": "apm",
+  "captureStatus": "handwritten-smoke",
+  "captureScripts": [
+    "scripts/fixtures/capture-apm-node-tracer.sh",
+    "scripts/fixtures/capture-apm-dd-test-agent-reference.sh"
+  ],
+  "payloadPath": "fixtures/apm/trace.json",
+  "expectedArtifactPath": "testdata/g1-evidence/latest/apm/events.json",
+  "expectedNormalized": {
+    "source": "apm",
+    "service": "api-service",
+    "env": "local",
+    "version": "dev",
+    "traceId": "123456789",
+    "spanId": "987654321",
+    "parentSpanId": "0",
+    "route": "POST /api/cases/{caseId}/exports"
+  },
+  "redactionExpectations": [
+    {
+      "field": "decoded.meta.authorization",
+      "expect": "masked-outside-local-raw-mode"
+    },
+    {
+      "field": "decoded.meta.http.url",
+      "expect": "query-string risk flagged by later validation"
+    }
+  ],
+  "g1Notes": "This JSON shape is a smoke approximation. G1 needs msgpack captured from a real Datadog tracer or a dd-apm-test-agent reference flow."
+}
+

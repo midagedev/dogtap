@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "fixtureClass": "smoke",
+  "gate": "G1 Fixture Evidence",
+  "source": "logs",
+  "captureStatus": "handwritten-smoke",
+  "captureScript": "scripts/fixtures/capture-logs.sh",
+  "payloadPath": "fixtures/logs/text-log.txt",
+  "expectedArtifactPath": "testdata/g1-evidence/latest/logs/events.json",
+  "expectedNormalized": {
+    "source": "logs",
+    "method": "POST",
+    "errorMessage": "case export failed status=error service=api-service env=local version=dev trace_id=123456789 span_id=987654321 route=/api/cases/{caseId}/exports user_email=fixture.user@example.com"
+  },
+  "expectedMissingNormalized": [
+    "service",
+    "env"
+  ],
+  "redactionExpectations": [
+    {
+      "field": "decoded.message",
+      "expect": "email-masked-outside-local-raw-mode"
+    },
+    {
+      "field": "headers.authorization",
+      "expect": "masked"
+    }
+  ],
+  "g1Notes": "This text log fixture intentionally keeps structured fields inside the message to document current smoke behavior before parser work."
+}
+

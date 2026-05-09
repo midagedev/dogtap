@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "fixtureClass": "g1-real-evidence",
+  "gate": "G1 Fixture Evidence",
+  "source": "rum",
+  "captureStatus": "captured-local-dogtap-reviewed-sanitized",
+  "captureScript": "scripts/fixtures/capture-rum-browser.sh",
+  "captureCommand": "npm --prefix testdata/rum-browser install && scripts/fixtures/capture-rum-browser.sh",
+  "capturedAtUtc": "2026-05-08T09:18:04Z",
+  "sourceArtifactPath": "testdata/g1-evidence/latest/rum/events.json",
+  "networkArtifactPath": "testdata/g1-evidence/latest/rum/browser-network.json",
+  "diagnosticsArtifactPath": "testdata/g1-evidence/latest/rum/browser-diagnostics.json",
+  "payloadPath": "fixtures/rum/browser-rum-sdk-batch.json",
+  "replayRequest": {
+    "method": "POST",
+    "path": "/datadog-intake-proxy",
+    "query": "ddforward=%2Fapi%2Fv2%2Frum%3Fddsource%3Dbrowser%26ddtags%3Dsdk_version%253A6.0.0%252Capi%253Afetch%252Cenv%253Alocal%252Cservice%253Aweb-frontend%252Cversion%253Ag1-fixture%26dd-api-key%3Ddogtap-fixture-token%26dd-evp-origin-version%3D6.0.0%26dd-evp-origin%3Dbrowser",
+    "headers": {
+      "Content-Type": "text/plain;charset=UTF-8"
+    }
+  },
+  "sdk": {
+    "package": "@datadog/browser-rum",
+    "version": "6.0.0",
+    "bundleServedFrom": "testdata/rum-browser/node_modules/@datadog/browser-rum/bundle/datadog-rum.js"
+  },
+  "runtime": {
+    "os": "Darwin 25.3.0 arm64",
+    "node": "v24.14.0",
+    "npm": "11.9.0",
+    "playwright": "1.52.0",
+    "browser": "HeadlessChrome/136.0.7103.25",
+    "go": "go1.26.1 darwin/arm64",
+    "scriptCommit": "unavailable-worktree-has-no-HEAD"
+  },
+  "localOnly": true,
+  "externalDatadogApisCalled": false,
+  "browserNetworkRequestCount": 1,
+  "browserBlockedExternalRequestCount": 0,
+  "eventCount": 10,
+  "eventTypeCounts": {
+    "resource": 2,
+    "action": 4,
+    "error": 1,
+    "view": 3
+  },
+  "expectedNormalized": {
+    "source": "rum",
+    "service": "web-frontend",
+    "env": "local",
+    "version": "g1-fixture",
+    "sessionId": "31f6289e-b24c-4359-b1bc-cb7e77ab7048",
+    "viewId": "e62f734e-599f-4fd5-91a0-437ac9cfd8f6",
+    "userId": "user-123",
+    "accountId": "account-123",
+    "workspaceId": "workspace-123",
+    "caseId": "case-123",
+    "route": "/cases/:caseId"
+  },
+  "logoutExpectation": {
+    "actionName": "dogtap.fixture.logout",
+    "userIdPresent": false,
+    "accountIdPresent": false,
+    "workspaceIdPresent": true
+  },
+  "redactionExpectations": [
+    {
+      "field": "usr.email",
+      "expect": "sanitized-in-promoted-fixture",
+      "observedInRun": true
+    },
+    {
+      "field": "view.url/referrer access_token query",
+      "expect": "removed-in-promoted-fixture-and-validation-failure-in-run-local-envelope",
+      "observedInRun": true
+    },
+    {
+      "field": "headers.Cookie",
+      "expect": "masked-in-Dogtap-event-envelope",
+      "observedInRun": true
+    },
+    {
+      "field": "query.ddforward dd-api-key",
+      "expect": "synthetic-token-only; should be masked before any durable/nonlocal use",
+      "observedInRun": true
+    }
+  ],
+  "reviewNotes": [
+    "Promoted payload is parsed from the captured Browser RUM SDK newline-delimited text batch, not hand-written.",
+    "The local browser route blocked non-localhost requests; diagnostics recorded zero blocked external requests and zero request failures.",
+    "Email and access_token values from the synthetic capture page were removed or replaced before promotion.",
+    "Dogtap intake now decodes SDK text/plain JSON batches and applies request-level ddforward/ddtags metadata during capture and replay.",
+    "Browser RUM SDK request-level env is present in the captured ddforward/ddtags query; replayRequest preserves that metadata for deterministic fixture replay."
+  ]
+}

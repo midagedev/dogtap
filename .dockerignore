@@ -1,0 +1,16 @@
+.git
+.dogtap
+data
+snapshots
+tmp
+/dogtap
+web/node_modules
+web/test-results
+web/playwright-report
+web/*.tsbuildinfo
+web/vite.config.js
+web/vite.config.d.ts
+testdata/g1-evidence/latest
+testdata/rum-browser/node_modules
+testdata/apm-node/node_modules
+testdata/otlp-node/node_modules

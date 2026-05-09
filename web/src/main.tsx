@@ -1,0 +1,1965 @@
+import React from "react";
+import ReactDOM from "react-dom/client";
+import {
+  Activity,
+  AlertTriangle,
+  Boxes,
+  Clipboard,
+  FileText,
+  Filter,
+  GitBranch,
+  Inbox,
+  ListTree,
+  Network,
+  Pause,
+  Play,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+} from "lucide-react";
+import "./styles.css";
+
+type Source = "rum" | "apm" | "logs" | "otlp" | "unknown";
+
+type ValidationRule = {
+  ruleId: string;
+  severity: string;
+  status: string;
+  message: string;
+  fieldPath?: string;
+  evidence?: string;
+};
+
+type EventEnvelope = {
+  id: string;
+  receivedAt: string;
+  source: Source;
+  payloadKind?: string;
+  endpoint: string;
+  method: string;
+  rawBody?: string;
+  decoded?: unknown;
+  details?: TelemetryDetails;
+  normalized: {
+    service?: string;
+    env?: string;
+    version?: string;
+    host?: string;
+    timestamp?: string;
+    traceId?: string;
+    spanId?: string;
+    parentSpanId?: string;
+    sessionId?: string;
+    viewId?: string;
+    userId?: string;
+    accountId?: string;
+    workspaceId?: string;
+    caseId?: string;
+    route?: string;
+    method?: string;
+    statusCode?: number;
+    durationMs?: number;
+    errorType?: string;
+    errorMessage?: string;
+    tags?: Record<string, string>;
+  };
+  validation: {
+    status: string;
+    summary?: string;
+    rules: ValidationRule[];
+  };
+};
+
+type TelemetryDetails = {
+  replay?: ReplayDetail;
+  logs?: LogEntry[];
+  trace?: TraceDetail;
+  metrics?: MetricEntry[];
+};
+
+type ReplayDetail = {
+  format?: string;
+  contentType?: string;
+  bytes?: number;
+  recordCount?: number;
+  segmentBytes?: number;
+  segmentContentType?: string;
+  segmentFilename?: string;
+  sessionId?: string;
+  viewId?: string;
+  start?: string;
+  end?: string;
+};
+
+type ReplayFrame = {
+  label: string;
+  timestamp?: number;
+  summary: string;
+};
+
+type LogEntry = {
+  timestamp?: string;
+  level: string;
+  message: string;
+  traceId?: string;
+};
+
+type TraceSpan = {
+  eventId: string;
+  spanId?: string;
+  parentSpanId?: string;
+  traceId?: string;
+  name: string;
+  resource?: string;
+  route?: string;
+  service: string;
+  durationMs?: number;
+  depth: number;
+};
+
+type TraceDetail = {
+  traceId?: string;
+  spans?: Array<{
+    traceId?: string;
+    spanId?: string;
+    parentSpanId?: string;
+    name?: string;
+    resource?: string;
+    service?: string;
+    start?: string;
+    durationMs?: number;
+    error?: boolean;
+  }>;
+};
+
+type MetricEntry = {
+  name?: string;
+  service?: string;
+  unit?: string;
+  value?: number;
+  aggregation?: string;
+  route?: string;
+  timestamp?: string;
+};
+
+type MetricSample = {
+  eventId: string;
+  name: string;
+  service: string;
+  unit?: string;
+  value?: number;
+  aggregation?: string;
+  route?: string;
+  timestamp?: string;
+};
+
+type ServiceSummary = {
+  service: string;
+  sources: Source[];
+  events: number;
+  errors: number;
+  rum: number;
+  logs: number;
+  traces: number;
+  metrics: number;
+  avgDurationMs?: number;
+};
+
+type ServiceEdge = {
+  from: string;
+  to: string;
+  count: number;
+  traces: string[];
+};
+
+type RouteSummary = {
+  route: string;
+  service: string;
+  count: number;
+  errors: number;
+  avgDurationMs?: number;
+};
+
+type ObservabilityOverviewData = {
+  services: ServiceSummary[];
+  edges: ServiceEdge[];
+  routes: RouteSummary[];
+  metrics: MetricSample[];
+  sourceCounts: Array<{ label: string; count: number }>;
+};
+
+type Report = {
+  summary: {
+    total: number;
+    passed: number;
+    failed: number;
+    fatal: number;
+    warnings: number;
+  };
+};
+
+const sources: Array<Source | ""> = ["", "rum", "logs", "apm", "otlp"];
+const correlationFields = [
+  { key: "traceId", label: "Trace" },
+  { key: "userId", label: "User" },
+  { key: "workspaceId", label: "Workspace" },
+  { key: "caseId", label: "Case" },
+] as const;
+
+type CorrelationField = (typeof correlationFields)[number]["key"];
+type StreamMode = "events" | "failures";
+
+function App() {
+  const [events, setEvents] = React.useState<EventEnvelope[]>([]);
+  const [failures, setFailures] = React.useState<EventEnvelope[]>([]);
+  const [report, setReport] = React.useState<Report | null>(null);
+  const [selectedId, setSelectedId] = React.useState<string>("");
+  const [source, setSource] = React.useState<Source | "">("");
+  const [status, setStatus] = React.useState<string>("");
+  const [query, setQuery] = React.useState<string>("");
+  const [mode, setMode] = React.useState<StreamMode>("events");
+  const [failureRule, setFailureRule] = React.useState<string>("");
+  const [loading, setLoading] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const eventsRes = await fetch("/api/events?limit=100");
+      const nextEvents = (await eventsRes.json()) as EventEnvelope[];
+      const [failuresResult, reportResult] = await Promise.allSettled([
+        fetch("/api/validation/failures"),
+        fetch("/api/reports/latest"),
+      ]);
+
+      let nextFailures = nextEvents.filter(
+        (event) => event.validation.status === "fail",
+      );
+      if (failuresResult.status === "fulfilled" && failuresResult.value.ok) {
+        nextFailures = (await failuresResult.value.json()) as EventEnvelope[];
+      }
+
+      let nextReport: Report = summarizeEvents(nextEvents);
+      if (reportResult.status === "fulfilled" && reportResult.value.ok) {
+        nextReport = (await reportResult.value.json()) as Report;
+      }
+
+      setEvents(nextEvents);
+      setFailures(nextFailures);
+      setReport(nextReport);
+      if (selectedId && !nextEvents.some((event) => event.id === selectedId)) {
+        setSelectedId("");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedId]);
+
+  React.useEffect(() => {
+    void load();
+    const id = window.setInterval(() => void load(), 3000);
+    return () => window.clearInterval(id);
+  }, [load]);
+
+  const failureRules = React.useMemo(() => {
+    return Array.from(
+      new Set(
+        failures.flatMap((event) =>
+          event.validation.rules
+            .filter((rule) => rule.status === "fail")
+            .map((rule) => rule.ruleId),
+        ),
+      ),
+    ).sort();
+  }, [failures]);
+
+  const streamEvents = mode === "failures" ? failures : events;
+  const visible = streamEvents.filter((event) => {
+    if (source && event.source !== source) return false;
+    if (mode === "events" && status && event.validation.status !== status)
+      return false;
+    if (
+      mode === "failures" &&
+      failureRule &&
+      !event.validation.rules.some(
+        (rule) => rule.status === "fail" && rule.ruleId === failureRule,
+      )
+    ) {
+      return false;
+    }
+    if (!query.trim()) return true;
+    const haystack = JSON.stringify(event).toLowerCase();
+    return haystack.includes(query.toLowerCase());
+  });
+  const selected =
+    events.find((event) => event.id === selectedId) ?? visible[0] ?? events[0];
+  const overview = React.useMemo(
+    () => buildObservabilityOverview(events),
+    [events],
+  );
+
+  return (
+    <main className="app-shell">
+      <header className="topbar">
+        <div className="brand">
+          <Boxes size={24} aria-hidden="true" />
+          <div>
+            <h1>Dogtap</h1>
+            <p>Telemetry intake inspector</p>
+          </div>
+        </div>
+        <button
+          className="icon-button"
+          onClick={() => void load()}
+          title="Refresh events"
+          aria-label="Refresh events"
+        >
+          <RefreshCw size={18} className={loading ? "spin" : ""} />
+        </button>
+      </header>
+
+      <section className="metrics-band" aria-label="Validation summary">
+        <Metric
+          icon={<Activity size={18} />}
+          label="Received"
+          value={report?.summary.total ?? events.length}
+        />
+        <Metric
+          icon={<ShieldCheck size={18} />}
+          label="Passed"
+          value={report?.summary.passed ?? 0}
+        />
+        <Metric
+          icon={<AlertTriangle size={18} />}
+          label="Failed"
+          value={report?.summary.failed ?? failures.length}
+          tone="danger"
+        />
+      </section>
+
+      {events.length === 0 ? <IntegrationTargets /> : null}
+
+      <ObservabilityOverview data={overview} />
+
+      <section className="workspace">
+        <aside className="stream-pane">
+          <div
+            className="mode-tabs"
+            role="tablist"
+            aria-label="Telemetry stream view"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === "events"}
+              onClick={() => setMode("events")}
+            >
+              <Activity size={15} aria-hidden="true" />
+              <span>Events</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === "failures"}
+              onClick={() => setMode("failures")}
+            >
+              <Inbox size={15} aria-hidden="true" />
+              <span>Failures</span>
+              <strong>{failures.length}</strong>
+            </button>
+          </div>
+          <div className="toolbar">
+            <label>
+              <Filter size={16} aria-hidden="true" />
+              <select
+                value={source}
+                onChange={(event) =>
+                  setSource(event.target.value as Source | "")
+                }
+              >
+                {sources.map((item) => (
+                  <option key={item || "all"} value={item}>
+                    {item || "all sources"}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <select
+              value={status}
+              onChange={(event) => setStatus(event.target.value)}
+            >
+              <option value="">all statuses</option>
+              <option value="pass">pass</option>
+              <option value="fail">fail</option>
+            </select>
+          </div>
+          {mode === "failures" ? (
+            <div
+              className="failure-inbox"
+              aria-label="Validation failure inbox filters"
+            >
+              <div className="failure-count">
+                <AlertTriangle size={16} aria-hidden="true" />
+                <strong>{visible.length}</strong>
+                <span>matching failures</span>
+              </div>
+              <select
+                value={failureRule}
+                onChange={(event) => setFailureRule(event.target.value)}
+                aria-label="Failure rule"
+              >
+                <option value="">all rules</option>
+                {failureRules.map((rule) => (
+                  <option key={rule} value={rule}>
+                    {rule}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+          <label className="search">
+            <Search size={16} aria-hidden="true" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Filter payloads"
+            />
+          </label>
+          <div className="event-list">
+            {visible.map((event) => (
+              <button
+                key={event.id}
+                className={`event-row ${selected?.id === event.id ? "selected" : ""}`}
+                onClick={() => setSelectedId(event.id)}
+              >
+                <span className={`source source-${event.source}`}>
+                  {eventLabel(event)}
+                </span>
+                <span className="event-main">
+                  <span className="event-title-line">
+                    <strong>
+                      {event.normalized.service || event.endpoint}
+                    </strong>
+                    <time>{formatTime(event.receivedAt)}</time>
+                  </span>
+                  <small>{eventSubtitle(event, mode)}</small>
+                </span>
+                <span className={`status status-${event.validation.status}`}>
+                  {event.validation.status}
+                </span>
+              </button>
+            ))}
+            {visible.length === 0 ? (
+              <p className="empty">No telemetry received yet.</p>
+            ) : null}
+          </div>
+        </aside>
+
+        <section className="detail-pane">
+          {selected ? (
+            <EventDetail
+              event={selected}
+              events={events}
+              onSelectEvent={setSelectedId}
+            />
+          ) : (
+            <p className="empty">Select an event to inspect its payload.</p>
+          )}
+        </section>
+      </section>
+    </main>
+  );
+}
+
+function Metric({
+  icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  tone?: "danger";
+}) {
+  return (
+    <div className={`metric ${tone ?? ""}`}>
+      {icon}
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function IntegrationTargets() {
+  const targets = React.useMemo(() => {
+    const protocol = window.location.protocol === "https:" ? "https:" : "http:";
+    const host = window.location.hostname || "localhost";
+    const rumProxy = `${window.location.origin}/datadog-intake-proxy`;
+    return [
+      {
+        label: "Browser RUM",
+        meta: "proxy",
+        value: rumProxy,
+        copy: rumProxy,
+      },
+      {
+        label: "APM",
+        meta: "Datadog tracer",
+        value: `DD_AGENT_HOST=${host}\nDD_TRACE_AGENT_PORT=8126`,
+        copy: `DD_AGENT_HOST=${host}\nDD_TRACE_AGENT_PORT=8126`,
+      },
+      {
+        label: "OTLP HTTP",
+        meta: "traces logs metrics",
+        value: `OTEL_EXPORTER_OTLP_ENDPOINT=${protocol}//${host}:4318`,
+        copy: `OTEL_EXPORTER_OTLP_ENDPOINT=${protocol}//${host}:4318\nOTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf`,
+      },
+      {
+        label: "OTLP gRPC",
+        meta: "traces logs metrics",
+        value: `OTEL_EXPORTER_OTLP_ENDPOINT=${protocol}//${host}:4317`,
+        copy: `OTEL_EXPORTER_OTLP_ENDPOINT=${protocol}//${host}:4317\nOTEL_EXPORTER_OTLP_PROTOCOL=grpc`,
+      },
+    ];
+  }, []);
+
+  return (
+    <section className="targets-band" aria-label="Apply Dogtap to an app">
+      <div className="targets-title">
+        <h2>
+          <Network size={16} aria-hidden="true" /> Apply Dogtap
+        </h2>
+        <span>copy these into a local app</span>
+      </div>
+      <div className="target-grid">
+        {targets.map((target) => (
+          <div className="target-item" key={target.label}>
+            <div>
+              <strong>{target.label}</strong>
+              <span>{target.meta}</span>
+            </div>
+            <code>{target.value}</code>
+            <CopyIconButton
+              value={target.copy}
+              label={`Copy ${target.label} target`}
+            />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CopyIconButton({ value, label }: { value: string; label: string }) {
+  const [copied, setCopied] = React.useState(false);
+
+  async function onCopy() {
+    await copyToClipboard(value);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1200);
+  }
+
+  return (
+    <button
+      type="button"
+      className={`icon-button target-copy ${copied ? "copied" : ""}`}
+      onClick={() => void onCopy()}
+      aria-label={label}
+      title={copied ? "Copied" : label}
+    >
+      <Clipboard size={15} aria-hidden="true" />
+    </button>
+  );
+}
+
+function ObservabilityOverview({
+  data,
+}: {
+  data: ObservabilityOverviewData;
+}) {
+  return (
+    <section className="overview-band" aria-label="Observability overview">
+      <section className="overview-panel service-map-panel">
+        <div className="panel-title">
+          <h2>
+            <Network size={16} aria-hidden="true" /> Service Map
+          </h2>
+          <span>
+            {data.services.length} services · {data.edges.length} edges
+          </span>
+        </div>
+        <div className="service-map">
+          <div className="service-nodes" aria-label="Service nodes">
+            {data.services.length ? (
+              data.services.slice(0, 6).map((service) => (
+                <div className="service-node" key={service.service}>
+                  <strong>{service.service}</strong>
+                  <span>{service.sources.join(", ")}</span>
+                  <small>
+                    {service.events} events · {service.traces} traces ·{" "}
+                    {service.metrics} metrics
+                  </small>
+                </div>
+              ))
+            ) : (
+              <p className="viewer-empty">No service tags received yet.</p>
+            )}
+          </div>
+          <div className="service-edges" aria-label="Service edges">
+            {data.edges.length ? (
+              data.edges.slice(0, 5).map((edge) => (
+                <div className="service-edge" key={`${edge.from}-${edge.to}`}>
+                  <code>{edge.from}</code>
+                  <span>-&gt;</span>
+                  <code>{edge.to}</code>
+                  <small>{edge.count} spans</small>
+                </div>
+              ))
+            ) : (
+              <p className="viewer-empty">
+                Cross-service trace spans will appear here.
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="overview-panel traffic-panel">
+        <div className="panel-title">
+          <h2>
+            <Activity size={16} aria-hidden="true" /> Traffic
+          </h2>
+          <span>{data.routes.length} routes</span>
+        </div>
+        <div className="source-strip">
+          {data.sourceCounts.map((item) => (
+            <div key={item.label}>
+              <span>{item.label}</span>
+              <strong>{item.count}</strong>
+            </div>
+          ))}
+        </div>
+        <div className="route-list" aria-label="Traffic routes">
+          {data.routes.length ? (
+            data.routes.slice(0, 5).map((route) => (
+              <div className="route-row" key={`${route.service}-${route.route}`}>
+                <strong>{route.route}</strong>
+                <span>{route.service}</span>
+                <small>
+                  {route.count} hits · {route.errors} errors ·{" "}
+                  {formatDuration(route.avgDurationMs)}
+                </small>
+              </div>
+            ))
+          ) : (
+            <p className="viewer-empty">No route traffic received yet.</p>
+          )}
+        </div>
+      </section>
+
+      <section className="overview-panel metric-panel">
+        <div className="panel-title">
+          <h2>
+            <ListTree size={16} aria-hidden="true" /> Metrics Snapshot
+          </h2>
+          <span>{data.metrics.length} samples</span>
+        </div>
+        <div className="metric-list" aria-label="Metric samples">
+          {data.metrics.length ? (
+            data.metrics.slice(0, 6).map((metric) => (
+              <div
+                className="metric-row"
+                key={`${metric.eventId}-${metric.name}-${metric.route ?? ""}`}
+              >
+                <strong>{metric.name}</strong>
+                <span>{metric.service}</span>
+                <code>{formatMetricValue(metric)}</code>
+              </div>
+            ))
+          ) : (
+            <p className="viewer-empty">OTLP metrics will appear here.</p>
+          )}
+        </div>
+      </section>
+    </section>
+  );
+}
+
+function EventDetail({
+  event,
+  events,
+  onSelectEvent,
+}: {
+  event: EventEnvelope;
+  events: EventEnvelope[];
+  onSelectEvent: (id: string) => void;
+}) {
+  const failingRules = event.validation.rules.filter(
+    (rule) => rule.status === "fail",
+  );
+  return (
+    <div className="detail-grid">
+      <section className="panel">
+        <div className="panel-title">
+          <h2>{event.source.toUpperCase()} detail</h2>
+          <span className={`status status-${event.validation.status}`}>
+            {event.validation.summary}
+          </span>
+        </div>
+        <dl className="facts">
+          <div>
+            <dt>Endpoint</dt>
+            <dd>
+              {event.method} {event.endpoint}
+            </dd>
+          </div>
+          <div>
+            <dt>Received</dt>
+            <dd>{formatTime(event.receivedAt)}</dd>
+          </div>
+          <div>
+            <dt>Service</dt>
+            <dd>{event.normalized.service || "missing"}</dd>
+          </div>
+          <div>
+            <dt>Env</dt>
+            <dd>{event.normalized.env || "missing"}</dd>
+          </div>
+          <div>
+            <dt>Version</dt>
+            <dd>{event.normalized.version || "none"}</dd>
+          </div>
+          <div>
+            <dt>Trace</dt>
+            <dd>{event.normalized.traceId || "none"}</dd>
+          </div>
+          <div>
+            <dt>Route</dt>
+            <dd>{event.normalized.route || "none"}</dd>
+          </div>
+          <div>
+            <dt>User</dt>
+            <dd>{event.normalized.userId || "none"}</dd>
+          </div>
+          <div>
+            <dt>Workspace</dt>
+            <dd>{event.normalized.workspaceId || "none"}</dd>
+          </div>
+          <div>
+            <dt>Account</dt>
+            <dd>{event.normalized.accountId || "none"}</dd>
+          </div>
+          <div>
+            <dt>Case</dt>
+            <dd>{event.normalized.caseId || "none"}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section className="panel">
+        <div className="panel-title">
+          <h2>Validation</h2>
+          <span>{failingRules.length} failing</span>
+        </div>
+        <div className="rules">
+          {event.validation.rules.map((rule) => (
+            <div
+              className={`rule rule-${rule.status}`}
+              key={`${event.id}-${rule.ruleId}-${rule.fieldPath}`}
+            >
+              <div className="rule-copy">
+                <strong>{rule.ruleId}</strong>
+                <span>{rule.message}</span>
+              </div>
+              {rule.fieldPath ? <small>{rule.fieldPath}</small> : null}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <CorrelationPanel
+        event={event}
+        events={events}
+        onSelectEvent={onSelectEvent}
+      />
+      <TelemetryViewer event={event} events={events} />
+      <DatadogQueryPanel event={event} />
+
+      <section className="panel payload-panel">
+        <div className="panel-title">
+          <h2>Payload</h2>
+          <span>{event.rawBody ? "raw" : "redacted"}</span>
+        </div>
+        <pre>{event.rawBody || JSON.stringify(event.decoded, null, 2)}</pre>
+      </section>
+    </div>
+  );
+}
+
+function CorrelationPanel({
+  event,
+  events,
+  onSelectEvent,
+}: {
+  event: EventEnvelope;
+  events: EventEnvelope[];
+  onSelectEvent: (id: string) => void;
+}) {
+  const groups = correlationFields.map((field) => {
+    const value = event.normalized[field.key];
+    const related = value
+      ? events.filter(
+          (candidate) =>
+            candidate.id !== event.id &&
+            candidate.normalized[field.key] === value,
+        )
+      : [];
+    return { ...field, value, related };
+  });
+  const linkCount = groups.reduce(
+    (count, group) => count + group.related.length,
+    0,
+  );
+  const hints = correlationHints(event, groups);
+
+  return (
+    <section className="panel">
+      <div className="panel-title">
+        <h2>Correlation</h2>
+        <span>{linkCount} links</span>
+      </div>
+      <div className="hint-list">
+        {hints.map((hint) => (
+          <span key={hint}>{hint}</span>
+        ))}
+      </div>
+      <div className="correlation-list">
+        {groups.map((group) => (
+          <div className="correlation-row" key={group.key}>
+            <div className="correlation-head">
+              <GitBranch size={15} aria-hidden="true" />
+              <strong>{group.label}</strong>
+              <code>{group.value || "missing"}</code>
+              <span>
+                {group.related.length
+                  ? `${group.related.length} peer${group.related.length > 1 ? "s" : ""}`
+                  : "no peers"}
+              </span>
+            </div>
+            {group.related.length ? (
+              <div className="peer-list">
+                {group.related.slice(0, 4).map((peer) => (
+                  <button
+                    type="button"
+                    key={`${group.key}-${peer.id}`}
+                    onClick={() => onSelectEvent(peer.id)}
+                  >
+                    <span className={`source source-${peer.source}`}>
+                      {peer.source}
+                    </span>
+                    <span>{peer.normalized.service || peer.endpoint}</span>
+                    <small>
+                      {peer.normalized.route ||
+                        peer.normalized.traceId ||
+                        peer.id}
+                    </small>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function TelemetryViewer({
+  event,
+  events,
+}: {
+  event: EventEnvelope;
+  events: EventEnvelope[];
+}) {
+  if (event.payloadKind === "replay") {
+    return <ReplayViewer event={event} />;
+  }
+  if (event.source === "logs" || event.payloadKind === "log") {
+    return <LogViewer event={event} />;
+  }
+  if (event.payloadKind === "metric") {
+    return <MetricViewer event={event} />;
+  }
+  if (
+    event.source === "apm" ||
+    event.source === "otlp" ||
+    event.normalized.traceId
+  ) {
+    return <TraceViewer event={event} events={events} />;
+  }
+  return (
+    <section className="panel inspector-panel">
+      <div className="panel-title">
+        <h2>Viewer</h2>
+        <span>no specialized viewer</span>
+      </div>
+      <p className="viewer-empty">
+        RUM events without replay data use the payload and correlation panels.
+      </p>
+    </section>
+  );
+}
+
+function ReplayViewer({ event }: { event: EventEnvelope }) {
+  const frames = React.useMemo(() => replayFrames(event), [event]);
+  const [index, setIndex] = React.useState(0);
+  const [playing, setPlaying] = React.useState(false);
+  const current = frames[Math.min(index, Math.max(frames.length - 1, 0))];
+
+  React.useEffect(() => {
+    setIndex(0);
+    setPlaying(false);
+  }, [event.id]);
+
+  React.useEffect(() => {
+    if (!playing || frames.length <= 1) return undefined;
+    const timer = window.setInterval(() => {
+      setIndex((value) => {
+        if (value >= frames.length - 1) {
+          setPlaying(false);
+          return value;
+        }
+        return value + 1;
+      });
+    }, 750);
+    return () => window.clearInterval(timer);
+  }, [frames.length, playing]);
+
+  const replaySummary = replayMetadata(event);
+  return (
+    <section className="panel inspector-panel log-panel">
+      <div className="panel-title">
+        <h2>Session Replay</h2>
+        <span>{frames.length ? `${frames.length} frames` : replaySummary}</span>
+      </div>
+      {frames.length ? (
+        <div className="replay-viewer">
+          <div className="replay-controls">
+            <button
+              type="button"
+              className="copy-button"
+              onClick={() => setPlaying((value) => !value)}
+            >
+              {playing ? (
+                <Pause size={15} aria-hidden="true" />
+              ) : (
+                <Play size={15} aria-hidden="true" />
+              )}
+              <span>{playing ? "Pause" : "Play"}</span>
+            </button>
+            <input
+              aria-label="Replay frame"
+              type="range"
+              min={0}
+              max={Math.max(frames.length - 1, 0)}
+              value={index}
+              onChange={(change) => {
+                setPlaying(false);
+                setIndex(Number(change.target.value));
+              }}
+            />
+            <code>
+              {index + 1} / {frames.length}
+            </code>
+          </div>
+          <div className="replay-stage" aria-label="Replay payload preview">
+            <div>
+              <strong>{current?.label ?? "frame"}</strong>
+              <span>
+                {current?.timestamp
+                  ? formatReplayTime(current.timestamp)
+                  : "no timestamp"}
+              </span>
+            </div>
+            <p>{current?.summary ?? "No frame data."}</p>
+          </div>
+          <div className="frame-list">
+            {frames.slice(0, 18).map((frame, frameIndex) => (
+              <button
+                type="button"
+                key={`${frame.timestamp}-${frameIndex}`}
+                className={frameIndex === index ? "active" : ""}
+                onClick={() => {
+                  setPlaying(false);
+                  setIndex(frameIndex);
+                }}
+              >
+                <span>{frameIndex + 1}</span>
+                <strong>{frame.label}</strong>
+                <small>{frame.summary}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p className="viewer-empty">
+          Replay payload was accepted, but no JSON frame records were decoded.
+          Inspect the raw payload.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function LogViewer({ event }: { event: EventEnvelope }) {
+  const entries = React.useMemo(() => logEntries(event), [event]);
+  return (
+    <section className="panel inspector-panel log-panel">
+      <div className="panel-title">
+        <h2>
+          <FileText size={16} aria-hidden="true" /> Log Viewer
+        </h2>
+        <span>{entries.length} entries</span>
+      </div>
+      <div className="log-viewer">
+        {entries.map((entry, index) => (
+          <div className="log-line" key={`${entry.timestamp}-${index}`}>
+            <span className={`log-level log-${entry.level.toLowerCase()}`}>
+              {entry.level}
+            </span>
+            <time>{entry.timestamp || formatTime(event.receivedAt)}</time>
+            <p>{entry.message}</p>
+            <code>
+              {entry.traceId || event.normalized.traceId || "no trace"}
+            </code>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MetricViewer({ event }: { event: EventEnvelope }) {
+  const metrics = React.useMemo(() => metricSamplesFromEvent(event), [event]);
+  return (
+    <section className="panel inspector-panel log-panel">
+      <div className="panel-title">
+        <h2>
+          <Activity size={16} aria-hidden="true" /> Metric Viewer
+        </h2>
+        <span>{metrics.length} samples</span>
+      </div>
+      <div className="metric-detail-list">
+        {metrics.length ? (
+          metrics.map((metric) => (
+            <div
+              className="metric-detail-row"
+              key={`${metric.eventId}-${metric.name}-${metric.route ?? ""}`}
+            >
+              <strong>{metric.name}</strong>
+              <span>{metric.service}</span>
+              <code>{formatMetricValue(metric)}</code>
+              <small>{metric.route || metric.aggregation || "no route"}</small>
+            </div>
+          ))
+        ) : (
+          <p className="viewer-empty">
+            Metric payload was accepted, but no OTLP metric samples were
+            decoded. Inspect the raw payload.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function TraceViewer({
+  event,
+  events,
+}: {
+  event: EventEnvelope;
+  events: EventEnvelope[];
+}) {
+  const traceId = event.normalized.traceId;
+  const related = traceId
+    ? events.filter((candidate) => candidate.normalized.traceId === traceId)
+    : [event];
+  const spans = traceSpans(related);
+  return (
+    <section className="panel inspector-panel">
+      <div className="panel-title">
+        <h2>
+          <Network size={16} aria-hidden="true" /> Trace Spans
+        </h2>
+        <span>{spans.length} spans</span>
+      </div>
+      <div className="trace-viewer">
+        {spans.length ? (
+          spans.map((span) => (
+            <div
+              className="span-row"
+              key={`${span.eventId}-${span.spanId || span.name}`}
+              style={{ "--depth": span.depth } as React.CSSProperties}
+            >
+              <ListTree size={15} aria-hidden="true" />
+              <div>
+                <strong>{span.name}</strong>
+                <small>
+                  {span.service} ·{" "}
+                  {span.resource || span.route || "no resource"}
+                </small>
+              </div>
+              <code>{span.spanId || "no span"}</code>
+              <span>{formatDuration(span.durationMs)}</span>
+            </div>
+          ))
+        ) : (
+          <p className="viewer-empty">
+            No span payloads found for this trace. A log-only event still links
+            by trace ID.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function DatadogQueryPanel({ event }: { event: EventEnvelope }) {
+  const [disabled, setDisabled] = React.useState<Set<string>>(() => new Set());
+  const [copied, setCopied] = React.useState(false);
+  const options = React.useMemo(() => datadogTerms(event), [event]);
+
+  React.useEffect(() => {
+    setDisabled(new Set());
+    setCopied(false);
+  }, [event.id]);
+
+  const query = options
+    .filter((option) => !disabled.has(option.key))
+    .map((option) => option.term)
+    .join(" ");
+
+  async function copyQuery() {
+    if (!query) return;
+    await copyToClipboard(query);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1200);
+  }
+
+  return (
+    <section className="panel">
+      <div className="panel-title">
+        <h2>Datadog Search</h2>
+        <button
+          type="button"
+          className="copy-button"
+          onClick={() => void copyQuery()}
+          disabled={!query}
+        >
+          <Clipboard size={15} aria-hidden="true" />
+          <span>{copied ? "Copied" : "Copy"}</span>
+        </button>
+      </div>
+      <div className="query-builder">
+        <div className="query-options" aria-label="Datadog query fields">
+          {options.map((option) => (
+            <label key={option.key}>
+              <input
+                type="checkbox"
+                checked={!disabled.has(option.key)}
+                onChange={(change) => {
+                  setDisabled((current) => {
+                    const next = new Set(current);
+                    if (change.target.checked) {
+                      next.delete(option.key);
+                    } else {
+                      next.add(option.key);
+                    }
+                    return next;
+                  });
+                }}
+              />
+              <span>{option.label}</span>
+            </label>
+          ))}
+        </div>
+        <input
+          className="query-output"
+          aria-label="Datadog search query"
+          readOnly
+          value={query}
+        />
+      </div>
+    </section>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+);
+
+function formatTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  return `${hours}:${minutes}:${seconds}`;
+}
+
+function eventSubtitle(event: EventEnvelope, mode: StreamMode) {
+  if (mode === "failures") {
+    const rule = event.validation.rules.find(
+      (candidate) => candidate.status === "fail",
+    );
+    return rule
+      ? `${rule.ruleId}${rule.fieldPath ? ` · ${rule.fieldPath}` : ""}`
+      : event.validation.summary || event.id;
+  }
+  return event.normalized.route || event.normalized.traceId || event.id;
+}
+
+function eventLabel(event: EventEnvelope) {
+  if (event.payloadKind === "replay") return "replay";
+  if (event.payloadKind === "trace") return "trace";
+  if (event.payloadKind === "log") return "log";
+  return event.source;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return undefined;
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function stringValue(value: unknown): string | undefined {
+  if (typeof value === "string" && value.trim()) return value;
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
+  return undefined;
+}
+
+function numberValue(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
+function getPath(value: unknown, path: string): unknown {
+  const parts = path.split(".");
+  let current: unknown = value;
+  for (const part of parts) {
+    const record = asRecord(current);
+    if (!record || !(part in record)) return undefined;
+    current = record[part];
+  }
+  return current;
+}
+
+function replayFrames(event: EventEnvelope): ReplayFrame[] {
+  const records = replayRecords(event.decoded);
+  return records.map((record) => {
+    const row = asRecord(record) ?? {};
+    const data = asRecord(row.data);
+    const timestamp = numberValue(row.timestamp);
+    const label = replayLabel(row.type);
+    const fallback = JSON.stringify(data ?? row) ?? "frame";
+    const summary =
+      stringValue(data?.href) ??
+      stringValue(data?.source) ??
+      stringValue(data?.tagName) ??
+      fallback.slice(0, 180);
+    return { label, timestamp, summary };
+  });
+}
+
+function replayRecords(decoded: unknown): unknown[] {
+  const record = asRecord(decoded);
+  const direct = asArray(record?.records);
+  if (direct.length) return direct;
+  const nested = asArray(getPath(decoded, "records.records"));
+  if (nested.length) return nested;
+  const events = asArray(record?.events);
+  if (events.length) return events;
+  return Array.isArray(decoded) ? decoded : [];
+}
+
+function replayMetadata(event: EventEnvelope) {
+  const detail = event.details?.replay;
+  if (detail) {
+    const count = detail.recordCount
+      ? `${detail.recordCount} records`
+      : "payload accepted";
+    const bytes = detail.segmentBytes || detail.bytes;
+    return bytes ? `${count}, ${bytes} bytes` : count;
+  }
+  const replay = asRecord(asRecord(event.decoded)?.replay);
+  if (!replay) return "payload accepted";
+  const format = stringValue(replay.format) ?? "unknown";
+  const bytes = numberValue(replay.bytes);
+  return bytes ? `${format}, ${bytes} bytes` : format;
+}
+
+function replayLabel(value: unknown) {
+  const type = numberValue(value);
+  switch (type) {
+    case 2:
+      return "Full snapshot";
+    case 3:
+      return "Incremental";
+    case 4:
+      return "Metadata";
+    case 5:
+      return "Custom";
+    case 6:
+      return "Plugin";
+    default:
+      return stringValue(value) ?? "Replay frame";
+  }
+}
+
+function formatReplayTime(timestamp: number) {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return `${timestamp} ms`;
+  return `${formatTime(date.toISOString())}.${String(date.getMilliseconds()).padStart(3, "0")}`;
+}
+
+function logEntries(event: EventEnvelope): LogEntry[] {
+  if (event.details?.logs?.length) {
+    return event.details.logs.map((entry) => ({
+      timestamp: entry.timestamp,
+      level: (entry.level || "info").toUpperCase(),
+      message: entry.message || "log payload",
+      traceId: entry.traceId,
+    }));
+  }
+  const items = Array.isArray(event.decoded) ? event.decoded : [event.decoded];
+  return items.map((item) => {
+    const row = asRecord(item) ?? {};
+    const tags = asRecord(row.tags);
+    const level =
+      stringValue(row.status) ??
+      stringValue(row.level) ??
+      stringValue(row.severity) ??
+      "info";
+    const message =
+      stringValue(row.message) ??
+      stringValue(row.msg) ??
+      stringValue(row.error) ??
+      JSON.stringify(row);
+    return {
+      timestamp:
+        stringValue(row.timestamp) ??
+        stringValue(row.date) ??
+        stringValue(row.time),
+      level: level.toUpperCase(),
+      message,
+      traceId:
+        stringValue(row.trace_id) ??
+        stringValue(row.traceId) ??
+        stringValue(tags?.trace_id),
+    };
+  });
+}
+
+function traceSpans(events: EventEnvelope[]): TraceSpan[] {
+  const spans = events.flatMap((event) => extractSpans(event));
+  const seen = new Set<string>();
+  const unique = spans.filter((span) => {
+    const key = `${span.eventId}:${span.spanId ?? span.name}:${span.parentSpanId ?? ""}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const byID = new Map(
+    unique.filter((span) => span.spanId).map((span) => [span.spanId, span]),
+  );
+  return unique.map((span) => {
+    let depth = 0;
+    let parent = span.parentSpanId ? byID.get(span.parentSpanId) : undefined;
+    while (parent && depth < 8) {
+      depth += 1;
+      parent = parent.parentSpanId ? byID.get(parent.parentSpanId) : undefined;
+    }
+    return { ...span, depth };
+  });
+}
+
+function extractSpans(event: EventEnvelope): TraceSpan[] {
+  if (event.details?.trace?.spans?.length) {
+    return event.details.trace.spans.map((span) => ({
+      eventId: event.id,
+      spanId: span.spanId,
+      parentSpanId: span.parentSpanId,
+      traceId:
+        span.traceId ??
+        event.details?.trace?.traceId ??
+        event.normalized.traceId,
+      name: span.name ?? event.normalized.route ?? "span",
+      resource: span.resource,
+      route: event.normalized.route,
+      service: span.service ?? event.normalized.service ?? "unknown-service",
+      durationMs: span.durationMs,
+      depth: 0,
+    }));
+  }
+  const spans: TraceSpan[] = [];
+  collectSpanRecords(event.decoded, (row) => {
+    const spanId = stringValue(row.span_id) ?? stringValue(row.spanId);
+    const traceId =
+      stringValue(row.trace_id) ??
+      stringValue(row.traceId) ??
+      event.normalized.traceId;
+    spans.push({
+      eventId: event.id,
+      spanId,
+      parentSpanId: stringValue(row.parent_id) ?? stringValue(row.parentSpanId),
+      traceId,
+      name:
+        stringValue(row.name) ??
+        stringValue(row.operationName) ??
+        event.normalized.route ??
+        "span",
+      resource: stringValue(row.resource),
+      route: stringValue(row.route) ?? event.normalized.route,
+      service:
+        stringValue(row.service) ??
+        event.normalized.service ??
+        "unknown-service",
+      durationMs: spanDuration(row),
+      depth: 0,
+    });
+  });
+  if (
+    !spans.length &&
+    (event.source === "apm" || event.source === "otlp") &&
+    (event.normalized.traceId || event.normalized.spanId)
+  ) {
+    spans.push({
+      eventId: event.id,
+      spanId: event.normalized.spanId,
+      parentSpanId: event.normalized.parentSpanId,
+      traceId: event.normalized.traceId,
+      name:
+        event.normalized.errorType || event.normalized.route || event.source,
+      route: event.normalized.route,
+      service: event.normalized.service || "unknown-service",
+      durationMs: event.normalized.durationMs,
+      depth: 0,
+    });
+  }
+  return spans;
+}
+
+function collectSpanRecords(
+  value: unknown,
+  visit: (row: Record<string, unknown>) => void,
+): void {
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectSpanRecords(item, visit));
+    return;
+  }
+  const row = asRecord(value);
+  if (!row) return;
+  if ("span_id" in row || "spanId" in row) {
+    visit(row);
+  }
+  Object.values(row).forEach((item) => collectSpanRecords(item, visit));
+}
+
+function spanDuration(row: Record<string, unknown>): number | undefined {
+  const direct = numberValue(row.duration) ?? numberValue(row.durationMs);
+  if (direct === undefined) return undefined;
+  if (direct > 1_000_000) return direct / 1_000_000;
+  return direct;
+}
+
+function formatDuration(value: number | undefined) {
+  if (value === undefined || !Number.isFinite(value)) return "-";
+  if (value >= 1000) return `${(value / 1000).toFixed(2)}s`;
+  return `${value.toFixed(value < 10 ? 2 : 1)}ms`;
+}
+
+function buildObservabilityOverview(
+  events: EventEnvelope[],
+): ObservabilityOverviewData {
+  const serviceMap = new Map<ServiceSummary["service"], ServiceSummary>();
+  const routeMap = new Map<
+    string,
+    RouteSummary & { durationTotal: number; durationCount: number }
+  >();
+  const metricSamples: MetricSample[] = [];
+
+  for (const event of events) {
+    const eventMetrics = metricSamplesFromEvent(event);
+    metricSamples.push(...eventMetrics);
+    const service =
+      event.normalized.service ||
+      eventMetrics[0]?.service ||
+      "unknown-service";
+    const summary = ensureServiceSummary(serviceMap, service);
+    summary.events += 1;
+    if (!summary.sources.includes(event.source)) {
+      summary.sources.push(event.source);
+    }
+    if (event.source === "rum") summary.rum += 1;
+    if (event.source === "logs" || event.payloadKind === "log")
+      summary.logs += 1;
+    if (event.source === "apm" || event.payloadKind === "trace")
+      summary.traces += 1;
+    if (event.payloadKind === "metric") summary.metrics += 1;
+    if (isErrorEvent(event)) summary.errors += 1;
+
+    const duration = eventDuration(event);
+    if (duration !== undefined) {
+      summary.avgDurationMs =
+        ((summary.avgDurationMs ?? 0) * (summary.events - 1) + duration) /
+        summary.events;
+    }
+
+    const route =
+      event.normalized.route ||
+      eventMetrics.find((metric) => metric.route)?.route;
+    if (route) {
+      const routeKey = `${service}\n${route}`;
+      const routeSummary =
+        routeMap.get(routeKey) ??
+        ({
+          route,
+          service,
+          count: 0,
+          errors: 0,
+          durationTotal: 0,
+          durationCount: 0,
+        } satisfies RouteSummary & {
+          durationTotal: number;
+          durationCount: number;
+        });
+      routeSummary.count += 1;
+      if (isErrorEvent(event)) routeSummary.errors += 1;
+      if (duration !== undefined) {
+        routeSummary.durationTotal += duration;
+        routeSummary.durationCount += 1;
+        routeSummary.avgDurationMs =
+          routeSummary.durationTotal / routeSummary.durationCount;
+      }
+      routeMap.set(routeKey, routeSummary);
+    }
+  }
+
+  const edges = serviceEdges(events);
+  const services = Array.from(serviceMap.values()).sort(
+    (left, right) => right.errors - left.errors || right.events - left.events,
+  );
+  const routes = Array.from(routeMap.values())
+    .map((route) => ({
+      route: route.route,
+      service: route.service,
+      count: route.count,
+      errors: route.errors,
+      avgDurationMs: route.avgDurationMs,
+    }))
+    .sort(
+      (left, right) => right.errors - left.errors || right.count - left.count,
+    );
+
+  return {
+    services,
+    edges,
+    routes,
+    metrics: metricSamples,
+    sourceCounts: [
+      {
+        label: "RUM",
+        count: events.filter((event) => event.source === "rum").length,
+      },
+      {
+        label: "Logs",
+        count: events.filter(
+          (event) => event.source === "logs" || event.payloadKind === "log",
+        ).length,
+      },
+      {
+        label: "Traces",
+        count: events.filter(
+          (event) => event.source === "apm" || event.payloadKind === "trace",
+        ).length,
+      },
+      {
+        label: "Metrics",
+        count: events.filter((event) => event.payloadKind === "metric").length,
+      },
+    ],
+  };
+}
+
+function ensureServiceSummary(
+  serviceMap: Map<string, ServiceSummary>,
+  service: string,
+) {
+  const current = serviceMap.get(service);
+  if (current) return current;
+  const next: ServiceSummary = {
+    service,
+    sources: [],
+    events: 0,
+    errors: 0,
+    rum: 0,
+    logs: 0,
+    traces: 0,
+    metrics: 0,
+  };
+  serviceMap.set(service, next);
+  return next;
+}
+
+function isErrorEvent(event: EventEnvelope) {
+  return (
+    event.validation.status === "fail" ||
+    Boolean(event.normalized.errorType) ||
+    (event.normalized.statusCode ?? 0) >= 500 ||
+    logEntries(event).some((entry) =>
+      ["ERROR", "CRITICAL", "ALERT"].includes(entry.level),
+    )
+  );
+}
+
+function eventDuration(event: EventEnvelope) {
+  const spanDuration = event.details?.trace?.spans?.find(
+    (span) => span.durationMs !== undefined,
+  )?.durationMs;
+  return spanDuration ?? event.normalized.durationMs;
+}
+
+function serviceEdges(events: EventEnvelope[]): ServiceEdge[] {
+  const spans = events.flatMap((event) => extractSpans(event));
+  const byID = new Map<string, TraceSpan>();
+  for (const span of spans) {
+    if (!span.spanId) continue;
+    byID.set(`${span.traceId ?? ""}:${span.spanId}`, span);
+  }
+  const edges = new Map<string, { from: string; to: string; traces: Set<string>; count: number }>();
+  for (const span of spans) {
+    if (!span.parentSpanId) continue;
+    const parent = byID.get(`${span.traceId ?? ""}:${span.parentSpanId}`);
+    if (!parent || parent.service === span.service) continue;
+    const key = `${parent.service}\n${span.service}`;
+    const edge =
+      edges.get(key) ??
+      {
+        from: parent.service,
+        to: span.service,
+        traces: new Set<string>(),
+        count: 0,
+      };
+    edge.count += 1;
+    if (span.traceId) edge.traces.add(span.traceId);
+    edges.set(key, edge);
+  }
+  return Array.from(edges.values())
+    .map((edge) => ({
+      from: edge.from,
+      to: edge.to,
+      count: edge.count,
+      traces: Array.from(edge.traces),
+    }))
+    .sort((left, right) => right.count - left.count);
+}
+
+function metricSamplesFromEvent(event: EventEnvelope): MetricSample[] {
+  if (event.details?.metrics?.length) {
+    return event.details.metrics.map((metric) => ({
+      eventId: event.id,
+      name: metric.name || "metric",
+      service:
+        metric.service || event.normalized.service || "unknown-service",
+      unit: metric.unit,
+      value: metric.value,
+      aggregation: metric.aggregation,
+      route: metric.route || event.normalized.route,
+      timestamp: metric.timestamp,
+    }));
+  }
+  const samples: MetricSample[] = [];
+  collectMetricRecords(event.decoded, (metric) => {
+    const name = stringValue(metric.name) ?? "metric";
+    const unit = stringValue(metric.unit);
+    const { aggregation, points } = metricPoints(metric);
+    const metricAttributes = attributeMap(metric);
+    if (!points.length) {
+      const value = metricValue(metric);
+      if (value !== undefined) {
+        samples.push(
+          metricSample(event, name, unit, value, aggregation, metricAttributes),
+        );
+      }
+      return;
+    }
+    for (const point of points) {
+      const pointRecord = asRecord(point);
+      if (!pointRecord) continue;
+      const value = metricValue(pointRecord);
+      if (value === undefined) continue;
+      samples.push(
+        metricSample(event, name, unit, value, aggregation, {
+          ...metricAttributes,
+          ...attributeMap(pointRecord),
+        }),
+      );
+    }
+  });
+  if (!samples.length && event.payloadKind === "metric") {
+    samples.push({
+      eventId: event.id,
+      name: "metric payload",
+      service: event.normalized.service || "unknown-service",
+      route: event.normalized.route,
+      timestamp: event.normalized.timestamp,
+    });
+  }
+  return samples;
+}
+
+function metricSample(
+  event: EventEnvelope,
+  name: string,
+  unit: string | undefined,
+  value: number,
+  aggregation: string | undefined,
+  attributes: Record<string, string>,
+): MetricSample {
+  return {
+    eventId: event.id,
+    name,
+    service:
+      attributes.service ||
+      attributes["service.name"] ||
+      event.normalized.service ||
+      "unknown-service",
+    unit,
+    value,
+    aggregation,
+    route:
+      attributes["http.route"] ||
+      attributes.route ||
+      attributes["resource.name"] ||
+      event.normalized.route,
+    timestamp: event.normalized.timestamp,
+  };
+}
+
+function collectMetricRecords(
+  value: unknown,
+  visit: (row: Record<string, unknown>) => void,
+): void {
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectMetricRecords(item, visit));
+    return;
+  }
+  const row = asRecord(value);
+  if (!row) return;
+  if (
+    "name" in row &&
+    ["gauge", "sum", "histogram", "summary", "dataPoints", "value"].some(
+      (key) => key in row,
+    )
+  ) {
+    visit(row);
+  }
+  Object.values(row).forEach((item) => collectMetricRecords(item, visit));
+}
+
+function metricPoints(row: Record<string, unknown>) {
+  for (const aggregation of ["gauge", "sum", "histogram", "summary"]) {
+    const body = asRecord(row[aggregation]);
+    const points = asArray(body?.dataPoints);
+    if (points.length) return { aggregation, points };
+    const snakePoints = asArray(body?.data_points);
+    if (snakePoints.length) return { aggregation, points: snakePoints };
+  }
+  const direct = asArray(row.dataPoints);
+  if (direct.length) {
+    return {
+      aggregation: stringValue(row.aggregation),
+      points: direct,
+    };
+  }
+  const directSnake = asArray(row.data_points);
+  return {
+    aggregation: stringValue(row.aggregation),
+    points: directSnake,
+  };
+}
+
+function metricValue(row: Record<string, unknown>) {
+  return (
+    numberValue(row.asDouble) ??
+    numberValue(row.asInt) ??
+    numberValue(row.value) ??
+    numberValue(row.count) ??
+    numberValue(row.sum)
+  );
+}
+
+function attributeMap(row: Record<string, unknown>) {
+  const tags: Record<string, string> = {};
+  const tagMap = asRecord(row.tags);
+  if (tagMap) {
+    for (const [key, value] of Object.entries(tagMap)) {
+      const scalar = stringValue(value);
+      if (scalar) tags[key] = scalar;
+    }
+  }
+  for (const item of asArray(row.attributes)) {
+    const attribute = asRecord(item);
+    if (!attribute) continue;
+    const key = stringValue(attribute.key);
+    const value = attributeScalar(attribute.value);
+    if (key && value) tags[key] = value;
+  }
+  return tags;
+}
+
+function attributeScalar(value: unknown): string | undefined {
+  const record = asRecord(value);
+  if (!record) return stringValue(value);
+  return (
+    stringValue(record.stringValue) ??
+    stringValue(record.intValue) ??
+    stringValue(record.doubleValue) ??
+    stringValue(record.boolValue)
+  );
+}
+
+function formatMetricValue(metric: MetricSample) {
+  if (metric.value === undefined || !Number.isFinite(metric.value)) return "-";
+  const abs = Math.abs(metric.value);
+  const value =
+    abs >= 100 ? metric.value.toFixed(0) : metric.value.toFixed(2);
+  const trimmed = value.replace(/\.?0+$/, "");
+  return metric.unit ? `${trimmed} ${metric.unit}` : trimmed;
+}
+
+async function copyToClipboard(value: string) {
+  try {
+    await navigator.clipboard.writeText(value);
+  } catch {
+    const fallback = document.createElement("textarea");
+    fallback.value = value;
+    fallback.style.position = "fixed";
+    fallback.style.opacity = "0";
+    document.body.appendChild(fallback);
+    fallback.focus();
+    fallback.select();
+    document.execCommand("copy");
+    fallback.remove();
+  }
+}
+
+function summarizeEvents(events: EventEnvelope[]): Report {
+  return {
+    summary: {
+      total: events.length,
+      passed: events.filter((event) => event.validation.status === "pass")
+        .length,
+      failed: events.filter((event) => event.validation.status === "fail")
+        .length,
+      fatal: events.filter((event) =>
+        event.validation.rules.some(
+          (rule) => rule.severity === "fatal" && rule.status === "fail",
+        ),
+      ).length,
+      warnings: events.filter((event) =>
+        event.validation.rules.some(
+          (rule) => rule.severity === "warning" && rule.status === "fail",
+        ),
+      ).length,
+    },
+  };
+}
+
+function correlationHints(
+  event: EventEnvelope,
+  groups: Array<{
+    key: CorrelationField;
+    label: string;
+    value?: string;
+    related: EventEnvelope[];
+  }>,
+) {
+  const hints: string[] = [];
+  const missing = correlationFields
+    .filter((field) => !event.normalized[field.key])
+    .map((field) => field.label.toLowerCase());
+  if (missing.length) {
+    hints.push(`missing ${missing.join(", ")}`);
+  }
+
+  const trace = groups.find((group) => group.key === "traceId");
+  if (trace?.value) {
+    const sources = new Set(trace.related.map((peer) => peer.source));
+    sources.add(event.source);
+    hints.push(
+      sources.size > 1
+        ? `trace spans ${sources.size} sources`
+        : "trace has one source",
+    );
+  }
+
+  const contextPeers = groups
+    .filter((group) => group.key !== "traceId")
+    .reduce((count, group) => count + group.related.length, 0);
+  if (contextPeers > 0) {
+    hints.push(`${contextPeers} context peers`);
+  }
+
+  return hints.length ? hints : ["no correlation keys"];
+}
+
+function datadogTerms(event: EventEnvelope) {
+  const terms: Array<{ key: string; label: string; term: string }> = [];
+  const add = (
+    key: string,
+    label: string,
+    field: string,
+    value?: string | number,
+  ) => {
+    if (value === undefined || value === null || value === "") return;
+    terms.push({
+      key,
+      label,
+      term: `${field}:${formatDatadogValue(String(value))}`,
+    });
+  };
+
+  add("service", "Service", "service", event.normalized.service);
+  add("env", "Env", "env", event.normalized.env);
+  add("version", "Version", "version", event.normalized.version);
+  add("trace", "Trace", "trace_id", event.normalized.traceId);
+  add("user", "User", "@usr.id", event.normalized.userId);
+  add("account", "Account", "@account.id", event.normalized.accountId);
+  add("workspace", "Workspace", "@workspace.id", event.normalized.workspaceId);
+  add("case", "Case", "@case.id", event.normalized.caseId);
+  add("route", "Route", "@http.route", event.normalized.route);
+  add("status", "Status", "@http.status_code", event.normalized.statusCode);
+  return terms;
+}
+
+function formatDatadogValue(value: string) {
+  if (/^[A-Za-z0-9_.:-]+$/.test(value)) {
+    return value;
+  }
+  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}

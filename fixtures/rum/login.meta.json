@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "fixtureClass": "smoke",
+  "gate": "G1 Fixture Evidence",
+  "source": "rum",
+  "captureStatus": "handwritten-smoke",
+  "captureScript": "scripts/fixtures/capture-rum-browser.sh",
+  "payloadPath": "fixtures/rum/login.json",
+  "expectedArtifactPath": "testdata/g1-evidence/latest/rum/events.json",
+  "expectedNormalized": {
+    "source": "rum",
+    "service": "web-frontend",
+    "env": "local",
+    "version": "dev",
+    "sessionId": "session-123",
+    "viewId": "view-123",
+    "userId": "user-123",
+    "accountId": "account-123",
+    "workspaceId": "workspace-123",
+    "caseId": "case-123",
+    "route": "/cases/case-123"
+  },
+  "redactionExpectations": [
+    {
+      "field": "headers.authorization",
+      "expect": "masked"
+    },
+    {
+      "field": "query.access_token",
+      "expect": "masked-and-validation-failure"
+    },
+    {
+      "field": "decoded.usr.email",
+      "expect": "masked-outside-local-raw-mode"
+    }
+  ],
+  "g1Notes": "This fixture is not captured from the Datadog Browser RUM SDK. Use the capture script and promote the captured artifact before claiming G1."
+}
+

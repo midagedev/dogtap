@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "capture": "node capture.mjs"
+  },
+  "dependencies": {
+    "@datadog/browser-rum": "6.0.0",
+    "playwright": "1.52.0"
+  }
+}
+

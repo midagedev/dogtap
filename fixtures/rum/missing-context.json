@@ -1,0 +1,10 @@
+{
+  "service": "web-frontend",
+  "env": "local",
+  "version": "dev",
+  "type": "view",
+  "view": {
+    "id": "view-missing-context",
+    "url_path": "/cases/missing-context"
+  }
+}

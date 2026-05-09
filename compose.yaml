@@ -1,0 +1,17 @@
+services:
+  dogtap:
+    build: .
+    ports:
+      - "8080:8080"
+      - "8126:8126"
+      - "4317:4317"
+      - "4318:4318"
+    environment:
+      DOGTAP_MODE: local
+      DOGTAP_STORAGE_KIND: file
+      DOGTAP_STORAGE_PATH: /data/events.json
+    volumes:
+      - dogtap-data:/data
+
+volumes:
+  dogtap-data:

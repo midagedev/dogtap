@@ -1,0 +1,42 @@
+mode: local
+server:
+  httpAddr: ":8080"
+  apmAddr: ":8126"
+  otlpHttpAddr: ":4318"
+  grpcAddr: ":4317"
+storage:
+  kind: file
+  path: .dogtap/events.json
+  maxEvents: 1000
+  ttl: 2h
+safety:
+  samplingRate: 1.0
+  queueMaxInFlight: 100
+  backpressurePolicy: drop-newest
+validation:
+  required:
+    serviceTags: true
+    rum:
+      - userId
+      - accountId
+      - workspaceId
+    logs:
+      - service
+      - env
+    apm:
+      - service
+      - env
+      - version
+    otlp:
+      - service
+  pii:
+    enabled: true
+    failOn:
+      - access_token
+      - authorization
+      - refresh_token
+forwarding:
+  enabled: false
+  site: datadoghq.com
+security:
+  maxBodyBytes: 10485760

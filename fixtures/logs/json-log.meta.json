@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "fixtureClass": "smoke",
+  "gate": "G1 Fixture Evidence",
+  "source": "logs",
+  "captureStatus": "handwritten-smoke",
+  "captureScript": "scripts/fixtures/capture-logs.sh",
+  "payloadPath": "fixtures/logs/json-log.json",
+  "expectedArtifactPath": "testdata/g1-evidence/latest/logs/events.json",
+  "expectedNormalized": {
+    "source": "logs",
+    "service": "api-service",
+    "env": "local",
+    "version": "dev",
+    "traceId": "123456789",
+    "spanId": "987654321",
+    "route": "/api/cases/{caseId}/exports",
+    "errorMessage": "case export failed"
+  },
+  "redactionExpectations": [
+    {
+      "field": "headers.dd-api-key",
+      "expect": "masked"
+    },
+    {
+      "field": "query.access_token",
+      "expect": "masked-and-validation-failure"
+    },
+    {
+      "field": "decoded.email",
+      "expect": "masked-outside-local-raw-mode"
+    }
+  ],
+  "g1Notes": "The capture script posts JSON logs through Dogtap locally. Promote generated artifacts only after recording command output and Dogtap events."
+}
+

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "fixtureClass": "g1-real-evidence",
+  "gate": "G1 Fixture Evidence",
+  "source": "otlp",
+  "protocol": "http",
+  "captureStatus": "captured-from-opentelemetry-node-sdk-sanitized",
+  "captureScript": "scripts/fixtures/capture-otlp-node-sdk.sh",
+  "captureCommand": "npm --prefix testdata/otlp-node install && scripts/fixtures/capture-otlp-node-sdk.sh",
+  "captureDateUtc": "2026-05-08T09:15:10Z",
+  "captureEnvironment": {
+    "os": "macOS 26.3.1 (a) 25D771280a",
+    "arch": "arm64",
+    "node": "v24.14.0",
+    "npm": "11.9.0",
+    "go": "go1.26.1 darwin/arm64"
+  },
+  "sdk": {
+    "language": "nodejs",
+    "name": "opentelemetry",
+    "version": "1.30.1",
+    "exporter": "@opentelemetry/exporter-trace-otlp-http",
+    "exporterVersion": "0.57.2"
+  },
+  "payloadPath": "fixtures/otlp/otel-node-http-traces.json",
+  "sourceEvidencePath": "testdata/g1-evidence/latest/otlp/events.json",
+  "sourceEvidenceEvent": {
+    "endpoint": "/v1/traces",
+    "method": "POST",
+    "contentType": "application/json"
+  },
+  "localOnly": true,
+  "externalVendorApisCalled": false,
+  "sanitization": [
+    {
+      "field": "resourceSpans[0].scopeSpans[0].spans[0].attributes[3].value.stringValue",
+      "original": "local fixture bearer token",
+      "replacement": "[REDACTED_FIXTURE_TOKEN]"
+    }
+  ],
+  "expectedNormalized": {
+    "source": "otlp",
+    "service": "api-service",
+    "env": "local",
+    "version": "g1-fixture",
+    "method": "POST",
+    "traceId": "b1137139e51776409cd925913f8a228c",
+    "spanId": "59ce34bc746e804c"
+  },
+  "redactionExpectations": [
+    {
+      "field": "resourceSpans.scopeSpans.spans.attributes.authorization",
+      "expect": "sensitive key must be detected and value must not expose the original fixture token"
+    },
+    {
+      "field": "resourceSpans.scopeSpans.spans.attributes.case.id",
+      "expect": "high-cardinality identifier should be flagged or normalized according to policy"
+    }
+  ],
+  "reviewNotes": "Promoted from a local OpenTelemetry Node SDK OTLP HTTP export captured by Dogtap. The raw fixture token value was sanitized before promotion."
+}

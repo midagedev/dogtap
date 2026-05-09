@@ -1,0 +1,7 @@
+{
+  "message": "case export failed for operator@example.com",
+  "status": "error",
+  "ddtags": "service:api-service,env:local,version:dev,user.id:user-123,session.id:session-123",
+  "route": "/api/cases/case-123/exports?access_token=token-value",
+  "authorization": "Bearer body-token-value"
+}

@@ -1,0 +1,39 @@
+[
+  [
+    {
+      "duration": 22026367,
+      "error": 1,
+      "meta": {
+        "_dd.p.dm": "-0",
+        "_dd.p.tid": "69fda9b400000000",
+        "account.id": "account-123",
+        "authorization": "<redacted: fixture bearer token>",
+        "case.id": "case-123",
+        "env": "local",
+        "error.message": "fixture backend error",
+        "http.method": "POST",
+        "http.route": "/api/cases/{caseId}/exports",
+        "http.status_code": "500",
+        "language": "javascript",
+        "runtime-id": "8b0fe4eb-56a5-4df0-a301-0cb403019aa3",
+        "service": "api-service",
+        "version": "g1-fixture",
+        "workspace.id": "workspace-123"
+      },
+      "metrics": {
+        "_dd.agent_psr": 1,
+        "_dd.top_level": 1,
+        "_sampling_priority_v1": 1,
+        "process_id": 42414,
+        "setTraceError": 1
+      },
+      "name": "web.request",
+      "parent_id": 0,
+      "resource": "web.request",
+      "service": "api-service",
+      "span_id": 4958826448523026328,
+      "start": 1778231732148008704,
+      "trace_id": 4958826448523026328
+    }
+  ]
+]

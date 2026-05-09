@@ -1,0 +1,10 @@
+{
+  "message": "gzip log fixture with unsafe token marker access_token",
+  "status": "error",
+  "ddtags": "service:api-service,env:local,version:dev",
+  "trace_id": "223456789",
+  "span_id": "887654321",
+  "route": "/api/cases/{caseId}/exports",
+  "email": "gzip.fixture@example.com"
+}
+

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "fixtureClass": "smoke",
+  "gate": "G1 Fixture Evidence",
+  "source": "otlp",
+  "captureStatus": "handwritten-smoke",
+  "captureScript": "scripts/fixtures/capture-otlp-node-sdk.sh",
+  "payloadPath": "fixtures/otlp/traces.json",
+  "expectedArtifactPath": "testdata/g1-evidence/latest/otlp/events.json",
+  "expectedNormalized": {
+    "source": "otlp",
+    "service": "api-service",
+    "env": "local"
+  },
+  "redactionExpectations": [
+    {
+      "field": "resourceSpans.scopeSpans.spans.attributes.authorization",
+      "expect": "masked-outside-local-raw-mode"
+    },
+    {
+      "field": "resourceSpans.scopeSpans.spans.attributes.enduser.id",
+      "expect": "retained unless policy marks it sensitive"
+    }
+  ],
+  "g1Notes": "This fixture is a minimal OTLP JSON smoke payload. G1 needs HTTP and gRPC payloads emitted by an OpenTelemetry SDK or collector."
+}
+

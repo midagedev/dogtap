@@ -1,0 +1,27 @@
+{
+  "service": "web-frontend",
+  "env": "local",
+  "version": "dev",
+  "type": "view",
+  "usr": {
+    "id": "user-123"
+  },
+  "context": {
+    "account": {
+      "id": "account-123"
+    },
+    "workspace": {
+      "id": "workspace-123"
+    },
+    "case": {
+      "id": "case-123"
+    }
+  },
+  "session": {
+    "id": "session-123"
+  },
+  "view": {
+    "id": "view-123",
+    "url_path": "/cases/case-123"
+  }
+}

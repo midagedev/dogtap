@@ -1,0 +1,14 @@
+[
+  [
+    {
+      "service": "api-service",
+      "env": "local",
+      "version": "dev",
+      "name": "web.request",
+      "resource": "POST /api/cases/{caseId}/exports",
+      "trace_id": 123456789,
+      "span_id": 987654321,
+      "parent_id": 0
+    }
+  ]
+]

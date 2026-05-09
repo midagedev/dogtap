@@ -1,0 +1,131 @@
+# Roadmap
+
+## Final Target
+
+Dogtap should become a Datadog-compatible telemetry intake inspector and validation gateway that supports local mock behavior, CI contract validation, staging forwarding, and production-safe teeing.
+
+The roadmap is designed for parallel agent execution. Each phase has a gate defined in `specs/000-product/gates.md`.
+
+## Phase 0: Definition
+
+Status: complete
+
+- Product concept
+- PRD
+- Spec Kit style artifacts
+- Architecture
+- Testing strategy
+- Production safety rules
+- Final goal
+- Agent orchestration plan
+- Success gates
+
+Gate:
+
+- G0 Spec Readiness
+
+## Phase 1: Local Inspector MVP
+
+Goal: make local telemetry visible.
+
+Status: partially complete
+
+- Docker image
+- RUM intake
+- logs intake
+- bounded in-memory and optional file event store
+- dashboard stream, detail, failure inbox, correlation, and query views
+- required field validation
+- PII detection
+
+Gate:
+
+- G1 Fixture Evidence: passed
+- G2 Runtime Contract: passed
+- G3 Protocol Intake: passed
+
+## Phase 2: APM and Correlation
+
+Goal: connect frontend, backend, and logs.
+
+Status: smoke fixture-backed MVP complete
+
+- APM trace intake
+- trace/log/RUM correlation hints
+- Datadog query builder
+- debug bundle export
+
+Gate:
+
+- G3 Protocol Intake: passed
+- G4 Product Usability: passed
+
+## Phase 3: CI Contract Mode
+
+Goal: prevent telemetry regressions before deployment.
+
+Status: locally complete
+
+- headless validation command
+- fixture replay
+- JSON and Markdown reports
+- exit code policy
+- sample GitHub Actions workflow
+
+Gate:
+
+- G5 CI Contract: passed locally
+
+## Phase 4: Forward Mode
+
+Goal: inspect staging telemetry while still sending to Datadog.
+
+Status: RUM/logs complete, APM deferred
+
+- RUM forwarding
+- logs forwarding
+- forwarding result visibility
+- retry and drop policy
+- redacted local samples
+
+Gate:
+
+- G6 Forwarding Safety: passed for RUM/logs
+
+## Phase 5: Production-Safe Tee
+
+Goal: support limited production use without becoming a reliability risk.
+
+Status: complete
+
+- sampling: implemented
+- bounded queue: implemented
+- redaction-before-persistence: implemented
+- no raw payload by default: implemented
+- operational metrics: implemented
+- deployment runbook: written
+
+Gate:
+
+- G7 Production Safety: passed
+
+## Phase 6: Ecosystem
+
+Goal: make the project useful outside one company.
+
+Status: generic adoption quickstart subset complete; release candidate remains
+blocked pending one realistic sanitized adoption profile.
+
+- public docs site
+- sample apps
+- validation profile examples
+- OpenTelemetry Collector recipes
+- Helm chart or ECS task example
+- generic frontend/backend adoption kit: complete
+- copyable Docker Compose and environment snippets: complete
+- realistic sanitized adoption profile
+
+Gate:
+
+- G8 Release Candidate: blocked until sanitized local RUM/APM/log/metric
+  evidence from one realistic application profile validates successfully

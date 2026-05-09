@@ -1,0 +1,209 @@
+{
+  "id": "apm-did6jgfv90iw-1",
+  "receivedAt": "2026-05-08T09:15:32.673858Z",
+  "source": "apm",
+  "endpoint": "/v0.4/traces",
+  "method": "PUT",
+  "headers": {
+    "Connection": "keep-alive",
+    "Content-Length": "693",
+    "Content-Type": "application/msgpack",
+    "Datadog-Meta-Lang": "nodejs",
+    "Datadog-Meta-Lang-Interpreter": "v8",
+    "Datadog-Meta-Lang-Version": "v24.14.0",
+    "Datadog-Meta-Tracer-Version": "5.44.0",
+    "X-Datadog-Trace-Count": "1"
+  },
+  "contentType": "application/msgpack",
+  "bodySizeBytes": 693,
+  "decodedSizeBytes": 693,
+  "rawBody": "<redacted: original msgpack raw body contained fixture bearer token>",
+  "decoded": [
+    [
+      {
+        "duration": 22026367,
+        "error": 1,
+        "meta": {
+          "_dd.p.dm": "-0",
+          "_dd.p.tid": "69fda9b400000000",
+          "account.id": "account-123",
+          "authorization": "<redacted: fixture bearer token>",
+          "case.id": "case-123",
+          "env": "local",
+          "error.message": "fixture backend error",
+          "http.method": "POST",
+          "http.route": "/api/cases/{caseId}/exports",
+          "http.status_code": "500",
+          "language": "javascript",
+          "runtime-id": "8b0fe4eb-56a5-4df0-a301-0cb403019aa3",
+          "service": "api-service",
+          "version": "g1-fixture",
+          "workspace.id": "workspace-123"
+        },
+        "metrics": {
+          "_dd.agent_psr": 1,
+          "_dd.top_level": 1,
+          "_sampling_priority_v1": 1,
+          "process_id": 42414,
+          "setTraceError": 1
+        },
+        "name": "web.request",
+        "parent_id": 0,
+        "resource": "web.request",
+        "service": "api-service",
+        "span_id": 4958826448523026328,
+        "start": 1778231732148008704,
+        "trace_id": 4958826448523026328
+      }
+    ]
+  ],
+  "normalized": {
+    "service": "api-service",
+    "env": "local",
+    "version": "g1-fixture",
+    "source": "apm",
+    "traceId": "4958826448523026328",
+    "spanId": "4958826448523026328",
+    "parentSpanId": "0",
+    "accountId": "account-123",
+    "workspaceId": "workspace-123",
+    "caseId": "case-123",
+    "route": "web.request",
+    "method": "POST",
+    "statusCode": 500,
+    "errorMessage": "fixture backend error",
+    "tags": {
+      "account.id": "account-123",
+      "authorization": "<redacted: fixture bearer token>",
+      "case.id": "case-123",
+      "env": "local",
+      "error.message": "fixture backend error",
+      "http.method": "POST",
+      "http.route": "/api/cases/{caseId}/exports",
+      "http.status_code": "500",
+      "language": "javascript",
+      "runtime-id": "8b0fe4eb-56a5-4df0-a301-0cb403019aa3",
+      "service": "api-service",
+      "version": "g1-fixture",
+      "workspace.id": "workspace-123"
+    }
+  },
+  "validation": {
+    "status": "fail",
+    "rules": [
+      {
+        "ruleId": "required.service",
+        "severity": "info",
+        "status": "pass",
+        "message": "required field is present",
+        "fieldPath": "service"
+      },
+      {
+        "ruleId": "required.env",
+        "severity": "info",
+        "status": "pass",
+        "message": "required field is present",
+        "fieldPath": "env"
+      },
+      {
+        "ruleId": "required.apm.service",
+        "severity": "info",
+        "status": "pass",
+        "message": "required field is present",
+        "fieldPath": "service"
+      },
+      {
+        "ruleId": "required.apm.env",
+        "severity": "info",
+        "status": "pass",
+        "message": "required field is present",
+        "fieldPath": "env"
+      },
+      {
+        "ruleId": "required.apm.version",
+        "severity": "info",
+        "status": "pass",
+        "message": "required field is present",
+        "fieldPath": "version"
+      },
+      {
+        "ruleId": "cardinality.tag.account_id",
+        "severity": "warning",
+        "status": "fail",
+        "message": "high-cardinality value is attached as a tag",
+        "fieldPath": "normalized.tags.account.id",
+        "evidence": "move identifiers into normalized context when possible"
+      },
+      {
+        "ruleId": "cardinality.tag.case_id",
+        "severity": "warning",
+        "status": "fail",
+        "message": "high-cardinality value is attached as a tag",
+        "fieldPath": "normalized.tags.case.id",
+        "evidence": "move identifiers into normalized context when possible"
+      },
+      {
+        "ruleId": "cardinality.tag.workspace_id",
+        "severity": "warning",
+        "status": "fail",
+        "message": "high-cardinality value is attached as a tag",
+        "fieldPath": "normalized.tags.workspace.id",
+        "evidence": "move identifiers into normalized context when possible"
+      },
+      {
+        "ruleId": "secret.key.normalized_tags_authorization",
+        "severity": "fatal",
+        "status": "fail",
+        "message": "sensitive tag key detected",
+        "fieldPath": "normalized.tags.authorization",
+        "evidence": "sensitive key name"
+      },
+      {
+        "ruleId": "secret.pattern.bearer.normalized_tags_authorization",
+        "severity": "fatal",
+        "status": "fail",
+        "message": "token or secret pattern detected",
+        "fieldPath": "normalized.tags.authorization",
+        "evidence": "matched bearer pattern"
+      },
+      {
+        "ruleId": "secret.key.decoded_0_0_meta_authorization",
+        "severity": "fatal",
+        "status": "fail",
+        "message": "sensitive payload key detected",
+        "fieldPath": "decoded[0][0].meta.authorization",
+        "evidence": "sensitive key name"
+      },
+      {
+        "ruleId": "secret.pattern.bearer.decoded_0_0_meta_authorization",
+        "severity": "fatal",
+        "status": "fail",
+        "message": "token or secret pattern detected",
+        "fieldPath": "decoded[0][0].meta.authorization",
+        "evidence": "matched bearer pattern"
+      },
+      {
+        "ruleId": "secret.pattern.bearer.rawbody",
+        "severity": "fatal",
+        "status": "fail",
+        "message": "token or secret pattern detected",
+        "fieldPath": "rawBody",
+        "evidence": "matched bearer pattern in original local msgpack raw body before promotion redaction"
+      },
+      {
+        "ruleId": "secret.keyword.authorization.rawbody",
+        "severity": "fatal",
+        "status": "fail",
+        "message": "configured sensitive keyword detected",
+        "fieldPath": "rawBody",
+        "evidence": "matched bearer pattern in original local msgpack raw body before promotion redaction"
+      }
+    ],
+    "summary": "6 validation rule(s) failed, 3 warning(s)"
+  },
+  "forwarding": {
+    "mode": "local",
+    "attempted": false,
+    "status": "disabled"
+  }
+}

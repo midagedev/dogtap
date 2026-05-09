@@ -1,0 +1,373 @@
+import { expect, type Page, test } from "@playwright/test";
+
+const events = [
+  {
+    id: "evt-rum-replay",
+    receivedAt: "2026-05-08T08:15:00Z",
+    source: "rum",
+    payloadKind: "replay",
+    endpoint: "/datadog-intake-proxy",
+    method: "POST",
+    decoded: {
+      replay: { format: "multipart", contentType: "multipart/form-data", bytes: 512, recordCount: 3, segmentBytes: 280 },
+      records: [
+        { type: 4, timestamp: 1778206500000, data: { href: "http://localhost/cloud/cases/case-123" } },
+        { type: 2, timestamp: 1778206500100, data: { node: { type: 0, childNodes: [] } } },
+        { type: 3, timestamp: 1778206500200, data: { source: 2, text: "export button click" } },
+      ],
+    },
+    details: {
+      replay: {
+        format: "multipart",
+        bytes: 512,
+        recordCount: 3,
+        segmentBytes: 280,
+        sessionId: "session-123",
+        viewId: "view-123",
+      },
+    },
+    normalized: {
+      source: "rum",
+      service: "web-frontend",
+      env: "local",
+      version: "dev",
+      sessionId: "session-123",
+      viewId: "view-123",
+      route: "/cases/case-123",
+    },
+    validation: {
+      status: "pass",
+      summary: "passed",
+      rules: [],
+    },
+  },
+  {
+    id: "evt-rum-missing",
+    receivedAt: "2026-05-08T08:15:01Z",
+    source: "rum",
+    endpoint: "/rum",
+    method: "POST",
+    rawBody: "{\"type\":\"view\"}",
+    decoded: { type: "view" },
+    normalized: {
+      source: "rum",
+      service: "web-frontend",
+      env: "local",
+      version: "dev",
+      route: "/cases/missing-context",
+      viewId: "view-missing-context",
+    },
+    validation: {
+      status: "fail",
+      summary: "3 validation failures",
+      rules: [
+        {
+          ruleId: "required.rum.user.id",
+          severity: "error",
+          status: "fail",
+          message: "Missing required user context",
+          fieldPath: "user.id",
+        },
+        {
+          ruleId: "required.rum.workspace.id",
+          severity: "error",
+          status: "fail",
+          message: "Missing required workspace context",
+          fieldPath: "workspace.id",
+        },
+      ],
+    },
+  },
+  {
+    id: "evt-log-export",
+    receivedAt: "2026-05-08T08:15:02Z",
+    source: "logs",
+    payloadKind: "log",
+    endpoint: "/api/v2/logs",
+    method: "POST",
+    decoded: { status: "error", message: "case export failed", trace_id: "123456789" },
+    details: {
+      logs: [
+        {
+          timestamp: "2026-05-08T08:15:02Z",
+          level: "ERROR",
+          message: "case export failed",
+          traceId: "123456789",
+        },
+      ],
+    },
+    normalized: {
+      source: "logs",
+      service: "api-service",
+      env: "local",
+      version: "dev",
+      traceId: "123456789",
+      spanId: "987654321",
+      userId: "user-123",
+      workspaceId: "workspace-123",
+      caseId: "case-123",
+      route: "/api/cases/{caseId}/exports",
+      statusCode: 500,
+    },
+    validation: {
+      status: "pass",
+      summary: "passed",
+      rules: [],
+    },
+  },
+  {
+    id: "evt-apm-export",
+    receivedAt: "2026-05-08T08:15:03Z",
+    source: "apm",
+    payloadKind: "trace",
+    endpoint: "/v0.5/traces",
+    method: "POST",
+    decoded: [
+      [
+        {
+          trace_id: "123456789",
+          span_id: "987654321",
+          parent_id: "0",
+          name: "web.request",
+          resource: "POST /api/cases/{caseId}/exports",
+          service: "edge-gateway",
+          duration: 32000000,
+        },
+        {
+          trace_id: "123456789",
+          span_id: "987654322",
+          parent_id: "987654321",
+          name: "case.export.render",
+          resource: "render export",
+          service: "api-service",
+          duration: 12000000,
+        },
+      ],
+    ],
+    details: {
+      trace: {
+        traceId: "123456789",
+        spans: [
+          {
+            traceId: "123456789",
+            spanId: "987654321",
+            parentSpanId: "0",
+            name: "web.request",
+            resource: "POST /api/cases/{caseId}/exports",
+            service: "edge-gateway",
+            durationMs: 32,
+          },
+          {
+            traceId: "123456789",
+            spanId: "987654322",
+            parentSpanId: "987654321",
+            name: "case.export.render",
+            resource: "render export",
+            service: "api-service",
+            durationMs: 12,
+          },
+        ],
+      },
+    },
+    normalized: {
+      source: "apm",
+      service: "api-service",
+      env: "local",
+      version: "dev",
+      traceId: "123456789",
+      spanId: "987654321",
+      route: "POST /api/cases/{caseId}/exports",
+    },
+    validation: {
+      status: "pass",
+      summary: "passed",
+      rules: [],
+    },
+  },
+  {
+    id: "evt-otlp-metric",
+    receivedAt: "2026-05-08T08:15:04Z",
+    source: "otlp",
+    payloadKind: "metric",
+    endpoint: "/v1/metrics",
+    method: "POST",
+    decoded: {
+      resourceMetrics: [
+        {
+          scopeMetrics: [
+            {
+              metrics: [
+                {
+                  name: "http.server.request.duration",
+                  unit: "ms",
+                  gauge: {
+                    dataPoints: [
+                      {
+                        asDouble: 48.5,
+                        attributes: [
+                          {
+                            key: "http.route",
+                            value: { stringValue: "/api/cases/{caseId}/exports" },
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    details: {
+      metrics: [
+        {
+          name: "http.server.request.duration",
+          service: "api-service",
+          unit: "ms",
+          value: 48.5,
+          aggregation: "gauge",
+          route: "/api/cases/{caseId}/exports",
+        },
+      ],
+    },
+    normalized: {
+      source: "otlp",
+      service: "api-service",
+      env: "local",
+      version: "dev",
+      route: "/api/cases/{caseId}/exports",
+      statusCode: 200,
+    },
+    validation: {
+      status: "pass",
+      summary: "passed",
+      rules: [],
+    },
+  },
+  {
+    id: "evt-rum-login",
+    receivedAt: "2026-05-08T08:15:05Z",
+    source: "rum",
+    endpoint: "/rum",
+    method: "POST",
+    decoded: { type: "view" },
+    normalized: {
+      source: "rum",
+      service: "web-frontend",
+      env: "local",
+      version: "dev",
+      userId: "user-123",
+      workspaceId: "workspace-123",
+      caseId: "case-123",
+      route: "/cases/case-123",
+    },
+    validation: {
+      status: "pass",
+      summary: "passed",
+      rules: [],
+    },
+  },
+];
+
+async function mockDashboardApi(page: Page, nextEvents = events) {
+  const nextFailures = nextEvents.filter(
+    (event) => event.validation.status === "fail",
+  );
+  await page.route("**/api/events?*", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify(nextEvents),
+    });
+  });
+  await page.route("**/api/validation/failures", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify(nextFailures),
+    });
+  });
+  await page.route("**/api/reports/latest", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        summary: {
+          total: nextEvents.length,
+          passed: nextEvents.length - nextFailures.length,
+          failed: nextFailures.length,
+          fatal: 0,
+          warnings: 0,
+        },
+      }),
+    });
+  });
+}
+
+test("dashboard renders stream detail, failure inbox, correlation, and query builder", async ({ page }) => {
+  await mockDashboardApi(page);
+  await page.goto("/");
+
+  await expect(
+    page.getByRole("heading", { name: "Dogtap", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Validation summary").getByText("Received")).toBeVisible();
+  await expect(page.getByLabel("Apply Dogtap to an app")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Service Map" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Traffic" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Metrics Snapshot" })).toBeVisible();
+  await expect(page.getByLabel("Service edges").getByText("edge-gateway")).toBeVisible();
+  await expect(page.getByLabel("Service edges").getByText("api-service")).toBeVisible();
+  await expect(page.getByLabel("Metric samples").getByText("http.server.request.duration")).toBeVisible();
+  await expect(page.getByRole("button").filter({ hasText: "/cases/missing-context" })).toBeVisible();
+  await expect(page.getByText("Payload")).toBeVisible();
+
+  await page.getByRole("button").filter({ hasText: "/cases/case-123" }).first().click();
+  await expect(page.getByRole("heading", { name: "Session Replay" })).toBeVisible();
+  await expect(page.getByLabel("Replay frame")).toHaveValue("0");
+  await expect(page.getByText("export button click")).toBeVisible();
+
+  await page.getByRole("tab", { name: /Failures/ }).click();
+  await expect(page.getByLabel("Validation failure inbox filters")).toBeVisible();
+  await page.getByLabel("Failure rule").selectOption("required.rum.user.id");
+  await expect(page.getByRole("button").filter({ hasText: "required.rum.user.id" })).toBeVisible();
+
+  await page.getByRole("tab", { name: /Events/ }).click();
+  await page.getByRole("button").filter({ hasText: "/api/cases/{caseId}/exports" }).first().click();
+  await expect(page.getByRole("heading", { name: "Correlation" })).toBeVisible();
+  await expect(page.getByText("trace spans 2 sources")).toBeVisible();
+  await expect(page.getByText("1 peer").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Log Viewer" })).toBeVisible();
+  await expect(page.locator(".log-viewer").getByText("case export failed")).toBeVisible();
+
+  const query = page.getByLabel("Datadog search query");
+  await expect(query).toHaveValue(/service:api-service/);
+  await expect(query).toHaveValue(/trace_id:123456789/);
+  await expect(query).toHaveValue(/@workspace.id:workspace-123/);
+
+  await page.getByRole("button", { name: "Copy" }).click();
+  await expect(page.getByRole("button", { name: "Copied" })).toBeVisible();
+
+  await page.getByRole("button").filter({ hasText: "POST /api/cases/{caseId}/exports" }).first().click();
+  await expect(page.getByRole("heading", { name: "Trace Spans" })).toBeVisible();
+  await expect(page.locator(".trace-viewer").getByText("case.export.render")).toBeVisible();
+
+  await page.getByPlaceholder("Filter payloads").fill("http.server.request.duration");
+  await page.locator(".event-row").first().click();
+  await expect(page.getByRole("heading", { name: "Metric Viewer" })).toBeVisible();
+  await expect(page.locator(".metric-detail-list").getByText("48.5 ms")).toBeVisible();
+});
+
+test("empty dashboard shows generic adoption targets", async ({ page }) => {
+  await mockDashboardApi(page, []);
+  await page.goto("/");
+
+  const setup = page.getByLabel("Apply Dogtap to an app");
+  await expect(setup.getByRole("heading", { name: "Apply Dogtap" })).toBeVisible();
+  await expect(setup.getByText("Browser RUM")).toBeVisible();
+  await expect(setup.getByText(/datadog-intake-proxy/)).toBeVisible();
+  await expect(setup.getByText("APM")).toBeVisible();
+  await expect(setup.getByText(/DD_TRACE_AGENT_PORT=8126/)).toBeVisible();
+  await expect(setup.getByText("OTLP HTTP")).toBeVisible();
+  await expect(setup.getByText(/4318/)).toBeVisible();
+  await expect(page.getByText("No telemetry received yet.")).toBeVisible();
+});
