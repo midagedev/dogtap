@@ -95,7 +95,9 @@ seed_replay() {
       "type": 4,
       "timestamp": 1778206500000,
       "data": {
-        "href": "http://localhost/cases/case-123"
+        "href": "http://localhost/cases/case-123",
+        "width": 1024,
+        "height": 720
       }
     },
     {
@@ -104,7 +106,108 @@ seed_replay() {
       "data": {
         "node": {
           "type": 0,
-          "childNodes": []
+          "id": 1,
+          "childNodes": [
+            {
+              "type": 1,
+              "id": 2,
+              "name": "html",
+              "publicId": "",
+              "systemId": ""
+            },
+            {
+              "type": 2,
+              "id": 3,
+              "tagName": "html",
+              "attributes": {},
+              "childNodes": [
+                {
+                  "type": 2,
+                  "id": 4,
+                  "tagName": "head",
+                  "attributes": {},
+                  "childNodes": [
+                    {
+                      "type": 2,
+                      "id": 5,
+                      "tagName": "style",
+                      "attributes": {},
+                      "childNodes": [
+                        {
+                          "type": 3,
+                          "id": 6,
+                          "textContent": "body{margin:0;font:16px system-ui;background:#f8fafc;color:#172026}.case{padding:28px}.export{border:0;border-radius:6px;background:#2563eb;color:white;padding:10px 14px}"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": 2,
+                  "id": 7,
+                  "tagName": "body",
+                  "attributes": {},
+                  "childNodes": [
+                    {
+                      "type": 2,
+                      "id": 8,
+                      "tagName": "main",
+                      "attributes": {
+                        "class": "case"
+                      },
+                      "childNodes": [
+                        {
+                          "type": 2,
+                          "id": 9,
+                          "tagName": "h1",
+                          "attributes": {},
+                          "childNodes": [
+                            {
+                              "type": 3,
+                              "id": 10,
+                              "textContent": "Case #123"
+                            }
+                          ]
+                        },
+                        {
+                          "type": 2,
+                          "id": 11,
+                          "tagName": "p",
+                          "attributes": {},
+                          "childNodes": [
+                            {
+                              "type": 3,
+                              "id": 12,
+                              "textContent": "Export workflow replay"
+                            }
+                          ]
+                        },
+                        {
+                          "type": 2,
+                          "id": 13,
+                          "tagName": "button",
+                          "attributes": {
+                            "class": "export"
+                          },
+                          "childNodes": [
+                            {
+                              "type": 3,
+                              "id": 14,
+                              "textContent": "Export"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "initialOffset": {
+          "top": 0,
+          "left": 0
         }
       }
     },

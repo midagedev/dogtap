@@ -30,7 +30,7 @@ make demo-seed
 ```
 
 The dashboard should show the seeded service map, traffic, metrics, log viewer,
-trace spans, failure inbox, and Session Replay payload timeline.
+trace spans, failure inbox, and Session Replay viewer.
 
 ## Run The Visual Check
 

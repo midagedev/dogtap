@@ -129,7 +129,7 @@ blocked pending one realistic sanitized adoption profile.
 - log-forwarder bridge guidance: complete
 - OpenTelemetry Collector tee recipe: complete
 - RUM proxy runtime-config guidance: complete
-- RUM proxy canary guide
+- RUM proxy canary guide: complete
 - public CI and community contribution surface: complete
 - release binary and container publishing workflow: complete
 - seeded dashboard demo and live visual verification: complete

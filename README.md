@@ -148,6 +148,9 @@ If the app hardcodes Datadog RUM setup, make the proxy value
 runtime-configurable once. Future Dogtap enable/disable operations should then
 be configuration-only.
 
+Before canarying RUM or Session Replay proxying outside local-only debugging,
+use [docs/runbooks/RUM_PROXY_CANARY.md](docs/runbooks/RUM_PROXY_CANARY.md).
+
 ### 3. Point Backend Telemetry At Dogtap
 
 OTLP HTTP, host process:
@@ -243,6 +246,7 @@ Runnable demo:
 Runbook:
 
 - `docs/runbooks/ADOPTING_DOGTAP.md`
+- `docs/runbooks/RUM_PROXY_CANARY.md`
 - `docs/runbooks/EXTERNAL_INJECTION_ADOPTION.md`
 
 ## Runtime Modes
@@ -259,8 +263,8 @@ Runbook:
 
 | Surface | Endpoint / port | Current status |
 | --- | --- | --- |
-| Browser RUM proxy | `/datadog-intake-proxy` | Local/CI inspection, forwarding path for RUM |
-| RUM Session Replay payloads | `/api/v2/replay` or proxy `ddforward=/api/v2/replay` | Payload timeline and metadata inspection |
+| Browser RUM proxy | `/datadog-intake-proxy` | Local/CI inspection, forwarding path for RUM with safe `ddforward` handling |
+| RUM Session Replay payloads | `/api/v2/replay` or proxy `ddforward=/api/v2/replay` | DOM replay when rrweb records are decoded; timeline fallback otherwise |
 | Datadog logs HTTP | `/api/v2/logs`, `/v1/input` | JSON, text, gzip, and log-like payloads |
 | Datadog APM traces | `:8126`, `/v0.3/traces`, `/v0.4/traces`, `/v0.5/traces` | Intake and span inspection; forwarding deferred |
 | OTLP HTTP | `:4318`, `/v1/traces`, `/v1/logs`, `/v1/metrics` | Trace/log/metric intake |
@@ -300,7 +304,7 @@ parity.
 | Area | Current level | Notes |
 | --- | --- | --- |
 | RUM | Supported for local inspection | Browser SDK fixture-backed |
-| Session Replay | Partial | Payload playback/metadata, not full DOM replay rendering |
+| Session Replay | Partial | DOM playback for decoded rrweb records, with metadata/timeline fallback |
 | Logs | Supported for local inspection and RUM/log forwarding use cases | JSON/text/gzip coverage |
 | APM | Intake supported, forwarding deferred | Datadog tracer fixture-backed |
 | OTLP | HTTP and gRPC traces/logs/metrics supported | OpenTelemetry SDK fixture-backed |
@@ -312,7 +316,7 @@ parity.
 - not a long-term telemetry warehouse
 - no DogStatsD or profiling intake yet
 - APM forwarding is intentionally deferred
-- Session Replay viewer is payload-oriented, not a full browser replay renderer
+- Session Replay DOM playback requires decoded rrweb full snapshot records
 - production use requires explicit sampling, retention, backpressure, and
   fail-open policy review
 

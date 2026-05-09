@@ -10,6 +10,8 @@ Dogtap.
 - [Adopting Dogtap](runbooks/ADOPTING_DOGTAP.md): generic frontend/backend setup
 - [External Injection Adoption](runbooks/EXTERNAL_INJECTION_ADOPTION.md):
   preserve existing Datadog usage with sidecars and endpoint overrides
+- [RUM Proxy Canary](runbooks/RUM_PROXY_CANARY.md): safely test Browser RUM and
+  Session Replay proxying through Dogtap
 - [Support Matrix](SUPPORT_MATRIX.md): supported surfaces and explicit limits
 - [Production Safety](PRODUCTION_SAFETY.md): safety model for forwarding and tee modes
 - [Roadmap](ROADMAP.md): current phase and release blockers
@@ -36,6 +38,7 @@ Canonical spec artifacts live under `specs/000-product/`:
 
 - [Generic Local Adoption](runbooks/ADOPTING_DOGTAP.md)
 - [External Injection Adoption](runbooks/EXTERNAL_INJECTION_ADOPTION.md)
+- [RUM Proxy Canary](runbooks/RUM_PROXY_CANARY.md)
 - [Local Development](runbooks/local-dev.md)
 - [Production Deployment](runbooks/PRODUCTION_DEPLOYMENT.md)
 - [Release Candidate](runbooks/RELEASE_CANDIDATE.md)

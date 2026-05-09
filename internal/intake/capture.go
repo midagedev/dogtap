@@ -40,6 +40,7 @@ type CaptureResult struct {
 	ValidationEvent event.EventEnvelope
 	ForwardBody     []byte
 	ForwardHeader   http.Header
+	ForwardPath     string
 }
 
 func CaptureRequest(r *http.Request, opts CaptureOptions) (CaptureResult, error) {
@@ -118,6 +119,7 @@ func CaptureRequest(r *http.Request, opts CaptureOptions) (CaptureResult, error)
 		ValidationEvent: validationEvent,
 		ForwardBody:     append([]byte(nil), raw...),
 		ForwardHeader:   r.Header.Clone(),
+		ForwardPath:     rumForwardPath(opts.Source, r.URL.Query()),
 	}, nil
 }
 
@@ -157,6 +159,18 @@ func forwardedPath(query url.Values, want string) bool {
 		}
 	}
 	return false
+}
+
+func rumForwardPath(source event.Source, query url.Values) string {
+	if source != event.SourceRUM {
+		return ""
+	}
+	for _, forwarded := range query["ddforward"] {
+		if strings.TrimSpace(forwarded) != "" {
+			return forwarded
+		}
+	}
+	return ""
 }
 
 func RedactNormalized(n event.NormalizedTelemetry) event.NormalizedTelemetry {

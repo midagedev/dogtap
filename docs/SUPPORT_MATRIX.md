@@ -19,7 +19,7 @@ public release.
 | Surface | Endpoint / port | Current level | Verification |
 | --- | --- | --- | --- |
 | Browser RUM proxy | `/datadog-intake-proxy` | Supported for local and CI inspection | Browser RUM SDK fixture, replay tests, dashboard E2E |
-| RUM Session Replay | `/api/v2/replay`, proxy `ddforward=/api/v2/replay` | Partial | Payload timeline and metadata only; not full DOM reconstruction |
+| RUM Session Replay | `/api/v2/replay`, proxy `ddforward=/api/v2/replay` | Partial | DOM playback for decoded rrweb full snapshot records, with timeline fallback |
 | Datadog logs HTTP | `/api/v2/logs`, `/v1/input` | Supported for local inspection | JSON, text, and gzip fixtures |
 | Datadog APM traces | `:8126`, `/v0.3/traces`, `/v0.4/traces`, `/v0.5/traces` | Supported for intake and span inspection | Datadog tracer fixture-backed; forwarding deferred |
 | OTLP HTTP traces/logs/metrics | `:4318`, `/v1/traces`, `/v1/logs`, `/v1/metrics` | Supported for local inspection | OpenTelemetry SDK fixture-backed |
@@ -43,8 +43,8 @@ public release.
 
 | Source | Current level | Notes |
 | --- | --- | --- |
-| Browser RUM | Supported for bounded forwarding experiments | Forwarded by HTTP pass-through with safe forwarding metadata. |
-| RUM Session Replay | Supported for bounded forwarding experiments | Uses the Datadog replay intake path. |
+| Browser RUM | Supported for bounded forwarding experiments | Preserves safe relative `ddforward` path/query for `/api/v2/rum` and strips sensitive inbound headers. |
+| RUM Session Replay | Supported for bounded forwarding experiments | Preserves safe relative `ddforward` path/query for `/api/v2/replay`; dashboard renders decoded rrweb records when available. |
 | Datadog logs HTTP | Supported for bounded forwarding experiments | Adds the outbound Datadog API key only when forwarding logs. |
 | Datadog APM traces | Deferred | Intake and dashboard inspection are supported; forwarding needs a separate compatibility contract decision. |
 | OTLP traces/logs/metrics | Deferred | Keep an OpenTelemetry Collector on the production forwarding path. |
@@ -60,7 +60,7 @@ public release.
 | Log viewer | Supported | Shows decoded log entries and trace IDs. |
 | Trace/span viewer | Supported | Shows decoded spans where available. |
 | Metric viewer | Supported | Shows OTLP metric samples decoded from received payloads. |
-| Session Replay viewer | Partial | Replays decoded payload frames as a timeline, not a browser DOM replay. |
+| Session Replay viewer | Partial | Renders decoded rrweb records in an iframe and falls back to payload timeline/metadata when DOM snapshots are unavailable. |
 | Datadog search hints | Best effort | Query field names should be checked against the team's Datadog conventions. |
 
 ## Release Evidence Commands

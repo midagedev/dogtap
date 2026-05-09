@@ -17,6 +17,8 @@ import {
   Search,
   ShieldCheck,
 } from "lucide-react";
+import { Replayer } from "@rrweb/replay";
+import "@rrweb/replay/dist/style.css";
 import "./styles.css";
 
 type Source = "rum" | "apm" | "logs" | "otlp" | "unknown";
@@ -96,6 +98,12 @@ type ReplayFrame = {
   timestamp?: number;
   summary: string;
 };
+
+type RrwebReplayEvent = Exclude<
+  ConstructorParameters<typeof Replayer>[0][number],
+  string
+>;
+type ReplayPlayer = InstanceType<typeof Replayer>;
 
 type LogEntry = {
   timestamp?: string;
@@ -917,6 +925,7 @@ function TelemetryViewer({
 
 function ReplayViewer({ event }: { event: EventEnvelope }) {
   const frames = React.useMemo(() => replayFrames(event), [event]);
+  const replayEvents = React.useMemo(() => rrwebReplayEvents(event), [event]);
   const [index, setIndex] = React.useState(0);
   const [playing, setPlaying] = React.useState(false);
   const current = frames[Math.min(index, Math.max(frames.length - 1, 0))];
@@ -945,9 +954,23 @@ function ReplayViewer({ event }: { event: EventEnvelope }) {
     <section className="panel inspector-panel log-panel">
       <div className="panel-title">
         <h2>Session Replay</h2>
-        <span>{frames.length ? `${frames.length} frames` : replaySummary}</span>
+        <span>
+          {replayEvents.length
+            ? `${replayEvents.length} DOM events`
+            : frames.length
+              ? `${frames.length} frames`
+              : replaySummary}
+        </span>
       </div>
-      {frames.length ? (
+      {replayEvents.length ? (
+        <div className="replay-viewer">
+          <ReplayDomPlayer
+            key={event.id}
+            events={replayEvents}
+            summary={replaySummary}
+          />
+        </div>
+      ) : frames.length ? (
         <div className="replay-viewer">
           <div className="replay-controls">
             <button
@@ -988,23 +1011,14 @@ function ReplayViewer({ event }: { event: EventEnvelope }) {
             </div>
             <p>{current?.summary ?? "No frame data."}</p>
           </div>
-          <div className="frame-list">
-            {frames.slice(0, 18).map((frame, frameIndex) => (
-              <button
-                type="button"
-                key={`${frame.timestamp}-${frameIndex}`}
-                className={frameIndex === index ? "active" : ""}
-                onClick={() => {
-                  setPlaying(false);
-                  setIndex(frameIndex);
-                }}
-              >
-                <span>{frameIndex + 1}</span>
-                <strong>{frame.label}</strong>
-                <small>{frame.summary}</small>
-              </button>
-            ))}
-          </div>
+          <ReplayFrameList
+            frames={frames}
+            index={index}
+            onSelect={(frameIndex) => {
+              setPlaying(false);
+              setIndex(frameIndex);
+            }}
+          />
         </div>
       ) : (
         <p className="viewer-empty">
@@ -1013,6 +1027,166 @@ function ReplayViewer({ event }: { event: EventEnvelope }) {
         </p>
       )}
     </section>
+  );
+}
+
+function ReplayDomPlayer({
+  events,
+  summary,
+}: {
+  events: RrwebReplayEvent[];
+  summary: string;
+}) {
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+  const playerRef = React.useRef<ReplayPlayer | null>(null);
+  const [playing, setPlaying] = React.useState(false);
+  const [position, setPosition] = React.useState(0);
+  const [duration, setDuration] = React.useState(0);
+  const [error, setError] = React.useState<string | undefined>();
+
+  React.useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
+
+    root.replaceChildren();
+    playerRef.current = null;
+    setPlaying(false);
+    setPosition(0);
+    setDuration(0);
+    setError(undefined);
+
+    let player: ReplayPlayer | undefined;
+    try {
+      player = new Replayer(events, {
+        root,
+        speed: 1,
+        skipInactive: true,
+        inactivePeriodThreshold: 3000,
+        mouseTail: false,
+        showWarning: false,
+        showDebug: false,
+        logger: { log: () => undefined, warn: () => undefined },
+      });
+      playerRef.current = player;
+      const meta = player.getMetaData();
+      setDuration(Math.max(0, Math.round(meta.totalTime || 0)));
+      player.pause(0);
+      const finish = () => {
+        setPlaying(false);
+        setPosition(Math.max(0, Math.round(player?.getTimeOffset() || 0)));
+      };
+      player.on("finish", finish);
+      return () => {
+        player?.off("finish", finish);
+        player?.destroy();
+        playerRef.current = null;
+      };
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not render replay");
+      player?.destroy();
+      playerRef.current = null;
+      return undefined;
+    }
+  }, [events]);
+
+  React.useEffect(() => {
+    if (!playing) return undefined;
+    const timer = window.setInterval(() => {
+      const player = playerRef.current;
+      if (!player) return;
+      const next = Math.max(0, Math.round(player.getTimeOffset()));
+      setPosition(duration ? Math.min(next, duration) : next);
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [duration, playing]);
+
+  function togglePlayback() {
+    const player = playerRef.current;
+    if (!player) return;
+    if (playing) {
+      player.pause();
+      setPosition(Math.max(0, Math.round(player.getTimeOffset())));
+      setPlaying(false);
+      return;
+    }
+    const startAt = duration && position >= duration ? 0 : position;
+    setPosition(startAt);
+    player.play(startAt);
+    setPlaying(true);
+  }
+
+  function seek(next: number) {
+    const player = playerRef.current;
+    setPlaying(false);
+    setPosition(next);
+    player?.pause(next);
+  }
+
+  return (
+    <>
+      <div className="replay-controls">
+        <button
+          type="button"
+          className="copy-button"
+          onClick={togglePlayback}
+          disabled={Boolean(error)}
+        >
+          {playing ? (
+            <Pause size={15} aria-hidden="true" />
+          ) : (
+            <Play size={15} aria-hidden="true" />
+          )}
+          <span>{playing ? "Pause" : "Play"}</span>
+        </button>
+        <input
+          aria-label="DOM replay position"
+          type="range"
+          min={0}
+          max={Math.max(duration, 0)}
+          value={Math.min(position, Math.max(duration, 0))}
+          onChange={(change) => seek(Number(change.target.value))}
+          disabled={Boolean(error) || duration <= 0}
+        />
+        <code>{formatDuration(position)} / {formatDuration(duration)}</code>
+      </div>
+      <div className="replay-dom-meta">
+        <strong>DOM replay</strong>
+        <span>{summary}</span>
+      </div>
+      {error ? <p className="viewer-empty">{error}</p> : null}
+      <div
+        className="replay-dom-stage"
+        ref={rootRef}
+        aria-label="DOM replay viewport"
+      />
+    </>
+  );
+}
+
+function ReplayFrameList({
+  frames,
+  index,
+  onSelect,
+}: {
+  frames: ReplayFrame[];
+  index: number;
+  onSelect?: (index: number) => void;
+}) {
+  return (
+    <div className="frame-list">
+      {frames.slice(0, 18).map((frame, frameIndex) => (
+        <button
+          type="button"
+          key={`${frame.timestamp}-${frameIndex}`}
+          className={frameIndex === index ? "active" : ""}
+          onClick={() => onSelect?.(frameIndex)}
+        >
+          <span>{frameIndex + 1}</span>
+          <strong>{frame.label}</strong>
+          <small>{frame.summary}</small>
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -1299,6 +1473,35 @@ function replayRecords(decoded: unknown): unknown[] {
   const events = asArray(record?.events);
   if (events.length) return events;
   return Array.isArray(decoded) ? decoded : [];
+}
+
+function rrwebReplayEvents(event: EventEnvelope): RrwebReplayEvent[] {
+  const records = replayRecords(event.decoded)
+    .map((record) => rrwebReplayEvent(record))
+    .filter((record): record is RrwebReplayEvent => Boolean(record))
+    .sort((a, b) => a.timestamp - b.timestamp);
+  const hasFullSnapshot = records.some((record) => record.type === 2);
+  return hasFullSnapshot ? records : [];
+}
+
+function rrwebReplayEvent(record: unknown): RrwebReplayEvent | undefined {
+  const row = asRecord(record);
+  if (!row) return undefined;
+  const type = numberValue(row.type);
+  const timestamp = numberValue(row.timestamp);
+  if (type === undefined || timestamp === undefined) return undefined;
+  const data = parseReplayData(row.data);
+  if (type === 2 && !asRecord(asRecord(data)?.node)) return undefined;
+  return { ...row, type, timestamp, data } as RrwebReplayEvent;
+}
+
+function parseReplayData(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return value;
+  }
 }
 
 function replayMetadata(event: EventEnvelope) {

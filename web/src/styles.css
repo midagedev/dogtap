@@ -994,6 +994,51 @@ select {
   line-height: 1.45;
 }
 
+.replay-dom-meta {
+  min-width: 0;
+  min-height: 38px;
+  padding: 9px 12px;
+  border: 1px solid #d9e0e4;
+  border-radius: 6px;
+  background: #f8fafc;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.replay-dom-meta strong,
+.replay-dom-meta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.replay-dom-meta span {
+  color: #667680;
+  font-size: 12px;
+}
+
+.replay-dom-stage {
+  min-width: 0;
+  min-height: 360px;
+  max-height: 560px;
+  border: 1px solid #ccd5da;
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: auto;
+}
+
+.replay-dom-stage .replayer-wrapper {
+  transform-origin: top left;
+}
+
+.replay-dom-stage iframe {
+  border: 0;
+  background: #ffffff;
+}
+
 .frame-list {
   max-height: 220px;
   overflow: auto;
@@ -1249,6 +1294,7 @@ pre {
   .correlation-head,
   .peer-list button,
   .replay-controls,
+  .replay-dom-meta,
   .replay-stage div,
   .frame-list button,
   .log-line,

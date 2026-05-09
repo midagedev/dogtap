@@ -380,9 +380,10 @@ func (a *App) forward(ctx context.Context, source event.Source, result intake.Ca
 		return result.Event.Forwarding
 	}
 	return a.forwarder.Forward(ctx, forwarding.Payload{
-		Kind:   kind,
-		Body:   result.ForwardBody,
-		Header: result.ForwardHeader,
+		Kind:        kind,
+		Body:        result.ForwardBody,
+		Header:      result.ForwardHeader,
+		ForwardPath: result.ForwardPath,
 	})
 }
 

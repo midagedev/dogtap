@@ -18,6 +18,8 @@ Implemented usability surface:
 - Local mode exposes raw payloads; non-local modes hide raw payloads by default.
 - Seeded demo exercises RUM, Session Replay, logs, APM spans, OTLP metrics,
   service map, route traffic, and validation failures through the real HTTP API.
+- Dashboard Session Replay renders decoded rrweb full snapshot records as an
+  iframe DOM replay and keeps payload timeline fallback for partial payloads.
 
 ## Verification
 
@@ -34,4 +36,5 @@ go test ./internal/server
   checked against promoted G1 evidence.
 - Correlation currently uses the recent event snapshot returned by
   `/api/events?limit=100`.
-- Session Replay remains payload-timeline playback, not full DOM reconstruction.
+- Session Replay DOM playback depends on decoded rrweb full snapshot records;
+  redacted or partial payloads still fall back to timeline/metadata.

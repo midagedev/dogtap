@@ -57,9 +57,10 @@ type RetryPolicy struct {
 }
 
 type Payload struct {
-	Kind   Kind
-	Body   []byte
-	Header http.Header
+	Kind        Kind
+	Body        []byte
+	Header      http.Header
+	ForwardPath string
 }
 
 type Stats struct {
@@ -126,7 +127,7 @@ func (f *Forwarder) Forward(ctx context.Context, payload Payload) event.Forwardi
 	}
 	f.payloads.Add(1)
 
-	target, err := f.target(payload.Kind)
+	target, err := f.target(payload)
 	if err != nil {
 		return f.dropResult(result, start, "invalid_target", err.Error(), 0)
 	}
@@ -196,11 +197,11 @@ func (f *Forwarder) Stats() Stats {
 	}
 }
 
-func (f *Forwarder) target(kind Kind) (*url.URL, error) {
+func (f *Forwarder) target(payload Payload) (*url.URL, error) {
 	raw := f.cfg.TargetBaseURL
 	if raw == "" {
 		var err error
-		raw, err = DatadogTarget(kind, f.cfg.Site)
+		raw, err = DatadogTarget(payload.Kind, f.cfg.Site)
 		if err != nil {
 			return nil, err
 		}
@@ -213,7 +214,7 @@ func (f *Forwarder) target(kind Kind) (*url.URL, error) {
 		return nil, fmt.Errorf("target must include scheme and host")
 	}
 	if target.Path == "" || target.Path == "/" {
-		path, err := defaultPath(kind)
+		path, err := defaultPath(payload.Kind)
 		if err != nil {
 			return nil, err
 		}
@@ -221,6 +222,14 @@ func (f *Forwarder) target(kind Kind) (*url.URL, error) {
 	}
 	target.RawQuery = ""
 	target.User = nil
+	if payload.ForwardPath != "" {
+		forwarded, err := safeForwardPath(payload.Kind, payload.ForwardPath)
+		if err != nil {
+			return nil, err
+		}
+		target.Path = forwarded.Path
+		target.RawQuery = forwarded.RawQuery
+	}
 	return target, nil
 }
 
@@ -279,6 +288,26 @@ func defaultPath(kind Kind) (string, error) {
 	default:
 		return "", fmt.Errorf("unsupported forwarding kind %q", kind)
 	}
+}
+
+func safeForwardPath(kind Kind, raw string) (*url.URL, error) {
+	forwarded, err := url.Parse(raw)
+	if err != nil {
+		return nil, fmt.Errorf("parse ddforward: %w", err)
+	}
+	if forwarded.Scheme != "" || forwarded.Host != "" {
+		return nil, fmt.Errorf("ddforward must be a relative Datadog intake path")
+	}
+	wantPath, err := defaultPath(kind)
+	if err != nil {
+		return nil, err
+	}
+	if forwarded.Path != wantPath {
+		return nil, fmt.Errorf("ddforward path %q does not match %q", forwarded.Path, wantPath)
+	}
+	forwarded.User = nil
+	forwarded.Fragment = ""
+	return forwarded, nil
 }
 
 func copyForwardHeaders(dst, src http.Header) {

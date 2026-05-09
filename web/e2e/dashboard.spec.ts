@@ -11,8 +11,96 @@ const events = [
     decoded: {
       replay: { format: "multipart", contentType: "multipart/form-data", bytes: 512, recordCount: 3, segmentBytes: 280 },
       records: [
-        { type: 4, timestamp: 1778206500000, data: { href: "http://localhost/cloud/cases/case-123" } },
-        { type: 2, timestamp: 1778206500100, data: { node: { type: 0, childNodes: [] } } },
+        { type: 4, timestamp: 1778206500000, data: { href: "http://localhost/cloud/cases/case-123", width: 1024, height: 720 } },
+        {
+          type: 2,
+          timestamp: 1778206500100,
+          data: {
+            node: {
+              type: 0,
+              id: 1,
+              childNodes: [
+                { type: 1, id: 2, name: "html", publicId: "", systemId: "" },
+                {
+                  type: 2,
+                  id: 3,
+                  tagName: "html",
+                  attributes: {},
+                  childNodes: [
+                    {
+                      type: 2,
+                      id: 4,
+                      tagName: "head",
+                      attributes: {},
+                      childNodes: [
+                        {
+                          type: 2,
+                          id: 5,
+                          tagName: "style",
+                          attributes: {},
+                          childNodes: [
+                            {
+                              type: 3,
+                              id: 6,
+                              textContent:
+                                "body{margin:0;font:16px system-ui;background:#f8fafc;color:#172026}.case{padding:28px}.toolbar{display:flex;gap:8px;margin-top:18px}.export{border:0;border-radius:6px;background:#2563eb;color:white;padding:10px 14px}",
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                    {
+                      type: 2,
+                      id: 7,
+                      tagName: "body",
+                      attributes: {},
+                      childNodes: [
+                        {
+                          type: 2,
+                          id: 8,
+                          tagName: "main",
+                          attributes: { class: "case" },
+                          childNodes: [
+                            {
+                              type: 2,
+                              id: 9,
+                              tagName: "h1",
+                              attributes: {},
+                              childNodes: [{ type: 3, id: 10, textContent: "Case #123" }],
+                            },
+                            {
+                              type: 2,
+                              id: 11,
+                              tagName: "p",
+                              attributes: {},
+                              childNodes: [{ type: 3, id: 12, textContent: "Workspace replay preview" }],
+                            },
+                            {
+                              type: 2,
+                              id: 13,
+                              tagName: "div",
+                              attributes: { class: "toolbar" },
+                              childNodes: [
+                                {
+                                  type: 2,
+                                  id: 14,
+                                  tagName: "button",
+                                  attributes: { class: "export" },
+                                  childNodes: [{ type: 3, id: 15, textContent: "Export" }],
+                                },
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            initialOffset: { top: 0, left: 0 },
+          },
+        },
         { type: 3, timestamp: 1778206500200, data: { source: 2, text: "export button click" } },
       ],
     },
@@ -323,8 +411,11 @@ test("dashboard renders stream detail, failure inbox, correlation, and query bui
 
   await page.getByRole("button").filter({ hasText: "/cases/case-123" }).first().click();
   await expect(page.getByRole("heading", { name: "Session Replay" })).toBeVisible();
-  await expect(page.getByLabel("Replay frame")).toHaveValue("0");
-  await expect(page.getByText("export button click")).toBeVisible();
+  await expect(page.getByText("DOM replay")).toBeVisible();
+  await expect(page.getByLabel("DOM replay position")).toBeVisible();
+  const replayFrame = page.frameLocator(".replay-dom-stage iframe").first();
+  await expect(replayFrame.getByText("Case #123")).toBeVisible();
+  await expect(replayFrame.getByRole("button", { name: "Export" })).toBeVisible();
 
   await page.getByRole("tab", { name: /Failures/ }).click();
   await expect(page.getByLabel("Validation failure inbox filters")).toBeVisible();

@@ -124,6 +124,87 @@ func TestForwardRUMRetriesThenSucceeds(t *testing.T) {
 	}
 }
 
+func TestForwardRUMPreservesSafeDdforwardPathAndQuery(t *testing.T) {
+	type observedRequest struct {
+		path          string
+		query         string
+		authorization string
+		cookie        string
+	}
+	observed := make(chan observedRequest, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		observed <- observedRequest{
+			path:          r.URL.Path,
+			query:         r.URL.RawQuery,
+			authorization: r.Header.Get("Authorization"),
+			cookie:        r.Header.Get("Cookie"),
+		}
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer server.Close()
+
+	forwarder := newTestForwarder(t, Config{
+		Mode:          ModeForward,
+		TargetBaseURL: server.URL,
+	})
+
+	result := forwarder.Forward(context.Background(), Payload{
+		Kind:        KindRUM,
+		Body:        []byte(`{"type":"view","application":{"id":"app-1"}}`),
+		ForwardPath: "/api/v2/rum?ddsource=browser&dd-api-key=client-token&ddtags=env%3Alocal%2Cservice%3Aweb",
+		Header: http.Header{
+			"Content-Type":  []string{"application/json"},
+			"Authorization": []string{"Bearer inbound-secret"},
+			"Cookie":        []string{"session=inbound-secret"},
+		},
+	})
+
+	if result.Status != "success" {
+		t.Fatalf("got status %q, want success: %#v", result.Status, result)
+	}
+	got := <-observed
+	if got.path != "/api/v2/rum" {
+		t.Fatalf("got path %q, want /api/v2/rum", got.path)
+	}
+	if !strings.Contains(got.query, "dd-api-key=client-token") || !strings.Contains(got.query, "ddsource=browser") {
+		t.Fatalf("ddforward query was not preserved: %q", got.query)
+	}
+	if got.authorization != "" || got.cookie != "" {
+		t.Fatalf("forwarded inbound secret headers: authorization=%q cookie=%q", got.authorization, got.cookie)
+	}
+	assertResultDoesNotContain(t, result, "client-token")
+}
+
+func TestForwardRUMRejectsAbsoluteDdforwardURL(t *testing.T) {
+	var hits atomic.Int64
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		hits.Add(1)
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer server.Close()
+
+	forwarder := newTestForwarder(t, Config{
+		Mode:          ModeForward,
+		TargetBaseURL: server.URL,
+	})
+
+	result := forwarder.Forward(context.Background(), Payload{
+		Kind:        KindRUM,
+		Body:        []byte(`{"type":"view"}`),
+		ForwardPath: "https://browser-intake-datadoghq.com.malicious.com/api/v2/rum?ddsource=browser",
+		Header: http.Header{
+			"Content-Type": []string{"application/json"},
+		},
+	})
+
+	if result.Status != "dropped" || result.ErrorClass != "invalid_target" {
+		t.Fatalf("unexpected forwarding result: %#v", result)
+	}
+	if hits.Load() != 0 {
+		t.Fatalf("forwarder sent request for unsafe ddforward URL")
+	}
+}
+
 func TestForwardReplayUsesReplayEndpoint(t *testing.T) {
 	observedPath := make(chan string, 1)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -150,6 +231,39 @@ func TestForwardReplayUsesReplayEndpoint(t *testing.T) {
 	}
 	if got := <-observedPath; got != "/api/v2/replay" {
 		t.Fatalf("got path %q, want /api/v2/replay", got)
+	}
+}
+
+func TestForwardReplayPreservesSafeDdforwardQuery(t *testing.T) {
+	observedQuery := make(chan string, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v2/replay" {
+			t.Fatalf("got path %q, want /api/v2/replay", r.URL.Path)
+		}
+		observedQuery <- r.URL.RawQuery
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer server.Close()
+
+	forwarder := newTestForwarder(t, Config{
+		Mode:          ModeForward,
+		TargetBaseURL: server.URL,
+	})
+
+	result := forwarder.Forward(context.Background(), Payload{
+		Kind:        KindReplay,
+		Body:        []byte(`{"records":[{"type":4}]}`),
+		ForwardPath: "/api/v2/replay?ddsource=browser&dd-api-key=client-token",
+		Header: http.Header{
+			"Content-Type": []string{"application/json"},
+		},
+	})
+
+	if result.Status != "success" {
+		t.Fatalf("got status %q, want success: %#v", result.Status, result)
+	}
+	if got := <-observedQuery; !strings.Contains(got, "dd-api-key=client-token") {
+		t.Fatalf("ddforward query was not preserved: %q", got)
 	}
 }
 

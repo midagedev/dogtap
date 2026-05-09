@@ -86,6 +86,9 @@ Expected behavior:
 - Normalize RUM context fields.
 - Validate user/account/workspace/session fields.
 - Forward only if forwarding mode is enabled.
+- When forwarding, preserve only safe relative `ddforward` values matching
+  `/api/v2/rum` or `/api/v2/replay`; reject absolute URLs and path mismatches
+  to avoid open-proxy behavior.
 
 ## Logs Intake
 
