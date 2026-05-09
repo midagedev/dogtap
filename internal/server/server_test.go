@@ -142,6 +142,70 @@ func TestRUMProxySupportsBrowserCORS(t *testing.T) {
 	}
 }
 
+func TestFaroCollectEndpointStoresSDKPayload(t *testing.T) {
+	app := newTestApp(t, config.ModeLocal)
+	body := `{
+		"meta": {
+			"app": {"name": "faro-smoke-frontend", "version": "dev", "environment": "local"},
+			"user": {
+				"id": "faro-user-1",
+				"attributes": {
+					"accountId": "faro-account-1",
+					"workspaceId": "faro-workspace-1",
+					"caseId": "faro-case-1"
+				}
+			},
+			"session": {"id": "faro-session-1"},
+			"page": {"url": "http://localhost/faro"}
+		},
+		"events": [{
+			"name": "faro.workflow.run",
+			"attributes": {"route": "/faro", "caseId": "faro-case-1"},
+			"timestamp": "2026-05-09T12:00:00Z"
+		}]
+	}`
+	req := httptest.NewRequest(http.MethodPost, "/collect/faro-smoke", bytes.NewBufferString(body))
+	req.Header.Set("Origin", "http://localhost:3000")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Faro-Session-Id", "faro-session-1")
+	rec := httptest.NewRecorder()
+
+	app.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("got status %d, want %d: %s", rec.Code, http.StatusAccepted, rec.Body.String())
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Headers"); !strings.Contains(strings.ToLower(got), "x-api-key") {
+		t.Fatalf("allow headers = %q, want x-api-key", got)
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Headers"); !strings.Contains(strings.ToLower(got), "x-faro-session-id") {
+		t.Fatalf("allow headers = %q, want x-faro-session-id", got)
+	}
+	if got := rec.Header().Get("Access-Control-Expose-Headers"); !strings.Contains(strings.ToLower(got), "x-faro-session-status") {
+		t.Fatalf("expose headers = %q, want x-faro-session-status", got)
+	}
+	events, err := app.store.List(req.Context(), store.Query{Source: event.SourceFaro})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("got %d Faro events, want 1", len(events))
+	}
+	if events[0].PayloadKind != "event" || events[0].Normalized.Service != "faro-smoke-frontend" || events[0].Normalized.UserID != "faro-user-1" || events[0].Validation.Status != "pass" {
+		t.Fatalf("unexpected Faro event: %#v", events[0])
+	}
+
+	exactReq := httptest.NewRequest(http.MethodOptions, "/collect", nil)
+	exactReq.Header.Set("Origin", "http://localhost:3000")
+	exactReq.Header.Set("Access-Control-Request-Method", "POST")
+	exactReq.Header.Set("Access-Control-Request-Headers", "content-type,x-faro-session-id")
+	exactRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(exactRec, exactReq)
+	if exactRec.Code != http.StatusNoContent {
+		t.Fatalf("exact /collect preflight status = %d, want %d", exactRec.Code, http.StatusNoContent)
+	}
+}
+
 func TestRUMReplayProxyStoresReplayWithoutRequiredRUMContext(t *testing.T) {
 	app := newTestApp(t, config.ModeLocal)
 	body := `{"records":[{"type":4,"timestamp":1000,"data":{"href":"http://localhost/cloud/"}},{"type":2,"timestamp":1100,"data":{"node":{"type":0}}}]}`

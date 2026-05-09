@@ -323,6 +323,8 @@ func applyFixtureMetadata(req *http.Request, path string) error {
 func sourceFromPath(path string) event.Source {
 	lower := strings.ToLower(path)
 	switch {
+	case strings.Contains(lower, "faro"), strings.Contains(lower, "collect"):
+		return event.SourceFaro
 	case strings.Contains(lower, "otlp"):
 		return event.SourceOTLP
 	case strings.Contains(lower, "rum"):
@@ -346,6 +348,8 @@ func endpointFor(source event.Source) string {
 		return "/v0.5/traces"
 	case event.SourceOTLP:
 		return "/v1/traces"
+	case event.SourceFaro:
+		return "/collect"
 	default:
 		return "/unknown"
 	}

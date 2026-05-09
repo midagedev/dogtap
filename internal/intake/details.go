@@ -111,7 +111,7 @@ func eventItems(value any) []any {
 	case []any:
 		return typed
 	case map[string]any:
-		for _, key := range []string{"logs", "events", "records"} {
+		for _, key := range []string{"logs", "exceptions", "events", "records"} {
 			if nested, ok := typed[key].([]any); ok {
 				return nested
 			}
@@ -157,6 +157,9 @@ func spanError(row map[string]any) bool {
 }
 
 func metricDetails(decoded any, normalized event.NormalizedTelemetry) []event.MetricEntry {
+	if entries := faroMeasurementDetails(decoded, normalized); len(entries) > 0 {
+		return entries
+	}
 	rows := []map[string]any{}
 	collectMetricRows(decoded, &rows)
 	entries := make([]event.MetricEntry, 0, len(rows))
@@ -185,6 +188,50 @@ func metricDetails(decoded any, normalized event.NormalizedTelemetry) []event.Me
 		}
 	}
 	return entries
+}
+
+func faroMeasurementDetails(decoded any, normalized event.NormalizedTelemetry) []event.MetricEntry {
+	measurements, ok := findAny(decoded, "measurements").([]any)
+	if !ok || len(measurements) == 0 {
+		return nil
+	}
+	entries := []event.MetricEntry{}
+	for _, measurement := range measurements {
+		row, ok := measurement.(map[string]any)
+		if !ok {
+			continue
+		}
+		metricType := coalesce(findString(row, "type", "name"), "faro.measurement")
+		values, ok := findAny(row, "values").(map[string]any)
+		if !ok || len(values) == 0 {
+			if value, ok := metricNumber(row, "value"); ok {
+				entries = append(entries, faroMetricEntry(metricType, value, row, normalized))
+			}
+			continue
+		}
+		for name, rawValue := range values {
+			value, ok := numericValue(rawValue)
+			if !ok {
+				continue
+			}
+			metricName := metricType
+			if name != "duration" && name != "value" {
+				metricName = metricType + "." + name
+			}
+			entries = append(entries, faroMetricEntry(metricName, value, row, normalized))
+		}
+	}
+	return entries
+}
+
+func faroMetricEntry(name string, value float64, row map[string]any, normalized event.NormalizedTelemetry) event.MetricEntry {
+	return event.MetricEntry{
+		Name:      name,
+		Service:   normalized.Service,
+		Value:     value,
+		Route:     coalesce(findString(row, "context.route"), normalized.Route),
+		Timestamp: coalesce(findString(row, "timestamp"), normalized.Timestamp),
+	}
 }
 
 func collectMetricRows(value any, rows *[]map[string]any) {
@@ -255,36 +302,43 @@ func metricTags(metric map[string]any, point map[string]any) map[string]string {
 
 func metricNumber(root any, paths ...string) (float64, bool) {
 	for _, path := range paths {
-		switch value := findAny(root, path).(type) {
-		case int:
-			return float64(value), true
-		case int8:
-			return float64(value), true
-		case int16:
-			return float64(value), true
-		case int32:
-			return float64(value), true
-		case int64:
-			return float64(value), true
-		case uint:
-			return float64(value), true
-		case uint8:
-			return float64(value), true
-		case uint16:
-			return float64(value), true
-		case uint32:
-			return float64(value), true
-		case uint64:
-			return float64(value), true
-		case float32:
-			return float64(value), true
-		case float64:
+		if value, ok := numericValue(findAny(root, path)); ok {
 			return value, true
-		case string:
-			parsed, err := strconv.ParseFloat(value, 64)
-			if err == nil {
-				return parsed, true
-			}
+		}
+	}
+	return 0, false
+}
+
+func numericValue(raw any) (float64, bool) {
+	switch value := raw.(type) {
+	case int:
+		return float64(value), true
+	case int8:
+		return float64(value), true
+	case int16:
+		return float64(value), true
+	case int32:
+		return float64(value), true
+	case int64:
+		return float64(value), true
+	case uint:
+		return float64(value), true
+	case uint8:
+		return float64(value), true
+	case uint16:
+		return float64(value), true
+	case uint32:
+		return float64(value), true
+	case uint64:
+		return float64(value), true
+	case float32:
+		return float64(value), true
+	case float64:
+		return value, true
+	case string:
+		parsed, err := strconv.ParseFloat(value, 64)
+		if err == nil {
+			return parsed, true
 		}
 	}
 	return 0, false

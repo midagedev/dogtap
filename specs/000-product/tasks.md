@@ -299,3 +299,30 @@ Evidence note 2026-05-09:
   Replay with a decoded rrweb DOM snapshot, logs, APM traces, OTLP traces,
   OTLP metrics, one required-context validation failure, and configuration-only
   rollback.
+
+## Phase 12: Faro SDK Compatibility Smoke
+
+- [x] T120 Record the Faro compatibility decision and keep the production
+  recommendation on Grafana Alloy `faro.receiver` to OTLP.
+- [x] T121 Document Dogtap's experimental native Faro intake endpoints:
+  `/faro`, `/collect`, and `/collect/`.
+- [x] T122 Document the external-injection smoke frontend `/faro` workflow and
+  `make smoke-faro` verification command.
+- [ ] T123 Promote Faro compatibility beyond smoke only after fixture-backed
+  production receiver behavior, retention, forwarding, and schema drift risks
+  are covered by gates.
+
+Gate:
+
+- [x] G8 Release Candidate Faro SDK smoke subset
+
+Evidence note 2026-05-09:
+
+- Faro compatibility decision recorded in
+  `docs/decisions/0008-faro-compatibility.md`.
+- Native Faro intake is documented as experimental and scoped to integration
+  smoke on `/faro`, `/collect`, and `/collect/`.
+- The smoke path uses `examples/external-injection-smoke/frontend` at `/faro`
+  and is documented as `make smoke-faro`.
+- Production-grade Faro routing should use Grafana Alloy `faro.receiver` and
+  export OTLP to Dogtap rather than depending on Dogtap's native Faro intake.

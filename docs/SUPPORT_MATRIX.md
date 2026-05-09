@@ -20,6 +20,7 @@ public release.
 | --- | --- | --- | --- |
 | Browser RUM proxy | `/datadog-intake-proxy` | Supported for local and CI inspection | Browser RUM SDK fixture, replay tests, dashboard E2E |
 | RUM Session Replay | `/api/v2/replay`, proxy `ddforward=/api/v2/replay` | Partial | DOM playback for decoded rrweb full snapshot records, with timeline fallback |
+| Grafana Faro SDK | `/faro`, `/collect`, `/collect/` | Experimental smoke only | Used by the external-injection frontend `/faro` workflow and `make smoke-faro`; not a production-grade Faro receiver contract |
 | Datadog logs HTTP | `/api/v2/logs`, `/v1/input` | Supported for local inspection | JSON, text, and gzip fixtures |
 | Datadog APM traces | `:8126`, `/v0.3/traces`, `/v0.4/traces`, `/v0.5/traces` | Supported for intake and span inspection | Datadog tracer fixture-backed; forwarding deferred |
 | OTLP HTTP traces/logs/metrics | `:4318`, `/v1/traces`, `/v1/logs`, `/v1/metrics` | Supported for local inspection | OpenTelemetry SDK fixture-backed |
@@ -35,6 +36,7 @@ public release.
 | Datadog Browser RUM SDK with hardcoded init | Requires one preparatory app change | Make the `proxy` value runtime-configurable, then Dogtap enable/disable is external. |
 | Datadog backend tracer | Supported for local/CI intake | Prefer `DD_TRACE_AGENT_URL`; host/port env works for common tracer setups. |
 | Datadog trace/log correlation | Supported when logs reach Dogtap | Keep `DD_LOGS_INJECTION=true`; Dogtap still needs a log input path. |
+| Grafana Faro Web SDK | Experimental smoke only | Point the SDK collector URL at Dogtap `/faro`, `/collect`, or `/collect/` for integration smoke. For production-grade Faro, route through Grafana Alloy `faro.receiver` and export OTLP to Dogtap. |
 | DD Agent stdout/file log tailing | Not Dogtap-native | Use a collector/log-forwarder bridge to Dogtap logs or OTLP logs. |
 | DogStatsD metrics | Not supported | Keep Datadog Agent for DogStatsD; use OTLP metrics for Dogtap inspection. |
 | OTel Collector sidecar/gateway | Supported as a bridge pattern | Send OTLP traces/logs/metrics to Dogtap in local/CI or sampled tee modes. |
@@ -48,6 +50,7 @@ public release.
 | Datadog logs HTTP | Supported for bounded forwarding experiments | Adds the outbound Datadog API key only when forwarding logs. |
 | Datadog APM traces | Deferred | Intake and dashboard inspection are supported; forwarding needs a separate compatibility contract decision. |
 | OTLP traces/logs/metrics | Deferred | Keep an OpenTelemetry Collector on the production forwarding path. |
+| Native Faro forwarding | Not supported | Native Faro intake is for smoke inspection only; use Alloy `faro.receiver` plus OTLP for production routing. |
 
 ## Dashboard Capabilities
 
@@ -72,6 +75,7 @@ go test ./...
 npm --prefix web run build
 make shell-check
 make smoke-adoption
+make smoke-faro
 make demo-visual-check
 go run ./cmd/dogtap replay \
   -config configs/generic-local.yaml \

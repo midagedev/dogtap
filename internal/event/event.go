@@ -9,6 +9,7 @@ const (
 	SourceAPM     Source = "apm"
 	SourceLogs    Source = "logs"
 	SourceOTLP    Source = "otlp"
+	SourceFaro    Source = "faro"
 	SourceUnknown Source = "unknown"
 )
 

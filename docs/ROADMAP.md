@@ -135,8 +135,29 @@ candidate.
 - seeded dashboard demo and live visual verification: complete
 - public support matrix and release candidate runbook: complete
 - realistic sanitized adoption profile: complete
+- experimental Faro SDK compatibility smoke: complete
+- production-grade Faro routing guidance through Grafana Alloy `faro.receiver`
+  to OTLP: complete
 
 Gate:
 
 - G8 Release Candidate: passed for first public release-candidate evidence
   (`docs/gates/G8_RELEASE_CANDIDATE.md`)
+
+## Phase 7: Compatibility Smokes
+
+Goal: validate adjacent telemetry SDKs without turning Dogtap into a second
+collector implementation.
+
+Status: Faro SDK compatibility smoke complete; production native Faro parity is
+not in scope.
+
+- native Faro intake for smoke at `/faro`, `/collect`, and `/collect/`
+- external-injection frontend workflow at `/faro`
+- `make smoke-faro` verification path
+- documented production guidance to use Grafana Alloy `faro.receiver` and OTLP
+  export into Dogtap
+
+Gate:
+
+- G8 Release Candidate: passed for Faro SDK smoke subset

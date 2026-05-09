@@ -182,6 +182,48 @@ func TestValidateBatchDetectsRUMLogoutContextLeak(t *testing.T) {
 	requireRule(t, validated[1].Validation, "context.rum.logout.account")
 }
 
+func TestValidateBatchDetectsFaroLogoutContextLeak(t *testing.T) {
+	v := New(config.Default().Validation)
+	events := []event.EventEnvelope{
+		{
+			Source: event.SourceFaro,
+			Decoded: map[string]any{
+				"events": []any{map[string]any{"name": "clearUser"}},
+			},
+			Normalized: event.NormalizedTelemetry{
+				Source:      event.SourceFaro,
+				Service:     "web-frontend",
+				Env:         "local",
+				UserID:      "user-1",
+				AccountID:   "account-1",
+				WorkspaceID: "workspace-1",
+				SessionID:   "session-1",
+				Route:       "/logout",
+			},
+		},
+		{
+			Source: event.SourceFaro,
+			Normalized: event.NormalizedTelemetry{
+				Source:      event.SourceFaro,
+				Service:     "web-frontend",
+				Env:         "local",
+				UserID:      "user-1",
+				AccountID:   "account-1",
+				WorkspaceID: "workspace-1",
+				SessionID:   "session-1",
+				Route:       "/login",
+			},
+		},
+	}
+
+	validated := v.ValidateBatch(events)
+	if validated[1].Validation.Status != "fail" {
+		t.Fatalf("got status %q, want fail", validated[1].Validation.Status)
+	}
+	requireRule(t, validated[1].Validation, "context.rum.logout.user")
+	requireRule(t, validated[1].Validation, "context.rum.logout.account")
+}
+
 func TestValidateBatchDetectsRUMWorkspaceSwitchLeak(t *testing.T) {
 	v := New(config.Default().Validation)
 	events := []event.EventEnvelope{

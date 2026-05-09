@@ -2,6 +2,7 @@ package intake
 
 import (
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -9,6 +10,9 @@ import (
 )
 
 func Normalize(source event.Source, decoded any) event.NormalizedTelemetry {
+	if source == event.SourceFaro {
+		return normalizeFaro(decoded)
+	}
 	root := firstPayload(decoded)
 	tags := collectTags(root)
 	n := event.NormalizedTelemetry{
@@ -49,6 +53,76 @@ func Normalize(source event.Source, decoded any) event.NormalizedTelemetry {
 		}
 	}
 	return n
+}
+
+func normalizeFaro(decoded any) event.NormalizedTelemetry {
+	tags := collectTags(decoded)
+	n := event.NormalizedTelemetry{
+		Source: event.SourceFaro,
+		Tags:   tags,
+	}
+	n.Service = coalesce(findString(decoded, "meta.app.name", "app.name"), tags["service"], tags["service.name"])
+	n.Env = coalesce(findString(decoded, "meta.app.environment", "app.environment"), tags["env"], tags["deployment.environment"], tags["deployment.environment.name"])
+	n.Version = coalesce(findString(decoded, "meta.app.version", "app.version", "meta.app.release", "app.release"), tags["version"], tags["service.version"])
+	n.Host = findString(decoded, "host", "hostname", "host.name")
+	n.Timestamp = findString(decoded, "events.timestamp", "logs.timestamp", "measurements.timestamp", "exceptions.timestamp", "timestamp")
+	n.TraceID = findString(decoded, "traces.resourceSpans.scopeSpans.spans.traceId", "traces.resourceSpans.scopeSpans.spans.trace_id", "traceId", "trace_id")
+	n.SpanID = findString(decoded, "traces.resourceSpans.scopeSpans.spans.spanId", "traces.resourceSpans.scopeSpans.spans.span_id", "spanId", "span_id")
+	n.ParentSpanID = findString(decoded, "traces.resourceSpans.scopeSpans.spans.parentSpanId", "traces.resourceSpans.scopeSpans.spans.parent_span_id", "parentSpanId", "parent_span_id")
+	n.SessionID = findString(decoded, "meta.session.id", "session.id", "session_id", "sessionId")
+	n.UserID = findString(decoded, "meta.user.id", "user.id", "user_id", "userId")
+	n.AccountID = findString(decoded, "meta.user.attributes.accountId", "meta.user.attributes.account.id", "account.id", "accountId")
+	n.WorkspaceID = findString(decoded, "meta.user.attributes.workspaceId", "meta.user.attributes.workspace.id", "workspace.id", "workspaceId")
+	n.CaseID = coalesce(
+		findString(decoded, "events.attributes.caseId", "events.attributes.case.id"),
+		findString(decoded, "meta.user.attributes.caseId", "meta.user.attributes.case.id", "case.id", "caseId"),
+	)
+	n.Route = coalesce(
+		findString(decoded, "events.attributes.route", "logs.context.route", "measurements.context.route", "meta.view.name", "route", "http.route", "url.path"),
+		tags["http.route"],
+		tags["url.path"],
+		pathFromURL(tags["url.full"]),
+		pathFromURL(findString(decoded, "meta.page.url", "page.url")),
+	)
+	n.Method = coalesce(
+		findString(decoded, "method", "http.method", "http.request.method"),
+		tags["http.method"],
+		tags["http.request.method"],
+	)
+	n.StatusCode = findInt(decoded, "status_code", "statusCode", "http.status_code", "http.response.status_code")
+	if n.StatusCode == 0 {
+		n.StatusCode = firstTagInt(tags, "http.status_code", "http.response.status_code", "status_code")
+	}
+	n.DurationMS = coalesceFaroDuration(decoded)
+	n.ErrorType = findString(decoded, "exceptions.type", "exceptions.value", "logs.level")
+	n.ErrorMessage = findString(decoded, "exceptions.message", "logs.message", "events.name")
+	return n
+}
+
+func pathFromURL(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Path == "" {
+		return raw
+	}
+	return parsed.Path
+}
+
+func coalesceFaroDuration(decoded any) float64 {
+	for _, path := range []string{
+		"measurements.values.duration",
+		"measurements.values.duration_ms",
+		"measurements.values.lcp",
+		"measurements.values.fcp",
+		"measurements.values.ttfb",
+	} {
+		if value := findFloat(decoded, path); value > 0 {
+			return value
+		}
+	}
+	return 0
 }
 
 func firstPayload(v any) any {
