@@ -1,0 +1,44 @@
+name: Feature request
+description: Propose a scoped Dogtap improvement.
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What telemetry validation, debugging, or adoption problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Describe the smallest useful behavior.
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Primary mode
+      options:
+        - Local development
+        - CI contract validation
+        - Staging forwarding
+        - Production tee
+        - Documentation or examples
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation criteria
+      description: What fixture, test, or manual check would prove this works?
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This keeps Dogtap focused on intake inspection, validation, safe forwarding, or developer feedback.
+        - label: This does not require storing raw production telemetry by default.
+        - label: This can be adopted and removed through standard Datadog or OpenTelemetry configuration surfaces.

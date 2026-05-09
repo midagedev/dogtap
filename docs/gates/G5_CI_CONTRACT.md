@@ -2,11 +2,11 @@
 
 ## Status
 
-Passed locally.
+Passed locally and covered by the repository CI workflow.
 
-The command, report formats, and exit policy are covered by local tests. A
-published GitHub Actions workflow is intentionally deferred until release
-automation is added.
+The command, report formats, and exit policy are covered by local tests. The
+published GitHub Actions workflow runs Go tests, dashboard build/E2E, shell
+syntax checks, generic adoption smoke, and container build checks.
 
 ## Evidence
 
@@ -28,6 +28,10 @@ Implemented CI surface:
 ```bash
 go test ./cmd/dogtap ./internal/report
 go test ./...
+npm --prefix web run build
+DOGTAP_E2E_BASE_URL=http://127.0.0.1:4175 npm --prefix web run test:e2e
+make shell-check
+make smoke-adoption
 go run ./cmd/dogtap replay -output /tmp/dogtap-report.md fixtures/rum/missing-context.json
 ```
 

@@ -28,7 +28,7 @@ Gate:
 
 Goal: make local telemetry visible.
 
-Status: partially complete
+Status: complete for the fixture-backed local inspector MVP
 
 - Docker image
 - RUM intake
@@ -64,7 +64,7 @@ Gate:
 
 Goal: prevent telemetry regressions before deployment.
 
-Status: locally complete
+Status: complete with local and GitHub Actions verification
 
 - headless validation command
 - fixture replay
@@ -74,7 +74,7 @@ Status: locally complete
 
 Gate:
 
-- G5 CI Contract: passed locally
+- G5 CI Contract: passed
 
 ## Phase 4: Forward Mode
 
@@ -123,6 +123,7 @@ blocked pending one realistic sanitized adoption profile.
 - Helm chart or ECS task example
 - generic frontend/backend adoption kit: complete
 - copyable Docker Compose and environment snippets: complete
+- public CI and community contribution surface: complete
 - realistic sanitized adoption profile
 
 Gate:
