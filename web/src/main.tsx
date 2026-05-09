@@ -648,11 +648,7 @@ function CopyIconButton({ value, label }: { value: string; label: string }) {
   );
 }
 
-function ObservabilityOverview({
-  data,
-}: {
-  data: ObservabilityOverviewData;
-}) {
+function ObservabilityOverview({ data }: { data: ObservabilityOverviewData }) {
   return (
     <section className="overview-band" aria-label="Observability overview">
       <section className="overview-panel service-map-panel">
@@ -718,7 +714,10 @@ function ObservabilityOverview({
         <div className="route-list" aria-label="Traffic routes">
           {data.routes.length ? (
             data.routes.slice(0, 5).map((route) => (
-              <div className="route-row" key={`${route.service}-${route.route}`}>
+              <div
+                className="route-row"
+                key={`${route.service}-${route.route}`}
+              >
                 <strong>{route.route}</strong>
                 <span>{route.service}</span>
                 <small>
@@ -841,20 +840,26 @@ function DashboardDiagnosticsPanel({
           <span>{data.sessions.length} sessions</span>
         </div>
         {activeSession ? (
-          <div className="session-timeline" aria-label="Browser session timeline">
+          <div
+            className="session-timeline"
+            aria-label="Browser session timeline"
+          >
             <div className="session-picker" aria-label="Browser sessions">
               {data.sessions.slice(0, 4).map((session) => (
                 <button
                   type="button"
                   className={
-                    session.sessionId === activeSession.sessionId ? "active" : ""
+                    session.sessionId === activeSession.sessionId
+                      ? "active"
+                      : ""
                   }
                   key={session.sessionId}
                   onClick={() => setActiveSessionId(session.sessionId)}
                 >
                   <strong>{session.sessionId}</strong>
                   <span>
-                    {session.events} signals · {formatLastSeen(session.lastSeen)}
+                    {session.events} signals ·{" "}
+                    {formatLastSeen(session.lastSeen)}
                   </span>
                 </button>
               ))}
@@ -1024,11 +1029,15 @@ function CorrelationPanel({
 }) {
   const groups = correlationFields.map((field) => {
     const value = event.normalized[field.key];
+    const valueIdentity = correlationFieldIdentity(field.key, value);
     const related = value
       ? events.filter(
           (candidate) =>
             candidate.id !== event.id &&
-            candidate.normalized[field.key] === value,
+            correlationFieldIdentity(
+              field.key,
+              candidate.normalized[field.key],
+            ) === valueIdentity,
         )
       : [];
     return { ...field, value, related };
@@ -1286,7 +1295,9 @@ function ReplayDomPlayer({
         playerRef.current = null;
       };
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not render replay");
+      setError(
+        caught instanceof Error ? caught.message : "Could not render replay",
+      );
       player?.destroy();
       playerRef.current = null;
       return undefined;
@@ -1351,7 +1362,9 @@ function ReplayDomPlayer({
           onChange={(change) => seek(Number(change.target.value))}
           disabled={Boolean(error) || duration <= 0}
         />
-        <code>{formatDuration(position)} / {formatDuration(duration)}</code>
+        <code>
+          {formatDuration(position)} / {formatDuration(duration)}
+        </code>
       </div>
       <div className="replay-dom-meta">
         <strong>DOM replay</strong>
@@ -1464,8 +1477,11 @@ function TraceViewer({
   events: EventEnvelope[];
 }) {
   const traceId = event.normalized.traceId;
+  const traceKey = traceIdentity(traceId);
   const related = traceId
-    ? events.filter((candidate) => candidate.normalized.traceId === traceId)
+    ? events.filter(
+        (candidate) => traceIdentity(candidate.normalized.traceId) === traceKey,
+      )
     : [event];
   const spans = traceSpans(related);
   return (
@@ -1821,14 +1837,27 @@ function traceSpans(events: EventEnvelope[]): TraceSpan[] {
     return true;
   });
   const byID = new Map(
-    unique.filter((span) => span.spanId).map((span) => [span.spanId, span]),
+    unique
+      .filter((span) => span.spanId)
+      .map((span) => [
+        `${traceIdentity(span.traceId)}:${spanIdentity(span.spanId)}`,
+        span,
+      ]),
   );
   return unique.map((span) => {
     let depth = 0;
-    let parent = span.parentSpanId ? byID.get(span.parentSpanId) : undefined;
+    let parent = span.parentSpanId
+      ? byID.get(
+          `${traceIdentity(span.traceId)}:${spanIdentity(span.parentSpanId)}`,
+        )
+      : undefined;
     while (parent && depth < 8) {
       depth += 1;
-      parent = parent.parentSpanId ? byID.get(parent.parentSpanId) : undefined;
+      parent = parent.parentSpanId
+        ? byID.get(
+            `${traceIdentity(parent.traceId)}:${spanIdentity(parent.parentSpanId)}`,
+          )
+        : undefined;
     }
     return { ...span, depth };
   });
@@ -1879,11 +1908,7 @@ function extractSpans(event: EventEnvelope): TraceSpan[] {
       depth: 0,
     });
   });
-  if (
-    !spans.length &&
-    (event.source === "apm" || event.source === "otlp") &&
-    (event.normalized.traceId || event.normalized.spanId)
-  ) {
+  if (!spans.length && (event.normalized.traceId || event.normalized.spanId)) {
     spans.push({
       eventId: event.id,
       spanId: event.normalized.spanId,
@@ -1943,9 +1968,7 @@ function buildObservabilityOverview(
     const eventMetrics = metricSamplesFromEvent(event);
     metricSamples.push(...eventMetrics);
     const service =
-      event.normalized.service ||
-      eventMetrics[0]?.service ||
-      "unknown-service";
+      event.normalized.service || eventMetrics[0]?.service || "unknown-service";
     const summary = ensureServiceSummary(serviceMap, service);
     summary.events += 1;
     if (!summary.sources.includes(event.source)) {
@@ -2046,7 +2069,9 @@ function buildObservabilityOverview(
   };
 }
 
-function buildDashboardDiagnostics(events: EventEnvelope[]): DashboardDiagnostics {
+function buildDashboardDiagnostics(
+  events: EventEnvelope[],
+): DashboardDiagnostics {
   return {
     intake: buildIntakeHealth(events),
     sessions: buildBrowserSessions(events),
@@ -2120,7 +2145,9 @@ function buildIntakeHealth(events: EventEnvelope[]): IntakeHealthData {
   return { sources: sourceHealth, endpoints };
 }
 
-function buildBrowserSessions(events: EventEnvelope[]): BrowserSessionSummary[] {
+function buildBrowserSessions(
+  events: EventEnvelope[],
+): BrowserSessionSummary[] {
   const sessionIds = new Set<string>();
   for (const event of events) {
     const sessionId = event.normalized.sessionId;
@@ -2142,7 +2169,9 @@ function browserSessionSummary(
   sessionId: string,
   events: EventEnvelope[],
 ): BrowserSessionSummary {
-  const seeds = events.filter((event) => event.normalized.sessionId === sessionId);
+  const seeds = events.filter(
+    (event) => event.normalized.sessionId === sessionId,
+  );
   const correlation = {
     traces: valuesFromEvents(seeds, "traceId"),
     users: valuesFromEvents(seeds, "userId"),
@@ -2152,7 +2181,10 @@ function browserSessionSummary(
   };
   const related = events
     .filter((event) => belongsToBrowserSession(event, sessionId, correlation))
-    .sort((left, right) => timestampMs(left.receivedAt) - timestampMs(right.receivedAt));
+    .sort(
+      (left, right) =>
+        timestampMs(left.receivedAt) - timestampMs(right.receivedAt),
+    );
   const sources = uniqueValues(related.map((event) => event.source));
   const services = uniqueValues(
     related.map((event) => event.normalized.service).filter(Boolean),
@@ -2212,7 +2244,10 @@ function belongsToBrowserSession(
 ) {
   const normalized = event.normalized;
   if (normalized.sessionId === sessionId) return true;
-  if (normalized.traceId && correlation.traces.has(normalized.traceId)) {
+  if (
+    normalized.traceId &&
+    correlation.traces.has(traceIdentity(normalized.traceId))
+  ) {
     return true;
   }
   if (normalized.caseId && correlation.cases.has(normalized.caseId)) {
@@ -2261,12 +2296,19 @@ function valuesFromEvents(
   return new Set(
     events
       .map((event) => event.normalized[key])
-      .filter((value): value is string => typeof value === "string" && value !== ""),
+      .map((value) =>
+        key === "traceId" ? traceIdentity(value) : stringValue(value),
+      )
+      .filter(
+        (value): value is string => typeof value === "string" && value !== "",
+      ),
   );
 }
 
 function uniqueValues<T>(values: Array<T | undefined>): T[] {
-  return Array.from(new Set(values.filter((value): value is T => value !== undefined)));
+  return Array.from(
+    new Set(values.filter((value): value is T => value !== undefined)),
+  );
 }
 
 function firstSetValue(values: Set<string>) {
@@ -2317,13 +2359,13 @@ function serviceEdges(events: EventEnvelope[]): ServiceEdge[] {
   for (const span of spans) {
     const spanId = spanIdentity(span.spanId);
     if (!spanId) continue;
-    byID.set(`${spanIdentity(span.traceId)}:${spanId}`, span);
+    byID.set(`${traceIdentity(span.traceId)}:${spanId}`, span);
   }
   const edges: ServiceEdgeAccumulator = new Map();
   for (const span of spans) {
     const parentSpanId = spanIdentity(span.parentSpanId);
     if (!parentSpanId) continue;
-    const traceId = spanIdentity(span.traceId);
+    const traceId = traceIdentity(span.traceId);
     const parent = byID.get(`${traceId}:${parentSpanId}`);
     if (!parent || parent.service === span.service) continue;
     addServiceEdge(edges, parent.service, span.service, traceId);
@@ -2347,7 +2389,7 @@ function addTraceCorrelationEdges(
 ) {
   const byTrace = new Map<string, string[]>();
   for (const event of events) {
-    const traceId = spanIdentity(event.normalized.traceId);
+    const traceId = traceIdentity(event.normalized.traceId);
     const service = event.normalized.service;
     if (!traceId || !service) continue;
     const services = byTrace.get(traceId) ?? [];
@@ -2371,21 +2413,66 @@ function addServiceEdge(
 ) {
   if (!from || !to || from === to) return;
   const key = `${from}\n${to}`;
-  const edge =
-    edges.get(key) ??
-    {
-      from,
-      to,
-      traces: new Set<string>(),
-      count: 0,
-    };
+  const edge = edges.get(key) ?? {
+    from,
+    to,
+    traces: new Set<string>(),
+    count: 0,
+  };
   edge.count += 1;
   if (traceId) edge.traces.add(traceId);
   edges.set(key, edge);
 }
 
 function spanIdentity(value: unknown) {
-  return stringValue(value)?.trim() ?? "";
+  return numericIDIdentity(value, 16);
+}
+
+function traceIdentity(value: unknown) {
+  return numericIDIdentity(value, 32);
+}
+
+function correlationFieldIdentity(
+  key: keyof EventEnvelope["normalized"],
+  value: unknown,
+) {
+  return key === "traceId"
+    ? traceIdentity(value)
+    : (stringValue(value)?.trim() ?? "");
+}
+
+function numericIDIdentity(value: unknown, width: number) {
+  const raw = stringValue(value)?.trim();
+  if (!raw || raw === "0") return raw ?? "";
+  const lower = raw.toLowerCase();
+  if (/^\d+$/.test(raw)) {
+    return BigInt(raw).toString(16).padStart(width, "0");
+  }
+  if (/^[0-9a-f]+$/.test(lower) && lower.length <= width) {
+    return lower.padStart(width, "0");
+  }
+  const decoded = base64ToHex(raw);
+  if (decoded) {
+    return width === 32 && decoded.length === 16
+      ? decoded.padStart(32, "0")
+      : decoded.padStart(width, "0");
+  }
+  return lower;
+}
+
+function base64ToHex(value: string) {
+  if (!/^[a-z0-9+/]+={0,2}$/i.test(value) || value.length % 4 !== 0) {
+    return "";
+  }
+  try {
+    const decoded = atob(value);
+    if (decoded.length !== 8 && decoded.length !== 16) return "";
+    return Array.from(decoded, (char) =>
+      char.charCodeAt(0).toString(16).padStart(2, "0"),
+    ).join("");
+  } catch {
+    return "";
+  }
 }
 
 function metricSamplesFromEvent(event: EventEnvelope): MetricSample[] {
@@ -2393,8 +2480,7 @@ function metricSamplesFromEvent(event: EventEnvelope): MetricSample[] {
     return event.details.metrics.map((metric) => ({
       eventId: event.id,
       name: metric.name || "metric",
-      service:
-        metric.service || event.normalized.service || "unknown-service",
+      service: metric.service || event.normalized.service || "unknown-service",
       unit: metric.unit,
       value: metric.value,
       aggregation: metric.aggregation,
@@ -2556,8 +2642,7 @@ function attributeScalar(value: unknown): string | undefined {
 function formatMetricValue(metric: MetricSample) {
   if (metric.value === undefined || !Number.isFinite(metric.value)) return "-";
   const abs = Math.abs(metric.value);
-  const value =
-    abs >= 100 ? metric.value.toFixed(0) : metric.value.toFixed(2);
+  const value = abs >= 100 ? metric.value.toFixed(0) : metric.value.toFixed(2);
   const trimmed = value.replace(/\.?0+$/, "");
   return metric.unit ? `${trimmed} ${metric.unit}` : trimmed;
 }

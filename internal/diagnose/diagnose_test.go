@@ -139,6 +139,38 @@ func TestCollectFailsWithActionableHintForMissingExpectation(t *testing.T) {
 	}
 }
 
+func TestBuildAssertionsMatchesTraceAliases(t *testing.T) {
+	report := BuildAssertions(
+		[]event.EventEnvelope{
+			{
+				ID:     "trace-1",
+				Source: event.SourceOTLP,
+				Normalized: event.NormalizedTelemetry{
+					Source:  event.SourceOTLP,
+					TraceID: "000000000000000000000000075bcd15",
+				},
+				Validation: event.ValidationResult{Status: "pass"},
+			},
+		},
+		Expectations{Traces: []string{"123456789"}},
+		map[string]bool{},
+	)
+
+	if report.Status != "fail" {
+		t.Fatalf("probe checks should still fail without probe evidence: %#v", report)
+	}
+	var traceCheck *CheckResult
+	for index := range report.Checks {
+		if report.Checks[index].ID == "trace:123456789" {
+			traceCheck = &report.Checks[index]
+			break
+		}
+	}
+	if traceCheck == nil || traceCheck.Status != "pass" {
+		t.Fatalf("expected trace alias check to pass: %#v", report.Checks)
+	}
+}
+
 func diagnosticsServer(t *testing.T, events []event.EventEnvelope) *httptest.Server {
 	t.Helper()
 	mux := http.NewServeMux()

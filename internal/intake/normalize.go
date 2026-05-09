@@ -15,6 +15,7 @@ func Normalize(source event.Source, decoded any) event.NormalizedTelemetry {
 	}
 	root := firstPayload(decoded)
 	tags := collectTags(root)
+	traceRoot := tracedPayload(decoded)
 	n := event.NormalizedTelemetry{
 		Source: source,
 		Tags:   tags,
@@ -24,9 +25,9 @@ func Normalize(source event.Source, decoded any) event.NormalizedTelemetry {
 	n.Version = coalesce(findString(root, "version", "dd.version", "service.version"), tags["version"], tags["service.version"])
 	n.Host = findString(root, "host", "hostname", "host.name")
 	n.Timestamp = findString(root, "timestamp", "date", "time")
-	n.TraceID = findString(root, "trace_id", "traceId", "dd.trace_id", "trace.id")
-	n.SpanID = findString(root, "span_id", "spanId", "dd.span_id", "span.id")
-	n.ParentSpanID = findString(root, "parent_id", "parentSpanId", "parent.span.id")
+	n.TraceID = findString(traceRoot, "_dd.trace_id", "trace_id", "traceId", "dd.trace_id", "trace.id")
+	n.SpanID = findString(traceRoot, "_dd.span_id", "span_id", "spanId", "dd.span_id", "span.id")
+	n.ParentSpanID = findString(traceRoot, "parent_id", "parentSpanId", "parent.span.id")
 	n.SessionID = findString(root, "event.session.id", "session.id", "session_id", "sessionId", "application.id")
 	n.ViewID = findString(root, "event.view.id", "view.id", "view_id", "viewId")
 	n.UserID = findString(root, "usr.id", "user.id", "user_id", "userId", "context.user.id")
@@ -34,13 +35,28 @@ func Normalize(source event.Source, decoded any) event.NormalizedTelemetry {
 	n.WorkspaceID = findString(root, "workspace.id", "workspace_id", "workspaceId", "context.workspace.id")
 	n.CaseID = findString(root, "case.id", "case_id", "caseId", "context.case.id")
 	n.Route = coalesce(
+		pathFromURL(findString(traceRoot, "resource.url", "http.url")),
+		findString(traceRoot, "route", "resource", "resource.name", "view.url_path", "url.path", "http.route", "http.url"),
+		pathFromURL(findString(decoded, "resource.url", "http.url")),
 		findString(root, "route", "resource", "resource.name", "view.url_path", "url.path", "http.route", "http.url"),
 		tags["http.route"],
 		tags["resource.name"],
 		tags["url.path"],
 	)
-	n.Method = coalesce(findString(root, "method", "http.method", "http.request.method"), tags["http.method"], tags["http.request.method"])
-	n.StatusCode = findInt(root, "status_code", "statusCode", "http.status_code", "http.response.status_code")
+	n.Method = coalesce(
+		findString(traceRoot, "resource.method", "method", "http.method", "http.request.method"),
+		findString(decoded, "resource.method"),
+		findString(root, "method", "http.method", "http.request.method"),
+		tags["http.method"],
+		tags["http.request.method"],
+	)
+	n.StatusCode = findInt(traceRoot, "resource.status_code", "status_code", "statusCode", "http.status_code", "http.response.status_code")
+	if n.StatusCode == 0 {
+		n.StatusCode = findInt(root, "status_code", "statusCode", "http.status_code", "http.response.status_code")
+	}
+	if n.StatusCode == 0 {
+		n.StatusCode = findInt(decoded, "resource.status_code")
+	}
 	if n.StatusCode == 0 {
 		n.StatusCode = firstTagInt(tags, "http.status_code", "http.response.status_code", "status_code")
 	}
@@ -53,6 +69,73 @@ func Normalize(source event.Source, decoded any) event.NormalizedTelemetry {
 		}
 	}
 	return n
+}
+
+func tracedPayload(root any) any {
+	if payload, _, ok := bestTracedPayload(root); ok {
+		return payload
+	}
+	return root
+}
+
+func bestTracedPayload(root any) (any, int, bool) {
+	bestSize := 0
+	var best any
+	found := false
+	consider := func(candidate any, size int, ok bool) {
+		if !ok {
+			return
+		}
+		if !found || size < bestSize {
+			best = candidate
+			bestSize = size
+			found = true
+		}
+	}
+
+	switch typed := root.(type) {
+	case map[string]any:
+		for _, value := range typed {
+			consider(bestTracedPayload(value))
+		}
+		if hasTraceAndRoute(typed) {
+			consider(typed, payloadSize(typed), true)
+		}
+	case []any:
+		for _, value := range typed {
+			consider(bestTracedPayload(value))
+		}
+	}
+	return best, bestSize, found
+}
+
+func hasTraceAndRoute(root any) bool {
+	if findString(root, "_dd.trace_id", "trace_id", "traceId", "dd.trace_id", "trace.id") == "" {
+		return false
+	}
+	return coalesce(
+		findString(root, "resource.url", "http.url"),
+		findString(root, "route", "resource", "resource.name", "view.url_path", "url.path", "http.route", "http.url"),
+	) != ""
+}
+
+func payloadSize(root any) int {
+	switch typed := root.(type) {
+	case map[string]any:
+		size := 1
+		for _, value := range typed {
+			size += payloadSize(value)
+		}
+		return size
+	case []any:
+		size := 1
+		for _, value := range typed {
+			size += payloadSize(value)
+		}
+		return size
+	default:
+		return 1
+	}
 }
 
 func normalizeFaro(decoded any) event.NormalizedTelemetry {
