@@ -133,6 +133,11 @@ Acceptance criteria:
 - FR-035: Provide source-specific inspectors for RUM Session Replay payloads,
   structured logs, and trace spans so developers can confirm telemetry was
   captured in a usable form without opening Datadog.
+- FR-036: Show dashboard intake health by source and endpoint, including recent
+  activity, validation failures, and missing-context signals.
+- FR-037: Group browser telemetry by session so developers can inspect the
+  frontend timeline across RUM, Faro, replay, logs, metrics, and correlated
+  traces.
 
 ### Forwarding
 

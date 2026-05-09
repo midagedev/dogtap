@@ -326,3 +326,24 @@ Evidence note 2026-05-09:
   and is documented as `make smoke-faro`.
 - Production-grade Faro routing should use Grafana Alloy `faro.receiver` and
   export OTLP to Dogtap rather than depending on Dogtap's native Faro intake.
+
+## Phase 13: Dashboard Intake Health
+
+- [x] T130 Add dashboard intake health summaries by source and endpoint.
+- [x] T131 Add browser session timeline grouping across RUM/Faro/replay and
+  correlated logs, traces, and metrics.
+- [x] T132 Add E2E coverage for the intake health and session timeline panels.
+- [ ] T133 Promote the service map to an interactive graph after the dashboard
+  has stable intake and session diagnostics.
+
+Gate:
+
+- [x] G4 Product Usability dashboard diagnostics subset
+
+Evidence note 2026-05-09:
+
+- Dashboard intake health surfaces source activity, endpoint activity, last
+  seen age, and failing validation counts.
+- Session timeline groups events by browser session and related correlation
+  fields so frontend, log, trace, and metric signals can be inspected as one
+  workflow.
