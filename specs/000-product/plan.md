@@ -213,10 +213,22 @@ forwarding:
 ### Browser RUM
 
 Use Datadog Browser RUM proxy configuration to route events to Dogtap.
+Prefer a runtime-configured proxy value so Dogtap can be injected without
+editing application source for each adoption.
 
 ### Java APM
 
-Point the Datadog Java tracer to Dogtap using `DD_AGENT_HOST`, `DD_TRACE_AGENT_PORT`, or `DD_TRACE_AGENT_URL`.
+Point the Datadog Java tracer to Dogtap using `DD_TRACE_AGENT_URL` where
+available, or `DD_AGENT_HOST` plus `DD_TRACE_AGENT_PORT`.
+
+### External Injection
+
+The generic adoption path should ship removable overlays for Docker Compose,
+Kubernetes, CI services, and runtime frontend config. Dogtap must not require a
+Dogtap-specific SDK. Unsupported Datadog Agent behaviors, including DogStatsD
+and container log tailing, must be preserved on the Datadog production lane or
+bridged through OTLP/log-forwarder integrations until Dogtap implements them
+deliberately.
 
 ### Logs
 

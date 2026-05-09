@@ -4,6 +4,11 @@ This runbook is for a normal local development stack with a browser frontend and
 one or more backend services. It avoids Dogtap-specific runtime code; use
 Datadog Browser RUM, Datadog tracer, or OpenTelemetry configuration.
 
+If the application already uses Datadog, start with
+[External Injection Adoption](EXTERNAL_INJECTION_ADOPTION.md). The preferred
+path is to add Dogtap as a sidecar or service and override standard telemetry
+endpoints from environment, Compose, Kubernetes, CI, or runtime config.
+
 ## Start Dogtap
 
 From the Dogtap repository:
@@ -33,9 +38,18 @@ http://localhost:8080
 
 ## Frontend RUM
 
-Point the existing Datadog Browser RUM SDK at Dogtap:
+Point the existing Datadog Browser RUM SDK at Dogtap through runtime config
+where possible:
+
+```bash
+DATADOG_RUM_PROXY_URL=http://localhost:8080/datadog-intake-proxy
+```
+
+Then pass that value to the existing initialization:
 
 ```ts
+const rumProxy = runtimeConfig.DATADOG_RUM_PROXY_URL;
+
 datadogRum.init({
   applicationId: "local",
   clientToken: "local",
@@ -43,15 +57,12 @@ datadogRum.init({
   service: "your-frontend",
   env: "local",
   version: "local",
-  proxy: "http://localhost:8080/datadog-intake-proxy",
+  ...(rumProxy ? { proxy: rumProxy } : {}),
 });
 ```
 
-If the app uses runtime config, make this an environment value such as:
-
-```bash
-DATADOG_RUM_PROXY_URL=http://localhost:8080/datadog-intake-proxy
-```
+If the app hardcodes RUM initialization, make the proxy externally configurable
+once and keep later Dogtap enable/disable operations config-only.
 
 ## Backend, Preferred Path: OTLP
 
@@ -81,6 +92,7 @@ Use `examples/adoption-kit/backend-otel-http.env` or
 For backend containers in the same Compose project:
 
 ```bash
+DD_TRACE_AGENT_URL=http://dogtap:8126
 DD_AGENT_HOST=dogtap
 DD_TRACE_AGENT_PORT=8126
 DD_ENV=local

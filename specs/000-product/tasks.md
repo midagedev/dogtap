@@ -246,3 +246,31 @@ Evidence note 2026-05-08:
   `make smoke-adoption`.
 - Verification evidence is recorded in
   `docs/gates/G8_GENERIC_ADOPTION_SMOKE.md`.
+
+## Phase 11: Datadog-Preserving External Injection
+
+- [x] T110 Research official Datadog and OpenTelemetry injection surfaces for
+  RUM proxying, tracer agent endpoints, Agent log collection, DogStatsD, and
+  Collector sidecar patterns.
+- [x] T111 Record an external injection ADR that distinguishes supported
+  endpoint redirection from unsupported Datadog Agent parity claims.
+- [x] T112 Add Compose and Kubernetes sidecar templates that can be applied as
+  removable overlays to existing applications.
+- [x] T113 Add Datadog-preserving env overlays for existing tracers and optional
+  OTLP exporters.
+- [x] T114 Document frontend runtime-config requirements for externally
+  injected RUM proxy values.
+- [x] T115 Document collector/log-forwarder bridge patterns for teams whose
+  Datadog logs currently depend on Agent-side tailing.
+- [ ] T116 Add an executable Compose adoption fixture that proves Dogtap can be
+  enabled and removed by changing only override files.
+- [ ] T117 Add an OpenTelemetry Collector tee example for traces/logs/metrics
+  with Datadog primary and Dogtap inspection as a sampled secondary path.
+- [ ] T118 Add a RUM proxy canary runbook with Browser SDK version, raw-body,
+  header stripping, allowlist, and rollback requirements.
+- [ ] T119 Capture a realistic sanitized adoption profile and publish only the
+  safe summary under `docs/gates/`.
+
+Gate:
+
+- [ ] G8 Release Candidate external injection subset

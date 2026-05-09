@@ -123,6 +123,12 @@ blocked pending one realistic sanitized adoption profile.
 - Helm chart or ECS task example
 - generic frontend/backend adoption kit: complete
 - copyable Docker Compose and environment snippets: complete
+- Datadog-preserving external injection strategy: complete
+- Compose and Kubernetes sidecar injection templates: complete
+- log-forwarder bridge guidance: complete
+- OpenTelemetry Collector tee recipe
+- RUM proxy runtime-config guidance: complete
+- RUM proxy canary guide
 - public CI and community contribution surface: complete
 - release binary and container publishing workflow: complete
 - seeded dashboard demo and live visual verification: complete

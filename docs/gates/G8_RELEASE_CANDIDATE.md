@@ -36,6 +36,12 @@ The public evidence must confirm:
 - Browser RUM and Session Replay arrive with expected user/session/route context.
 - Backend logs and traces correlate by trace/span or workflow context.
 - OTLP metrics appear in the dashboard and replay reports where applicable.
+- Dogtap can be enabled and removed by deleting external overrides or restoring
+  standard Datadog/OTLP endpoint values, without Dogtap-specific application
+  SDK code.
+- Existing Datadog Agent-only behaviors such as stdout/file log tailing and
+  DogStatsD are either bridged into Dogtap or explicitly preserved on the
+  Datadog production lane.
 - Required context and redaction rules catch at least one meaningful failure.
 - No company names, customer payloads, credentials, private hosts, or raw
   production telemetry are committed.

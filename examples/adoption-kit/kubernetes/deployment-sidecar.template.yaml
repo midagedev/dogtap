@@ -1,0 +1,77 @@
+# Template fragment for adding Dogtap as a same-pod sidecar.
+#
+# This is intentionally not a complete Deployment. Copy the relevant env,
+# container, ports, and volume sections into an existing Deployment patch.
+# For same-pod backend SDKs, target 127.0.0.1. Browser RUM needs a reachable
+# Service/Ingress/port-forward because the browser cannot access pod loopback.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: your-service
+spec:
+  template:
+    spec:
+      containers:
+        - name: app
+          env:
+            - name: DD_TRACE_AGENT_URL
+              value: http://127.0.0.1:8126
+            - name: DD_AGENT_HOST
+              value: "127.0.0.1"
+            - name: DD_TRACE_AGENT_PORT
+              value: "8126"
+            - name: DD_ENV
+              value: local
+            - name: DD_SERVICE
+              value: your-backend
+            - name: DD_VERSION
+              value: local
+            - name: DD_LOGS_INJECTION
+              value: "true"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: http/protobuf
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://127.0.0.1:4318
+            - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+              value: http://127.0.0.1:4318/v1/traces
+            - name: OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
+              value: http://127.0.0.1:4318/v1/logs
+            - name: OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+              value: http://127.0.0.1:4318/v1/metrics
+
+        - name: dogtap
+          image: ghcr.io/midagedev/dogtap:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DOGTAP_MODE
+              value: local
+            - name: DOGTAP_STORAGE_KIND
+              value: file
+            - name: DOGTAP_STORAGE_PATH
+              value: /data/events.json
+            - name: DOGTAP_STORAGE_MAX_EVENTS
+              value: "2000"
+            - name: DOGTAP_STORAGE_TTL
+              value: 2h
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: apm
+              containerPort: 8126
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          volumeMounts:
+            - name: dogtap-data
+              mountPath: /data
+
+      volumes:
+        - name: dogtap-data
+          emptyDir: {}
