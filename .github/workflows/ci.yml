@@ -90,6 +90,9 @@ jobs:
       - name: Run generic adoption smoke
         run: make smoke-adoption
 
+      - name: Run external injection smoke
+        run: make smoke-external-injection
+
   demo:
     name: Demo visual check
     runs-on: ubuntu-latest

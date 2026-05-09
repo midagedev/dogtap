@@ -39,6 +39,9 @@ The target workflow is:
   `examples/adoption-kit/frontend-runtime-config.md`
 - Log forwarder bridge guidance:
   `examples/adoption-kit/log-forwarder-overrides.md`
+- Executable frontend/backend Compose smoke:
+  `examples/external-injection-smoke/` and
+  `scripts/external-injection/smoke.sh`
 
 ## Source-Backed Compatibility Notes
 
@@ -58,8 +61,6 @@ Reference links are collected in `docs/references/datadog.md`.
 
 ## Remaining Tasks
 
-- Add an executable Compose adoption fixture with a placeholder app service,
-  Dogtap override, and rollback check.
 - Add an OTel Collector tee example that keeps Datadog primary and sends a
   sampled local copy to Dogtap.
 - Add a RUM proxy canary guide covering Browser SDK version, raw-body
@@ -69,5 +70,6 @@ Reference links are collected in `docs/references/datadog.md`.
 
 ## Gate Decision
 
-G8 remains blocked. This subset improves the adoption contract but does not
-replace the required realistic sanitized adoption evidence.
+G8 remains blocked. This subset improves the adoption contract and now includes
+a frontend/backend Compose smoke, but it does not replace the required
+realistic sanitized adoption evidence.

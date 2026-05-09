@@ -1,0 +1,62 @@
+services:
+  dogtap:
+    image: ${DOGTAP_EXTERNAL_SMOKE_IMAGE:-dogtap:external-injection-smoke}
+    build:
+      context: ../..
+    ports:
+      - "${DOGTAP_EXTERNAL_HTTP_PORT:-19080}:8080"
+      - "${DOGTAP_EXTERNAL_APM_PORT:-19126}:8126"
+      - "${DOGTAP_EXTERNAL_OTLP_GRPC_PORT:-19317}:4317"
+      - "${DOGTAP_EXTERNAL_OTLP_HTTP_PORT:-19318}:4318"
+    environment:
+      DOGTAP_MODE: local
+      DOGTAP_STORAGE_KIND: file
+      DOGTAP_STORAGE_PATH: /data/events.json
+      DOGTAP_STORAGE_MAX_EVENTS: "2000"
+      DOGTAP_STORAGE_TTL: 2h
+    volumes:
+      - dogtap-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  backend:
+    environment:
+      VERSION: injected
+      DD_TRACE_AGENT_URL: http://dogtap:8126
+      DD_AGENT_HOST: dogtap
+      DD_TRACE_AGENT_PORT: "8126"
+      DD_SERVICE: external-smoke-backend
+      DD_ENV: ci
+      DD_VERSION: injected
+      DD_LOGS_INJECTION: "true"
+      DOGTAP_LOGS_URL: http://dogtap:8080/api/v2/logs
+      OTEL_SERVICE_NAME: external-smoke-backend
+      OTEL_RESOURCE_ATTRIBUTES: deployment.environment=ci,service.version=injected
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://dogtap:4318
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://dogtap:4318/v1/traces
+      OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: http://dogtap:4318/v1/logs
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://dogtap:4318/v1/metrics
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+    depends_on:
+      dogtap:
+        condition: service_healthy
+
+  frontend:
+    environment:
+      VERSION: injected
+      DD_SERVICE: external-smoke-frontend
+      DD_ENV: ci
+      DD_VERSION: injected
+      DATADOG_RUM_PROXY_URL: http://dogtap:8080/datadog-intake-proxy
+    depends_on:
+      dogtap:
+        condition: service_healthy
+
+volumes:
+  dogtap-data:
