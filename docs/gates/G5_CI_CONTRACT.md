@@ -6,7 +6,8 @@ Passed locally and covered by the repository CI workflow.
 
 The command, report formats, and exit policy are covered by local tests. The
 published GitHub Actions workflow runs Go tests, dashboard build/E2E, shell
-syntax checks, generic adoption smoke, and container build checks.
+syntax checks, generic adoption smoke, seeded demo visual verification, and
+container build checks.
 
 ## Evidence
 
@@ -32,6 +33,7 @@ npm --prefix web run build
 DOGTAP_E2E_BASE_URL=http://127.0.0.1:4175 npm --prefix web run test:e2e
 make shell-check
 make smoke-adoption
+make demo-visual-check
 go run ./cmd/dogtap replay -output /tmp/dogtap-report.md fixtures/rum/missing-context.json
 ```
 

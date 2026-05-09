@@ -224,9 +224,9 @@ Runbook:
 | --- | --- | --- |
 | `local` | Replace Datadog during local development | No |
 | `ci` | Assert telemetry contracts from tests | No |
-| `forward` | Inspect and forward telemetry to Datadog | Yes |
-| `tee` | Keep Datadog primary, sample-copy metadata to Dogtap | Yes |
-| `redact-only` | Enforce payload policy before forwarding | Yes |
+| `forward` | Inspect and forward supported telemetry to Datadog | RUM/logs |
+| `tee` | Keep Datadog primary, sample-copy metadata to Dogtap | RUM/logs |
+| `redact-only` | Enforce payload policy before forwarding | RUM/logs |
 
 ## Supported Intake Surfaces
 
@@ -238,6 +238,9 @@ Runbook:
 | Datadog APM traces | `:8126`, `/v0.3/traces`, `/v0.4/traces`, `/v0.5/traces` | Intake and span inspection; forwarding deferred |
 | OTLP HTTP | `:4318`, `/v1/traces`, `/v1/logs`, `/v1/metrics` | Trace/log/metric intake |
 | OTLP gRPC | `:4317` | Trace/log/metric intake |
+
+See [docs/SUPPORT_MATRIX.md](docs/SUPPORT_MATRIX.md) for the full support
+matrix, verification evidence, and explicit limitations.
 
 ## CI And Fixture Replay
 
@@ -312,8 +315,10 @@ make demo-visual-check
 
 - Usage quickstart: `specs/000-product/quickstart.md`
 - Docs index: `docs/README.md`
+- Support matrix: `docs/SUPPORT_MATRIX.md`
 - Generic adoption: `docs/runbooks/ADOPTING_DOGTAP.md`
 - Local development: `docs/runbooks/local-dev.md`
+- Release candidate runbook: `docs/runbooks/RELEASE_CANDIDATE.md`
 - Architecture: `docs/ARCHITECTURE.md`
 - Production safety: `docs/PRODUCTION_SAFETY.md`
 - Testing strategy: `docs/TESTING.md`
