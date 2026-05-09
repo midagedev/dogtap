@@ -16,6 +16,7 @@ All notable changes to Dogtap will be documented in this file.
 - Fixture replay command with JSON and Markdown reports.
 - Generic adoption kit under `examples/adoption-kit/`.
 - Generic adoption smoke script through `make smoke-adoption`.
+- Seeded dashboard demo and Playwright visual check through `make demo-visual-check`.
 - Release workflow for GitHub Release binaries and GHCR container images.
 - Build metadata in `dogtap version`.
 

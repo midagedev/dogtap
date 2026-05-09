@@ -90,6 +90,40 @@ jobs:
       - name: Run generic adoption smoke
         run: make smoke-adoption
 
+  demo:
+    name: Demo visual check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dashboard dependencies
+        run: npm --prefix web ci
+
+      - name: Install Playwright browser
+        run: npm --prefix web exec -- playwright install --with-deps chromium webkit
+
+      - name: Run live demo visual check
+        run: make demo-visual-check
+
+      - name: Upload demo screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dogtap-demo-screenshots
+          path: web/test-results/**/*.png
+          if-no-files-found: ignore
+
   container:
     name: Container build
     runs-on: ubuntu-latest

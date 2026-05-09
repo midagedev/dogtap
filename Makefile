@@ -1,4 +1,4 @@
-.PHONY: build test web-build run replay smoke-adoption shell-check
+.PHONY: build test web-build run replay smoke-adoption demo-seed demo-visual-check shell-check
 
 build:
 	npm --prefix web run build
@@ -18,6 +18,12 @@ replay:
 
 smoke-adoption:
 	bash scripts/generic/smoke.sh
+
+demo-seed:
+	bash scripts/demo/seed.sh
+
+demo-visual-check:
+	bash scripts/demo/visual-check.sh
 
 shell-check:
 	bash scripts/check-shell-syntax.sh

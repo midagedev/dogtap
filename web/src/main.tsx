@@ -172,6 +172,11 @@ type ServiceEdge = {
   traces: string[];
 };
 
+type ServiceEdgeAccumulator = Map<
+  string,
+  { from: string; to: string; traces: Set<string>; count: number }
+>;
+
 type RouteSummary = {
   route: string;
   service: string;
@@ -1647,26 +1652,21 @@ function serviceEdges(events: EventEnvelope[]): ServiceEdge[] {
   const spans = events.flatMap((event) => extractSpans(event));
   const byID = new Map<string, TraceSpan>();
   for (const span of spans) {
-    if (!span.spanId) continue;
-    byID.set(`${span.traceId ?? ""}:${span.spanId}`, span);
+    const spanId = spanIdentity(span.spanId);
+    if (!spanId) continue;
+    byID.set(`${spanIdentity(span.traceId)}:${spanId}`, span);
   }
-  const edges = new Map<string, { from: string; to: string; traces: Set<string>; count: number }>();
+  const edges: ServiceEdgeAccumulator = new Map();
   for (const span of spans) {
-    if (!span.parentSpanId) continue;
-    const parent = byID.get(`${span.traceId ?? ""}:${span.parentSpanId}`);
+    const parentSpanId = spanIdentity(span.parentSpanId);
+    if (!parentSpanId) continue;
+    const traceId = spanIdentity(span.traceId);
+    const parent = byID.get(`${traceId}:${parentSpanId}`);
     if (!parent || parent.service === span.service) continue;
-    const key = `${parent.service}\n${span.service}`;
-    const edge =
-      edges.get(key) ??
-      {
-        from: parent.service,
-        to: span.service,
-        traces: new Set<string>(),
-        count: 0,
-      };
-    edge.count += 1;
-    if (span.traceId) edge.traces.add(span.traceId);
-    edges.set(key, edge);
+    addServiceEdge(edges, parent.service, span.service, traceId);
+  }
+  if (edges.size === 0) {
+    addTraceCorrelationEdges(edges, events);
   }
   return Array.from(edges.values())
     .map((edge) => ({
@@ -1676,6 +1676,53 @@ function serviceEdges(events: EventEnvelope[]): ServiceEdge[] {
       traces: Array.from(edge.traces),
     }))
     .sort((left, right) => right.count - left.count);
+}
+
+function addTraceCorrelationEdges(
+  edges: ServiceEdgeAccumulator,
+  events: EventEnvelope[],
+) {
+  const byTrace = new Map<string, string[]>();
+  for (const event of events) {
+    const traceId = spanIdentity(event.normalized.traceId);
+    const service = event.normalized.service;
+    if (!traceId || !service) continue;
+    const services = byTrace.get(traceId) ?? [];
+    if (!services.includes(service)) {
+      services.push(service);
+    }
+    byTrace.set(traceId, services);
+  }
+  for (const [traceId, services] of byTrace) {
+    for (let index = 1; index < services.length; index += 1) {
+      addServiceEdge(edges, services[index - 1], services[index], traceId);
+    }
+  }
+}
+
+function addServiceEdge(
+  edges: ServiceEdgeAccumulator,
+  from: string,
+  to: string,
+  traceId?: string,
+) {
+  if (!from || !to || from === to) return;
+  const key = `${from}\n${to}`;
+  const edge =
+    edges.get(key) ??
+    {
+      from,
+      to,
+      traces: new Set<string>(),
+      count: 0,
+    };
+  edge.count += 1;
+  if (traceId) edge.traces.add(traceId);
+  edges.set(key, edge);
+}
+
+function spanIdentity(value: unknown) {
+  return stringValue(value)?.trim() ?? "";
 }
 
 function metricSamplesFromEvent(event: EventEnvelope): MetricSample[] {
