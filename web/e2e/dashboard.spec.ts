@@ -121,6 +121,10 @@ const events = [
       version: "dev",
       sessionId: "session-123",
       viewId: "view-123",
+      userId: "user-123",
+      accountId: "account-123",
+      workspaceId: "workspace-123",
+      caseId: "case-123",
       route: "/cases/case-123",
     },
     validation: {
@@ -346,10 +350,44 @@ const events = [
       service: "web-frontend",
       env: "local",
       version: "dev",
+      sessionId: "session-123",
       userId: "user-123",
+      accountId: "account-123",
       workspaceId: "workspace-123",
       caseId: "case-123",
       route: "/cases/case-123",
+    },
+    validation: {
+      status: "pass",
+      summary: "passed",
+      rules: [],
+    },
+  },
+  {
+    id: "evt-faro-workflow",
+    receivedAt: "2026-05-08T08:15:06Z",
+    source: "faro",
+    payloadKind: "event",
+    endpoint: "/collect/faro-smoke",
+    method: "POST",
+    decoded: {
+      meta: {
+        app: { name: "faro-smoke-frontend", version: "dev", environment: "local" },
+        session: { id: "faro-session-1" },
+      },
+      events: [{ name: "faro.workflow.run" }],
+    },
+    normalized: {
+      source: "faro",
+      service: "faro-smoke-frontend",
+      env: "local",
+      version: "dev",
+      sessionId: "faro-session-1",
+      userId: "faro-user-1",
+      accountId: "faro-account-1",
+      workspaceId: "faro-workspace-1",
+      caseId: "faro-case-1",
+      route: "/faro",
     },
     validation: {
       status: "pass",
@@ -403,6 +441,20 @@ test("dashboard renders stream detail, failure inbox, correlation, and query bui
   await expect(page.getByRole("heading", { name: "Service Map" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Traffic" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Metrics Snapshot" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Intake Health" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Session Timeline" })).toBeVisible();
+  await expect(page.getByLabel("Intake sources").getByText("faro")).toBeVisible();
+  await expect(
+    page.getByLabel("Intake endpoints").getByText("/collect/faro-smoke"),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByLabel("Browser sessions")
+      .getByRole("button", { name: /session-123/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("Browser session timeline").getByText("case export failed"),
+  ).toBeVisible();
   await expect(page.getByLabel("Service edges").getByText("edge-gateway")).toBeVisible();
   await expect(page.getByLabel("Service edges").getByText("api-service")).toBeVisible();
   await expect(page.getByLabel("Metric samples").getByText("http.server.request.duration")).toBeVisible();

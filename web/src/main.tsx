@@ -201,6 +201,60 @@ type ObservabilityOverviewData = {
   sourceCounts: Array<{ label: string; count: number }>;
 };
 
+type IntakeSourceHealth = {
+  source: Source;
+  count: number;
+  failures: number;
+  missingContext: number;
+  endpointCount: number;
+  lastSeen?: string;
+};
+
+type EndpointHealth = {
+  endpoint: string;
+  source: Source;
+  count: number;
+  failures: number;
+  lastSeen?: string;
+};
+
+type IntakeHealthData = {
+  sources: IntakeSourceHealth[];
+  endpoints: EndpointHealth[];
+};
+
+type TimelineItem = {
+  eventId: string;
+  source: Source;
+  payloadKind?: string;
+  receivedAt: string;
+  label: string;
+  service: string;
+  route: string;
+  validationStatus: string;
+};
+
+type BrowserSessionSummary = {
+  sessionId: string;
+  sources: Source[];
+  events: number;
+  failures: number;
+  firstSeen?: string;
+  lastSeen?: string;
+  userId?: string;
+  workspaceId?: string;
+  accountId?: string;
+  caseId?: string;
+  services: string[];
+  routes: string[];
+  timeline: TimelineItem[];
+};
+
+type DashboardDiagnostics = {
+  intake: IntakeHealthData;
+  sessions: BrowserSessionSummary[];
+};
+
 type Report = {
   summary: {
     total: number;
@@ -309,6 +363,10 @@ function App() {
     () => buildObservabilityOverview(events),
     [events],
   );
+  const diagnostics = React.useMemo(
+    () => buildDashboardDiagnostics(events),
+    [events],
+  );
 
   return (
     <main className="app-shell">
@@ -352,6 +410,11 @@ function App() {
       {events.length === 0 ? <IntegrationTargets /> : null}
 
       <ObservabilityOverview data={overview} />
+
+      <DashboardDiagnosticsPanel
+        data={diagnostics}
+        onSelectEvent={setSelectedId}
+      />
 
       <section className="workspace">
         <aside className="stream-pane">
@@ -693,6 +756,147 @@ function ObservabilityOverview({
             <p className="viewer-empty">OTLP metrics will appear here.</p>
           )}
         </div>
+      </section>
+    </section>
+  );
+}
+
+function DashboardDiagnosticsPanel({
+  data,
+  onSelectEvent,
+}: {
+  data: DashboardDiagnostics;
+  onSelectEvent: (id: string) => void;
+}) {
+  const [activeSessionId, setActiveSessionId] = React.useState<string>();
+  const activeSession =
+    data.sessions.find((session) => session.sessionId === activeSessionId) ??
+    data.sessions[0];
+
+  React.useEffect(() => {
+    if (
+      activeSessionId &&
+      !data.sessions.some((session) => session.sessionId === activeSessionId)
+    ) {
+      setActiveSessionId(undefined);
+    }
+  }, [activeSessionId, data.sessions]);
+
+  return (
+    <section className="diagnostics-band" aria-label="Dashboard diagnostics">
+      <section className="overview-panel intake-health-panel">
+        <div className="panel-title">
+          <h2>
+            <ShieldCheck size={16} aria-hidden="true" /> Intake Health
+          </h2>
+          <span>{data.intake.endpoints.length} endpoints</span>
+        </div>
+        <div className="intake-health-grid">
+          <div className="intake-source-list" aria-label="Intake sources">
+            {data.intake.sources.map((source) => (
+              <div
+                className={`intake-source-row ${source.failures ? "has-failures" : ""}`}
+                key={source.source}
+              >
+                <span className={`source source-${source.source}`}>
+                  {source.source}
+                </span>
+                <strong>{source.count}</strong>
+                <small>{formatLastSeen(source.lastSeen)}</small>
+                <small>
+                  {source.failures} fail · {source.missingContext} context
+                </small>
+              </div>
+            ))}
+          </div>
+          <div className="endpoint-health-list" aria-label="Intake endpoints">
+            {data.intake.endpoints.length ? (
+              data.intake.endpoints.slice(0, 6).map((endpoint) => (
+                <div
+                  className={`endpoint-health-row ${endpoint.failures ? "has-failures" : ""}`}
+                  key={`${endpoint.source}-${endpoint.endpoint}`}
+                >
+                  <code>{endpoint.endpoint}</code>
+                  <span className={`source source-${endpoint.source}`}>
+                    {endpoint.source}
+                  </span>
+                  <small>
+                    {endpoint.count} hits · {endpoint.failures} fail ·{" "}
+                    {formatLastSeen(endpoint.lastSeen)}
+                  </small>
+                </div>
+              ))
+            ) : (
+              <p className="viewer-empty">No intake endpoints received yet.</p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="overview-panel session-timeline-panel">
+        <div className="panel-title">
+          <h2>
+            <GitBranch size={16} aria-hidden="true" /> Session Timeline
+          </h2>
+          <span>{data.sessions.length} sessions</span>
+        </div>
+        {activeSession ? (
+          <div className="session-timeline" aria-label="Browser session timeline">
+            <div className="session-picker" aria-label="Browser sessions">
+              {data.sessions.slice(0, 4).map((session) => (
+                <button
+                  type="button"
+                  className={
+                    session.sessionId === activeSession.sessionId ? "active" : ""
+                  }
+                  key={session.sessionId}
+                  onClick={() => setActiveSessionId(session.sessionId)}
+                >
+                  <strong>{session.sessionId}</strong>
+                  <span>
+                    {session.events} signals · {formatLastSeen(session.lastSeen)}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="session-active">
+              <div className="session-summary">
+                <strong>{activeSession.sessionId}</strong>
+                <span>{activeSession.sources.join(", ")}</span>
+                <small>
+                  {activeSession.events} signals · {activeSession.failures} fail
+                  · {formatLastSeen(activeSession.lastSeen)}
+                </small>
+              </div>
+              <div className="session-context">
+                <span>User {activeSession.userId || "missing"}</span>
+                <span>Workspace {activeSession.workspaceId || "missing"}</span>
+                <span>Case {activeSession.caseId || "missing"}</span>
+              </div>
+              <div className="timeline-list">
+                {activeSession.timeline.slice(0, 8).map((item) => (
+                  <button
+                    type="button"
+                    className={`timeline-item status-${item.validationStatus}`}
+                    key={`${activeSession.sessionId}-${item.eventId}`}
+                    onClick={() => onSelectEvent(item.eventId)}
+                  >
+                    <time>{formatTime(item.receivedAt)}</time>
+                    <span className={`source source-${item.source}`}>
+                      {item.payloadKind || item.source}
+                    </span>
+                    <strong>{item.label}</strong>
+                    <small>{item.service}</small>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="viewer-empty">
+            Browser sessions will appear when RUM or Faro sends a session id.
+          </p>
+        )}
       </section>
     </section>
   );
@@ -1390,6 +1594,31 @@ function formatTime(value: string) {
   return `${hours}:${minutes}:${seconds}`;
 }
 
+function formatLastSeen(value: string | undefined) {
+  const timestamp = timestampMs(value);
+  if (!timestamp) return "not seen";
+  const diff = Math.max(0, Date.now() - timestamp);
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+function latestTimestamp(left: string | undefined, right: string | undefined) {
+  if (!left) return right;
+  if (!right) return left;
+  return timestampMs(right) > timestampMs(left) ? right : left;
+}
+
+function timestampMs(value: string | undefined) {
+  if (!value) return 0;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
 function eventSubtitle(event: EventEnvelope, mode: StreamMode) {
   if (mode === "failures") {
     const rule = event.validation.rules.find(
@@ -1815,6 +2044,233 @@ function buildObservabilityOverview(
       },
     ],
   };
+}
+
+function buildDashboardDiagnostics(events: EventEnvelope[]): DashboardDiagnostics {
+  return {
+    intake: buildIntakeHealth(events),
+    sessions: buildBrowserSessions(events),
+  };
+}
+
+function buildIntakeHealth(events: EventEnvelope[]): IntakeHealthData {
+  const endpointMap = new Map<string, EndpointHealth>();
+  const endpointCountsBySource = new Map<Source, Set<string>>();
+  const fixedSources = sources.filter((source): source is Source =>
+    Boolean(source),
+  );
+  const sourceRows = new Map<Source, IntakeSourceHealth>(
+    fixedSources.map((source) => [
+      source,
+      {
+        source,
+        count: 0,
+        failures: 0,
+        missingContext: 0,
+        endpointCount: 0,
+      },
+    ]),
+  );
+
+  for (const event of events) {
+    const sourceRow =
+      sourceRows.get(event.source) ??
+      ({
+        source: event.source,
+        count: 0,
+        failures: 0,
+        missingContext: 0,
+        endpointCount: 0,
+      } satisfies IntakeSourceHealth);
+    sourceRow.count += 1;
+    if (event.validation.status === "fail") sourceRow.failures += 1;
+    if (hasMissingTelemetryContext(event)) sourceRow.missingContext += 1;
+    sourceRow.lastSeen = latestTimestamp(sourceRow.lastSeen, event.receivedAt);
+    sourceRows.set(event.source, sourceRow);
+
+    const endpointKey = `${event.source}\n${event.endpoint}`;
+    const endpoint =
+      endpointMap.get(endpointKey) ??
+      ({
+        endpoint: event.endpoint,
+        source: event.source,
+        count: 0,
+        failures: 0,
+      } satisfies EndpointHealth);
+    endpoint.count += 1;
+    if (event.validation.status === "fail") endpoint.failures += 1;
+    endpoint.lastSeen = latestTimestamp(endpoint.lastSeen, event.receivedAt);
+    endpointMap.set(endpointKey, endpoint);
+
+    const endpointSet = endpointCountsBySource.get(event.source) ?? new Set();
+    endpointSet.add(event.endpoint);
+    endpointCountsBySource.set(event.source, endpointSet);
+  }
+
+  const sourceHealth = Array.from(sourceRows.values()).map((source) => ({
+    ...source,
+    endpointCount: endpointCountsBySource.get(source.source)?.size ?? 0,
+  }));
+  const endpoints = Array.from(endpointMap.values()).sort(
+    (left, right) =>
+      timestampMs(right.lastSeen) - timestampMs(left.lastSeen) ||
+      right.failures - left.failures ||
+      right.count - left.count,
+  );
+  return { sources: sourceHealth, endpoints };
+}
+
+function buildBrowserSessions(events: EventEnvelope[]): BrowserSessionSummary[] {
+  const sessionIds = new Set<string>();
+  for (const event of events) {
+    const sessionId = event.normalized.sessionId;
+    if (sessionId && isBrowserSessionSeed(event)) {
+      sessionIds.add(sessionId);
+    }
+  }
+
+  return Array.from(sessionIds)
+    .map((sessionId) => browserSessionSummary(sessionId, events))
+    .sort(
+      (left, right) =>
+        right.events - left.events ||
+        timestampMs(right.lastSeen) - timestampMs(left.lastSeen),
+    );
+}
+
+function browserSessionSummary(
+  sessionId: string,
+  events: EventEnvelope[],
+): BrowserSessionSummary {
+  const seeds = events.filter((event) => event.normalized.sessionId === sessionId);
+  const correlation = {
+    traces: valuesFromEvents(seeds, "traceId"),
+    users: valuesFromEvents(seeds, "userId"),
+    accounts: valuesFromEvents(seeds, "accountId"),
+    workspaces: valuesFromEvents(seeds, "workspaceId"),
+    cases: valuesFromEvents(seeds, "caseId"),
+  };
+  const related = events
+    .filter((event) => belongsToBrowserSession(event, sessionId, correlation))
+    .sort((left, right) => timestampMs(left.receivedAt) - timestampMs(right.receivedAt));
+  const sources = uniqueValues(related.map((event) => event.source));
+  const services = uniqueValues(
+    related.map((event) => event.normalized.service).filter(Boolean),
+  );
+  const routes = uniqueValues(
+    related.map((event) => event.normalized.route).filter(Boolean),
+  );
+  const timeline = related.map((event) => ({
+    eventId: event.id,
+    source: event.source,
+    payloadKind: event.payloadKind,
+    receivedAt: event.receivedAt,
+    label: timelineLabel(event),
+    service: event.normalized.service || event.endpoint,
+    route: event.normalized.route || event.payloadKind || event.endpoint,
+    validationStatus: event.validation.status,
+  }));
+
+  return {
+    sessionId,
+    sources,
+    events: related.length,
+    failures: related.filter((event) => event.validation.status === "fail")
+      .length,
+    firstSeen: related[0]?.receivedAt,
+    lastSeen: related[related.length - 1]?.receivedAt,
+    userId: firstSetValue(correlation.users),
+    accountId: firstSetValue(correlation.accounts),
+    workspaceId: firstSetValue(correlation.workspaces),
+    caseId: firstSetValue(correlation.cases),
+    services,
+    routes,
+    timeline,
+  };
+}
+
+function timelineLabel(event: EventEnvelope) {
+  const logMessage = event.details?.logs?.[0]?.message;
+  if (logMessage) return logMessage;
+  const span = event.details?.trace?.spans?.[0];
+  if (span?.resource || span?.name) return span.resource || span.name || "span";
+  const metric = event.details?.metrics?.[0];
+  if (metric?.name) return metric.name;
+  return event.normalized.route || event.payloadKind || event.endpoint;
+}
+
+function belongsToBrowserSession(
+  event: EventEnvelope,
+  sessionId: string,
+  correlation: {
+    traces: Set<string>;
+    users: Set<string>;
+    accounts: Set<string>;
+    workspaces: Set<string>;
+    cases: Set<string>;
+  },
+) {
+  const normalized = event.normalized;
+  if (normalized.sessionId === sessionId) return true;
+  if (normalized.traceId && correlation.traces.has(normalized.traceId)) {
+    return true;
+  }
+  if (normalized.caseId && correlation.cases.has(normalized.caseId)) {
+    return true;
+  }
+  if (
+    normalized.userId &&
+    normalized.workspaceId &&
+    correlation.users.has(normalized.userId) &&
+    correlation.workspaces.has(normalized.workspaceId)
+  ) {
+    return true;
+  }
+  return (
+    normalized.accountId !== undefined &&
+    normalized.workspaceId !== undefined &&
+    correlation.accounts.has(normalized.accountId) &&
+    correlation.workspaces.has(normalized.workspaceId)
+  );
+}
+
+function isBrowserSessionSeed(event: EventEnvelope) {
+  return (
+    event.source === "rum" ||
+    event.source === "faro" ||
+    event.payloadKind === "replay"
+  );
+}
+
+function hasMissingTelemetryContext(event: EventEnvelope) {
+  const normalized = event.normalized;
+  if (!normalized.service || !normalized.env) return true;
+  if (event.payloadKind === "replay") return false;
+  if (event.source === "rum" || event.source === "faro") {
+    return (
+      !normalized.userId || !normalized.accountId || !normalized.workspaceId
+    );
+  }
+  return false;
+}
+
+function valuesFromEvents(
+  events: EventEnvelope[],
+  key: keyof EventEnvelope["normalized"],
+) {
+  return new Set(
+    events
+      .map((event) => event.normalized[key])
+      .filter((value): value is string => typeof value === "string" && value !== ""),
+  );
+}
+
+function uniqueValues<T>(values: Array<T | undefined>): T[] {
+  return Array.from(new Set(values.filter((value): value is T => value !== undefined)));
+}
+
+function firstSetValue(values: Set<string>) {
+  return values.values().next().value as string | undefined;
 }
 
 function ensureServiceSummary(

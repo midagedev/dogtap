@@ -20,6 +20,17 @@ test("seeded demo dashboard shows the public telemetry workflow", async ({
   await expect(
     page.getByRole("heading", { name: "Metrics Snapshot" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Intake Health" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Session Timeline" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByLabel("Browser sessions")
+      .getByRole("button", { name: /session-123/ }),
+  ).toBeVisible();
 
   await expect(
     page.getByLabel("Service nodes").getByText("web-frontend"),
