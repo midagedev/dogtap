@@ -60,6 +60,18 @@ docker compose -f compose.yaml -f .dogtap/compose.override.dogtap.yaml up --buil
 For backend containers in the same Compose project, use `dogtap` as the host.
 For host processes outside Docker, use `localhost`.
 
+Dogtap includes a small frontend/backend Compose smoke that exercises this
+contract:
+
+```bash
+make smoke-external-injection
+```
+
+The smoke starts a base frontend/backend stack without Dogtap, then starts the
+same stack with a Dogtap override that injects standard Datadog and OTLP
+endpoints. It verifies RUM, logs, APM traces, and OTLP metrics arrive, then
+proves rollback by omitting the override.
+
 ## Kubernetes Sidecar Injection
 
 Use `examples/adoption-kit/kubernetes/deployment-sidecar.template.yaml` as a

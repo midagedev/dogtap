@@ -125,6 +125,7 @@ blocked pending one realistic sanitized adoption profile.
 - copyable Docker Compose and environment snippets: complete
 - Datadog-preserving external injection strategy: complete
 - Compose and Kubernetes sidecar injection templates: complete
+- frontend/backend Compose external injection smoke: complete
 - log-forwarder bridge guidance: complete
 - OpenTelemetry Collector tee recipe
 - RUM proxy runtime-config guidance: complete

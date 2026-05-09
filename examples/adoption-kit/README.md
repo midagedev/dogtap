@@ -61,3 +61,10 @@ docker compose -f compose.yaml -f .dogtap/compose.override.dogtap.yaml up
 
 Rename the placeholder `your-backend` service and merge the env values into each
 service you want Dogtap to inspect.
+
+For an executable frontend/backend example of the same pattern, see
+`examples/external-injection-smoke/` or run:
+
+```bash
+make smoke-external-injection
+```
