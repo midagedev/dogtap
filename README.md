@@ -303,8 +303,23 @@ make smoke-adoption
 
 ## Release Process (Maintainers)
 
-The first public release is source-first. Container image publishing and binary
-release automation are future release tasks.
+Version tags publish cross-platform binaries to GitHub Releases and a
+multi-architecture container image to GitHub Container Registry:
+
+```bash
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+The published image is:
+
+```text
+ghcr.io/midagedev/dogtap:vX.Y.Z
+ghcr.io/midagedev/dogtap:latest
+```
+
+Stable tags update both the exact tag and `latest`. Prerelease tags, such as
+`vX.Y.Z-rc.1`, publish only the exact tag.
 
 Before tagging a release:
 
@@ -315,6 +330,7 @@ Before tagging a release:
 5. Re-run the public-surface scan for company/private strings and secret
    patterns.
 6. Update `CHANGELOG.md`.
+7. Confirm the draft tag name matches the changelog entry.
 
 ## License
 

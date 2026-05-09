@@ -15,6 +15,12 @@ import (
 	"github.com/midagedev/dogtap/internal/server"
 )
 
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
 	if err := run(os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -33,7 +39,7 @@ func run(args []string) error {
 	case "replay":
 		return replay(args[1:])
 	case "version":
-		fmt.Println("dogtap dev")
+		fmt.Printf("dogtap %s\ncommit: %s\nbuilt: %s\n", version, commit, date)
 		return nil
 	default:
 		return fmt.Errorf("unknown command %q", args[0])
