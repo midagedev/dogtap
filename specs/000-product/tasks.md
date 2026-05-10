@@ -522,3 +522,16 @@ Gate:
 Gate:
 
 - [x] G8 Release Candidate agent gap bridge subset
+
+## Phase 22: Bridge Smoke CI Gate
+
+- [x] T220 Add filelog bridge smoke to GitHub Actions with diagnostics
+  artifact upload.
+- [x] T221 Add StatsD bridge smoke to GitHub Actions with diagnostics artifact
+  upload.
+- [x] T222 Add bridge smoke checks to release workflow pre-tag validation.
+- [x] T223 Update public release evidence and maintainer checklist commands.
+
+Gate:
+
+- [x] G5 CI Contract bridge smoke subset

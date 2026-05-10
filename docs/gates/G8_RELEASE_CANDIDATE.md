@@ -15,7 +15,9 @@ the first public release candidate.
 - Public README, support matrix, release candidate runbook, and community
   templates exist.
 - CI runs Go tests, dashboard build/E2E, seeded demo visual verification,
-  generic adoption smoke, shell syntax checks, and container build.
+  generic adoption smoke, filelog bridge smoke, StatsD bridge smoke, shell
+  syntax checks, docs/spec checks, workflow contract checks, and container
+  build.
 - Tag-based release automation exists for binary archives and GHCR images.
 - Generic adoption kit and seeded demo are public and reproducible.
 - G0 through G7 evidence is documented, with APM and OTLP forwarding explicitly
@@ -55,7 +57,11 @@ The public evidence confirms:
 go test ./...
 npm --prefix web run build
 make shell-check
+make doc-check
+make contract-check
 make smoke-adoption
+make smoke-log-bridge
+make smoke-statsd-bridge
 make demo-visual-check
 make smoke-external-injection
 go run ./cmd/dogtap replay \

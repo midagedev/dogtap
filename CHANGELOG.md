@@ -40,6 +40,8 @@ All notable changes to Dogtap will be documented in this file.
   `make smoke-log-bridge` for Agent-style stdout/file log adoption gaps.
 - OpenTelemetry Collector StatsD bridge recipe, Compose smoke stack, and
   `make smoke-statsd-bridge` for DogStatsD-style metric adoption gaps.
+- GitHub Actions now runs the filelog and StatsD bridge smokes and uploads
+  bridge diagnostics artifacts on smoke failures.
 
 ### Notes
 

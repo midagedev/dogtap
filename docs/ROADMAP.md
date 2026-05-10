@@ -224,7 +224,7 @@ for humans and coding agents.
 
 Goal: make missing telemetry diagnosis more mechanical.
 
-Status: bridge recipes complete for the first Agent-gap scope.
+Status: first slice complete.
 
 - Add a diagnostics section that classifies likely causes: SDK not initialized,
   endpoint not reachable, wrong route/service selector, sampling disabled,
@@ -244,7 +244,7 @@ not only state that it is missing.
 
 Goal: preserve existing Datadog usage while covering common Agent-only gaps.
 
-Status: first slice complete.
+Status: complete for the first Agent-gap scope.
 
 - Add practical bridge recipes for stdout/container logs into Dogtap logs HTTP
   or OTLP logs: complete for OpenTelemetry Collector `filelog` to OTLP HTTP
@@ -252,6 +252,8 @@ Status: first slice complete.
 - Add DogStatsD-to-OTLP guidance or a fixture-backed bridge example: complete
   for OpenTelemetry Collector `statsd` to OTLP HTTP JSON, with
   `make smoke-statsd-bridge`.
+- Run bridge smokes in GitHub Actions and upload diagnostics artifacts:
+  complete.
 - Keep Dogtap itself from becoming a full Datadog Agent replacement.
 
 Why it matters: teams often rely on Datadog Agent behavior. Bridge recipes keep
