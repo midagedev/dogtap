@@ -110,6 +110,8 @@ type LogEntry = {
   level: string;
   message: string;
   traceId?: string;
+  spanId?: string;
+  fields: InspectorField[];
 };
 
 type TraceSpan = {
@@ -159,6 +161,23 @@ type MetricSample = {
   aggregation?: string;
   route?: string;
   timestamp?: string;
+};
+
+type InspectorField = {
+  label: string;
+  value: string;
+};
+
+type MetricSeries = {
+  key: string;
+  name: string;
+  service: string;
+  route?: string;
+  unit?: string;
+  samples: MetricSample[];
+  latest?: MetricSample;
+  min?: number;
+  max?: number;
 };
 
 type ServiceSummary = {
@@ -741,6 +760,7 @@ function CopyIconButton({ value, label }: { value: string; label: string }) {
 }
 
 function ObservabilityOverview({ data }: { data: ObservabilityOverviewData }) {
+  const series = metricSeries(data.metrics);
   return (
     <section className="overview-band" aria-label="Observability overview">
       <section className="overview-panel service-map-panel">
@@ -831,16 +851,25 @@ function ObservabilityOverview({ data }: { data: ObservabilityOverviewData }) {
           </h2>
           <span>{data.metrics.length} samples</span>
         </div>
-        <div className="metric-list" aria-label="Metric samples">
-          {data.metrics.length ? (
-            data.metrics.slice(0, 6).map((metric) => (
-              <div
-                className="metric-row"
-                key={`${metric.eventId}-${metric.name}-${metric.route ?? ""}`}
-              >
-                <strong>{metric.name}</strong>
-                <span>{metric.service}</span>
-                <code>{formatMetricValue(metric)}</code>
+        <div className="metric-chart-list" aria-label="Metric samples">
+          {series.length ? (
+            series.slice(0, 4).map((item) => (
+              <div className="metric-chart-row" key={item.key}>
+                <div className="metric-chart-heading">
+                  <strong>{item.name}</strong>
+                  <span>{item.service}</span>
+                  <small>{item.route || "no route"}</small>
+                </div>
+                <MetricSparkline series={item} />
+                <div className="metric-chart-stats">
+                  <code>{formatMetricValue(item.latest)}</code>
+                  <small>
+                    {item.samples.length} samples
+                    {item.min !== undefined && item.max !== undefined
+                      ? ` · min ${formatMetricNumber(item.min)} · max ${formatMetricNumber(item.max)}`
+                      : ""}
+                  </small>
+                </div>
               </div>
             ))
           ) : (
@@ -1455,7 +1484,7 @@ function TelemetryViewer({
     return <LogViewer event={event} />;
   }
   if (event.payloadKind === "metric") {
-    return <MetricViewer event={event} />;
+    return <MetricViewer event={event} events={events} />;
   }
   if (
     event.source === "apm" ||
@@ -1761,14 +1790,26 @@ function LogViewer({ event }: { event: EventEnvelope }) {
       <div className="log-viewer">
         {entries.map((entry, index) => (
           <div className="log-line" key={`${entry.timestamp}-${index}`}>
-            <span className={`log-level log-${entry.level.toLowerCase()}`}>
-              {entry.level}
-            </span>
-            <time>{entry.timestamp || formatTime(event.receivedAt)}</time>
-            <p>{entry.message}</p>
-            <code>
-              {entry.traceId || event.normalized.traceId || "no trace"}
-            </code>
+            <div className="log-line-main">
+              <span className={`log-level log-${entry.level.toLowerCase()}`}>
+                {entry.level}
+              </span>
+              <time>{entry.timestamp || formatTime(event.receivedAt)}</time>
+              <p>{entry.message}</p>
+              <code>
+                {entry.traceId || event.normalized.traceId || "no trace"}
+              </code>
+            </div>
+            {entry.fields.length ? (
+              <div className="log-field-grid" aria-label="Structured log fields">
+                {entry.fields.map((field) => (
+                  <div className="log-field" key={`${index}-${field.label}`}>
+                    <span>{field.label}</span>
+                    <code>{field.value}</code>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
         ))}
       </div>
@@ -1776,8 +1817,27 @@ function LogViewer({ event }: { event: EventEnvelope }) {
   );
 }
 
-function MetricViewer({ event }: { event: EventEnvelope }) {
+function MetricViewer({
+  event,
+  events,
+}: {
+  event: EventEnvelope;
+  events: EventEnvelope[];
+}) {
   const metrics = React.useMemo(() => metricSamplesFromEvent(event), [event]);
+  const selectedNames = React.useMemo(
+    () => new Set(metrics.map((metric) => metric.name)),
+    [metrics],
+  );
+  const relatedSeries = React.useMemo(
+    () =>
+      metricSeries(
+        events
+          .flatMap((candidate) => metricSamplesFromEvent(candidate))
+          .filter((sample) => selectedNames.has(sample.name)),
+      ),
+    [events, selectedNames],
+  );
   return (
     <section className="panel inspector-panel log-panel">
       <div className="panel-title">
@@ -1786,6 +1846,24 @@ function MetricViewer({ event }: { event: EventEnvelope }) {
         </h2>
         <span>{metrics.length} samples</span>
       </div>
+      {relatedSeries.length ? (
+        <div className="metric-summary-grid" aria-label="Metric summary">
+          {relatedSeries.slice(0, 3).map((series) => (
+            <div className="metric-summary-card" key={series.key}>
+              <strong>{series.name}</strong>
+              <span>{series.service}</span>
+              <MetricSparkline series={series} />
+              <div>
+                <code>{formatMetricValue(series.latest)}</code>
+                <small>
+                  min {formatMetricNumber(series.min)} · max{" "}
+                  {formatMetricNumber(series.max)}
+                </small>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
       <div className="metric-detail-list">
         {metrics.length ? (
           metrics.map((metric) => (
@@ -1807,6 +1885,41 @@ function MetricViewer({ event }: { event: EventEnvelope }) {
         )}
       </div>
     </section>
+  );
+}
+
+function MetricSparkline({ series }: { series: MetricSeries }) {
+  const values = series.samples
+    .map((sample) => sample.value)
+    .filter((value): value is number => value !== undefined);
+  if (!values.length) {
+    return (
+      <div className="metric-sparkline empty" aria-label="No numeric samples" />
+    );
+  }
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+  const span = maxValue - minValue || 1;
+  const points = values.map((value, index) => {
+    const x = values.length === 1 ? 50 : (index / (values.length - 1)) * 100;
+    const y = 34 - ((value - minValue) / span) * 28;
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  });
+  return (
+    <svg
+      className="metric-sparkline"
+      viewBox="0 0 100 40"
+      role="img"
+      aria-label={`${series.name} retained metric chart`}
+      preserveAspectRatio="none"
+    >
+      <line x1="0" y1="34" x2="100" y2="34" />
+      {values.length === 1 ? (
+        <circle cx="50" cy={points[0]?.split(",")[1] ?? "20"} r="3" />
+      ) : (
+        <polyline points={points.join(" ")} />
+      )}
+    </svg>
   );
 }
 
@@ -2131,16 +2244,26 @@ function formatReplayTime(timestamp: number) {
 }
 
 function logEntries(event: EventEnvelope): LogEntry[] {
+  const decodedItems = Array.isArray(event.decoded)
+    ? event.decoded
+    : [event.decoded];
   if (event.details?.logs?.length) {
-    return event.details.logs.map((entry) => ({
-      timestamp: entry.timestamp,
-      level: (entry.level || "info").toUpperCase(),
-      message: entry.message || "log payload",
-      traceId: entry.traceId,
-    }));
+    return event.details.logs.map((entry, index) => {
+      const row = asRecord(decodedItems[index]) ?? asRecord(decodedItems[0]);
+      return {
+        timestamp: entry.timestamp,
+        level: (entry.level || "info").toUpperCase(),
+        message: entry.message || "log payload",
+        traceId: entry.traceId,
+        spanId: stringValue(row?.span_id) ?? stringValue(row?.spanId),
+        fields: structuredLogFields(event, row, {
+          traceId: entry.traceId,
+          spanId: stringValue(row?.span_id) ?? stringValue(row?.spanId),
+        }),
+      };
+    });
   }
-  const items = Array.isArray(event.decoded) ? event.decoded : [event.decoded];
-  return items.map((item) => {
+  return decodedItems.map((item) => {
     const row = asRecord(item) ?? {};
     const tags = asRecord(row.tags);
     const level =
@@ -2164,8 +2287,73 @@ function logEntries(event: EventEnvelope): LogEntry[] {
         stringValue(row.trace_id) ??
         stringValue(row.traceId) ??
         stringValue(tags?.trace_id),
+      spanId:
+        stringValue(row.span_id) ??
+        stringValue(row.spanId) ??
+        stringValue(tags?.span_id),
+      fields: structuredLogFields(event, row),
     };
   });
+}
+
+function structuredLogFields(
+  event: EventEnvelope,
+  row?: Record<string, unknown>,
+  fallback?: { traceId?: string; spanId?: string },
+): InspectorField[] {
+  const fields: InspectorField[] = [];
+  const tags = asRecord(row?.tags);
+  const http = asRecord(row?.http);
+  const add = (label: string, value?: string | number) => {
+    if (value === undefined || value === "") return;
+    const text = String(value);
+    if (fields.some((field) => field.label === label && field.value === text)) {
+      return;
+    }
+    fields.push({ label, value: text });
+  };
+  add("service", stringValue(row?.service) ?? event.normalized.service);
+  add("env", stringValue(row?.env) ?? event.normalized.env);
+  add("version", stringValue(row?.version) ?? event.normalized.version);
+  add(
+    "route",
+    stringValue(row?.route) ??
+      stringValue(row?.resource_name) ??
+      stringValue(http?.route) ??
+      stringValue(tags?.route) ??
+      event.normalized.route,
+  );
+  add(
+    "status",
+    numberValue(row?.statusCode) ??
+      numberValue(row?.status_code) ??
+      numberValue(http?.status_code) ??
+      event.normalized.statusCode,
+  );
+  add(
+    "trace",
+    fallback?.traceId ??
+      stringValue(row?.trace_id) ??
+      stringValue(row?.traceId) ??
+      stringValue(tags?.trace_id) ??
+      event.normalized.traceId,
+  );
+  add(
+    "span",
+    fallback?.spanId ??
+      stringValue(row?.span_id) ??
+      stringValue(row?.spanId) ??
+      stringValue(tags?.span_id) ??
+      event.normalized.spanId,
+  );
+  add("user", stringValue(row?.user_id) ?? event.normalized.userId);
+  add("account", stringValue(row?.account_id) ?? event.normalized.accountId);
+  add(
+    "workspace",
+    stringValue(row?.workspace_id) ?? event.normalized.workspaceId,
+  );
+  add("case", stringValue(row?.case_id) ?? event.normalized.caseId);
+  return fields.slice(0, 10);
 }
 
 function traceSpans(events: EventEnvelope[]): TraceSpan[] {
@@ -2897,6 +3085,39 @@ function metricSample(
   };
 }
 
+function metricSeries(samples: MetricSample[]): MetricSeries[] {
+  const groups = new Map<string, MetricSample[]>();
+  for (const sample of samples) {
+    const key = `${sample.name}:${sample.service}:${sample.route ?? ""}:${sample.unit ?? ""}`;
+    groups.set(key, [...(groups.get(key) ?? []), sample]);
+  }
+  return Array.from(groups.entries())
+    .map(([key, group]) => {
+      const sorted = [...group].sort((a, b) =>
+        metricSampleTime(a).localeCompare(metricSampleTime(b)),
+      );
+      const values = sorted
+        .map((sample) => sample.value)
+        .filter((value): value is number => value !== undefined);
+      return {
+        key,
+        name: sorted[0]?.name ?? "metric",
+        service: sorted[0]?.service ?? "unknown-service",
+        route: sorted.find((sample) => sample.route)?.route,
+        unit: sorted.find((sample) => sample.unit)?.unit,
+        samples: sorted,
+        latest: sorted[sorted.length - 1],
+        min: values.length ? Math.min(...values) : undefined,
+        max: values.length ? Math.max(...values) : undefined,
+      };
+    })
+    .sort((a, b) => b.samples.length - a.samples.length);
+}
+
+function metricSampleTime(sample: MetricSample) {
+  return sample.timestamp || sample.eventId;
+}
+
 function collectMetricRecords(
   value: unknown,
   visit: (row: Record<string, unknown>) => void,
@@ -2980,12 +3201,19 @@ function attributeScalar(value: unknown): string | undefined {
   );
 }
 
-function formatMetricValue(metric: MetricSample) {
-  if (metric.value === undefined || !Number.isFinite(metric.value)) return "-";
-  const abs = Math.abs(metric.value);
-  const value = abs >= 100 ? metric.value.toFixed(0) : metric.value.toFixed(2);
-  const trimmed = value.replace(/\.?0+$/, "");
+function formatMetricValue(metric?: MetricSample) {
+  if (!metric || metric.value === undefined || !Number.isFinite(metric.value)) {
+    return "-";
+  }
+  const trimmed = formatMetricNumber(metric.value);
   return metric.unit ? `${trimmed} ${metric.unit}` : trimmed;
+}
+
+function formatMetricNumber(value?: number) {
+  if (value === undefined || !Number.isFinite(value)) return "-";
+  const abs = Math.abs(value);
+  const formatted = abs >= 100 ? value.toFixed(0) : value.toFixed(2);
+  return formatted.replace(/\.?0+$/, "");
 }
 
 async function copyToClipboard(value: string) {

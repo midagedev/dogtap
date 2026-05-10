@@ -49,6 +49,8 @@ All notable changes to Dogtap will be documented in this file.
   query debugging through Datadog-shaped paths.
 - Opt-in bounded SQLite storage for restart-safe local, CI, isolated E2E, and
   dev-cluster retained telemetry.
+- Dashboard structured log drilldown and retained metric snapshot charts for
+  faster log/metric inspection.
 
 ### Notes
 

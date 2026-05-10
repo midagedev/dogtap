@@ -30,7 +30,7 @@ Datadog clone, monitor engine, query engine, or long-term observability store.
 | Service map and traffic | Which frontend/backend services, routes, and edges actually emitted telemetry |
 | Browser sessions | RUM session IDs, user/workspace/case context, and Session Replay payloads |
 | Logs and traces | Backend log messages, trace/span trees, and cross-source trace correlation |
-| Metrics | OTLP metric names, services, routes, units, and sample values |
+| Metrics | OTLP metric names, services, routes, units, sample values, and retained charts |
 | Workflow contracts | Whether real paths such as login or checkout produced enough observable evidence |
 | Diagnostics bundle | Machine-readable assertions, likely root causes, artifacts, and next checks for agents or CI |
 
@@ -85,7 +85,7 @@ Dogtap is most useful when you want to verify:
 - structured logs, including trace IDs and redacted unsafe fields
 - Datadog APM trace/span payloads from existing tracers
 - OTLP traces, logs, and metrics from OpenTelemetry SDKs or collectors
-- service map, route traffic, metric samples, and cross-source correlation
+- service map, route traffic, metric charts, and cross-source correlation
 - workflow contract results that summarize whether a real user path is
   observable enough to debug
 - failed contract drilldowns with evaluated selector criteria and closest
