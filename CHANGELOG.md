@@ -25,6 +25,8 @@ All notable changes to Dogtap will be documented in this file.
   and example contracts under `configs/contracts/`.
 - Workflow contract templates for login, case-open, checkout, and report-export,
   plus a GitHub Actions recipe under `examples/github-actions/`.
+- Spec/docs/code alignment updates for diagnostics, Faro smoke, metrics, and
+  workflow contracts, plus `make doc-check` to prevent the most important drift.
 
 ### Notes
 

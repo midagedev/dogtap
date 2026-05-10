@@ -101,11 +101,12 @@ Expected evidence:
 - Datadog tracer payloads appear under `source=apm`.
 - OTLP traces/logs/metrics appear under `source=otlp`.
 - The dashboard shows service map, traffic, trace spans, logs, replay payloads,
-  metric samples, validation results, and copyable Datadog search hints.
+  metric samples, browser session timeline, validation results, workflow
+  contract status, and copyable Datadog search hints.
 
 ## CI Mode
 
-Fixture replay is available today:
+Fixture replay validates static payloads:
 
 ```bash
 go run ./cmd/dogtap replay \
@@ -118,10 +119,43 @@ go run ./cmd/dogtap replay \
   fixtures/otlp/traces.json
 ```
 
+Live diagnostics validates a running Dogtap instance after an app or E2E suite
+has sent telemetry:
+
+```bash
+go run ./cmd/dogtap diagnose \
+  -base-url http://127.0.0.1:8080 \
+  -output .dogtap/diagnostics/local \
+  -expect-non-empty \
+  -expect-source rum,logs,apm,otlp \
+  -expect-payload-kind replay,metric
+```
+
+Workflow contracts assert named user paths:
+
+```bash
+go run ./cmd/dogtap diagnose \
+  -base-url http://127.0.0.1:8080 \
+  -output .dogtap/diagnostics/login \
+  -workflow-contract configs/contracts/login.yaml \
+  -fail-on-workflow-contract \
+  -expect-non-empty
+```
+
+The same diagnostics can be collected by API when Dogtap is running inside
+Docker Compose:
+
+```bash
+curl -sS -X POST http://127.0.0.1:8080/api/diagnostics/archive \
+  -H 'Content-Type: application/json' \
+  -d '{"useDefaultWorkflowContracts":true,"expect":{"nonEmpty":true}}' \
+  -o dogtap-diagnostics.zip
+```
+
 Expected exit codes:
 
 - `0`: no blocking validation failures
-- `1`: validation failed
+- `1`: validation or explicit workflow contract assertion failed
 - `2`: configuration error
 - `3`: intake startup error
 - `4`: replay/report tool error

@@ -313,6 +313,7 @@ Runbook:
 | --- | --- | --- |
 | Browser RUM proxy | `/datadog-intake-proxy` | Local/CI inspection, forwarding path for RUM with safe `ddforward` handling |
 | RUM Session Replay payloads | `/api/v2/replay` or proxy `ddforward=/api/v2/replay` | DOM replay when rrweb records are decoded; timeline fallback otherwise |
+| Grafana Faro SDK | `/faro`, `/collect`, `/collect/` | Experimental smoke only; production-grade Faro should route through Grafana Alloy to OTLP |
 | Datadog logs HTTP | `/api/v2/logs`, `/v1/input` | JSON, text, gzip, and log-like payloads |
 | Datadog APM traces | `:8126`, `/v0.3/traces`, `/v0.4/traces`, `/v0.5/traces` | Intake and span inspection; forwarding deferred |
 | OTLP HTTP | `:4318`, `/v1/traces`, `/v1/logs`, `/v1/metrics` | Trace/log/metric intake |
@@ -386,6 +387,7 @@ Common checks:
 
 ```bash
 make shell-check
+make doc-check
 make smoke-adoption
 make demo-visual-check
 ```

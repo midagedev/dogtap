@@ -431,3 +431,28 @@ Evidence note 2026-05-10:
 - Follow-up templates cover login, case-open, checkout, and report-export, and
   `examples/github-actions/workflow-contract.yml` shows the intended CI
   assertion step after an existing E2E suite.
+
+## Phase 17: Spec/Docs/Code Alignment
+
+- [x] T170 Update `spec.md`, `plan.md`, `data-model.md`, and `quickstart.md`
+  to reflect the implemented diagnostics, Faro smoke, metrics, and workflow
+  contract surfaces.
+- [x] T171 Update public docs and orchestration docs so the product positioning
+  matches the code baseline.
+- [x] T172 Add a docs/spec alignment check to prevent high-signal drift from
+  returning in CI.
+- [x] T173 Record the next implementation roadmap discovered during alignment,
+  including contract authoring guardrails, dashboard evidence drilldown,
+  diagnostics root-cause classification, Agent gap bridge recipes, and public
+  deployment packaging.
+
+Gate:
+
+- [x] G0 Spec Readiness maintenance subset
+
+Evidence note 2026-05-10:
+
+- `make doc-check` verifies the most important Spec Kit and docs/code alignment
+  markers.
+- `docs/ROADMAP.md` now includes a prioritized Next Implementation Roadmap so
+  alignment findings become implementation candidates instead of cleanup notes.

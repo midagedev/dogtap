@@ -43,6 +43,7 @@ The lead agent should avoid implementing every slice directly. It should focus o
 | Validation Agent | rule engine and policy | rule schema, validators, redaction tests | UI styling |
 | Dashboard Agent | UI and API consumption | stream/detail/failure/correlation views | core protocol parsing |
 | CI Agent | headless mode and reports | validate command, replay command, reports | production forwarding |
+| Workflow Contract Agent | contract evaluator, templates, diagnostics contract artifacts | contract schema, contract tests, CI recipes | protocol intake parsing |
 | Forwarding Agent | Datadog forwarding | forwarder, retry/drop accounting, config | UI except status API needs |
 | Production Safety Agent | limits, sampling, retention | queue limits, TTL, redaction-before-persistence, fault tests | product copy |
 | Adoption Integration Agent | adoption profile | validation profile and runbooks | generic product defaults |
@@ -73,7 +74,8 @@ Parallel work:
 
 - RUM Agent captures browser RUM fixtures.
 - Logs Agent captures JSON, text, and gzip log fixtures.
-- APM Agent captures Datadog Java tracer fixtures and evaluates `dd-apm-test-agent`.
+- APM Agent captures fixture-backed Datadog tracer payloads and tracks
+  Java/Spring plus `dd-apm-test-agent` comparison as deferred evidence work.
 - OTLP Agent captures OTLP HTTP/gRPC fixtures.
 
 Integration gate:
@@ -151,6 +153,7 @@ Parallel work:
 - Release Agent finalizes image, examples, and changelog.
 - Spec Lead verifies docs match behavior.
 - Adoption Integration Agent validates one real adoption path.
+- Workflow Contract Agent verifies template and CI recipe consistency.
 - Lead Agent runs full gate checklist.
 
 Integration gate:

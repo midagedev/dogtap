@@ -17,7 +17,8 @@ EventEnvelope
   contentEncoding
   bodySizeBytes
   decodedSizeBytes
-  rawBodyRef
+  rawBody
+  decoded
   details
   normalized
   validation
@@ -32,6 +33,7 @@ Allowed initial values:
 - `apm`
 - `logs`
 - `otlp`
+- `faro`
 - `unknown`
 
 ## Normalized Fields
@@ -72,6 +74,7 @@ TelemetryDetails
   replay
   logs
   trace
+  metrics
 ```
 
 ```text
@@ -114,12 +117,29 @@ SpanDetail
   start
   durationMs
   error
+  normalizedRef
+```
+
+```text
+MetricEntry
+  name
+  service
+  unit
+  value
+  aggregation
+  route
+  timestamp
 ```
 
 `payloadKind` is used to distinguish source subtypes such as `rum`, `replay`,
 `log`, `trace`, and `metric`. RUM Session Replay payloads may omit normal RUM
 user/account/workspace context and are validated as replay segments rather than
 workflow RUM events.
+
+Faro SDK payloads use `source=faro` and may normalize as `event`, `log`,
+`metric`, or trace-related telemetry depending on the SDK payload shape. Native
+Faro intake is smoke-level; production-grade Faro routing should use Grafana
+Alloy into OTLP.
 
 ## Validation Result
 
@@ -167,6 +187,87 @@ ForwardingResult
   errorClass
   errorMessage
 ```
+
+## Diagnostics Snapshot
+
+```text
+Snapshot
+  createdAt
+  baseUrl
+  limit
+  filter
+  healthz
+  readyz
+  events
+  report
+  debugBundle
+  metrics
+  assertions
+  workflowContracts
+```
+
+```text
+AssertionReport
+  status
+  summary
+  observed
+  expectations
+  checks
+```
+
+Diagnostics archives contain the same evidence as the API response, split into
+agent-readable files such as `summary.md`, `assertions.json`, optional
+`workflow-contracts.json`, `events.json`, `report.json`, `debug-bundle.json`,
+`metrics.txt`, `healthz.json`, `readyz.json`, and `manifest.json`.
+
+## Workflow Contract
+
+```text
+Definition
+  name
+  description
+  labels
+  checks
+```
+
+```text
+CheckDefinition
+  id
+  type
+  description
+  source
+  payloadKind
+  service
+  route
+  routeRegex
+  metric
+  pattern
+  fields
+  from
+  to
+  hint
+```
+
+Supported check types:
+
+- `event`
+- `log-message`
+- `metric`
+- `trace-correlation`
+- `no-sensitive-values`
+
+```text
+ContractResult
+  name
+  description
+  status
+  summary
+  checks
+```
+
+Workflow contract failures are separate from diagnostics assertion failures
+unless a caller explicitly opts into failing the CLI with
+`-fail-on-workflow-contract`.
 
 ## Debug Bundle
 

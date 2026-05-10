@@ -1,4 +1,4 @@
-.PHONY: build test web-build run replay diagnose smoke-adoption smoke-external-injection smoke-faro demo-seed demo-visual-check shell-check
+.PHONY: build test web-build run replay diagnose smoke-adoption smoke-external-injection smoke-faro demo-seed demo-visual-check shell-check doc-check
 
 build:
 	npm --prefix web run build
@@ -36,3 +36,6 @@ demo-visual-check:
 
 shell-check:
 	bash scripts/check-shell-syntax.sh
+
+doc-check:
+	bash scripts/check-doc-spec-alignment.sh

@@ -2,11 +2,16 @@
 
 ## Status
 
-Draft
+Release-candidate baseline. The canonical behavior is the implemented Go
+backend, embedded React dashboard, diagnostics API, and workflow contract
+surface in this repository.
 
 ## Summary
 
-Dogtap is a local and production-safe intake inspector for Datadog telemetry. It helps engineering teams verify that their Datadog instrumentation is useful, correlated, safe, and cost-aware before and after deployment.
+Dogtap is a local and production-safe intake inspector and workflow contract
+validator for Datadog-compatible and OpenTelemetry telemetry. It helps
+engineering teams verify that instrumentation is useful, correlated, safe, and
+cost-aware before and after deployment.
 
 ## Problem
 
@@ -57,7 +62,9 @@ Acceptance criteria:
 
 ### Scenario 2: Backend trace and log correlation
 
-Given a Spring service instrumented for Datadog APM and JSON logs, when an API call fails, Dogtap shows the inbound request, outgoing trace spans, structured logs, status code, route, service, env, version, and correlation IDs.
+Given a backend service instrumented for Datadog APM and JSON logs, when an API
+call fails, Dogtap shows the inbound request, outgoing trace spans, structured
+logs, status code, route, service, env, version, and correlation IDs.
 
 Acceptance criteria:
 
@@ -67,13 +74,20 @@ Acceptance criteria:
 
 ### Scenario 3: CI telemetry contract
 
-Given an automated test workflow, when the app exercises login, workspace, subscription, design case, viewer, and export flows, Dogtap validates the telemetry contract and exits with a machine-readable report.
+Given an automated test workflow, when the app exercises login, workspace,
+subscription, design case, viewer, and export flows, Dogtap validates generic
+expectations and optional workflow observability contracts, then exits with
+machine-readable artifacts.
 
 Acceptance criteria:
 
 - CI can fail on missing required fields.
 - CI can fail on PII patterns.
-- CI produces a compact artifact that links failures to received payloads.
+- CI can fail on a supplied workflow contract with
+  `-fail-on-workflow-contract`.
+- CI produces `summary.md`, `assertions.json`, optional
+  `workflow-contracts.json`, and retained event evidence that links failures to
+  received payloads.
 
 ### Scenario 4: Staging forward mode
 
@@ -232,10 +246,15 @@ Acceptance criteria:
   applying external endpoint overrides and can roll back by removing those
   overrides.
 
-## Open Questions
+## Resolved Decisions
 
-- Should the first implementation reuse `dd-apm-test-agent` for trace intake or implement a minimal compatible receiver?
-- Should the dashboard be embedded in the same binary or served as static assets behind the API?
-- Which storage is appropriate for local mode: SQLite, embedded column store, or in-memory ring buffer with optional snapshots?
-- How much Datadog RUM private payload structure should be normalized versus shown raw?
-- Which license best supports personal OSS plus company adoption?
+- Trace intake uses a minimal compatible receiver with fixture-backed Datadog
+  tracer evidence; `dd-apm-test-agent` remains a reference path, not a runtime
+  dependency.
+- The React dashboard is embedded behind the Go API and rebuilt into
+  `web/dist`.
+- Local storage uses bounded memory with optional JSON file persistence; SQLite
+  is deferred until a concrete metadata-retention need appears.
+- Datadog private payload structures are normalized only where fixture-backed
+  and otherwise preserved for inspection as decoded/raw local evidence.
+- The repository is Apache-2.0 licensed for public OSS and team adoption.
