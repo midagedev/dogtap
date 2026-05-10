@@ -179,7 +179,7 @@ Common failing checks and likely causes:
 | `source:logs` | Dogtap does not tail containers; use HTTP logs, OTLP logs, or a log-forwarder bridge. |
 | `source:apm` | `DD_TRACE_AGENT_URL`, `DD_AGENT_HOST`, `DD_TRACE_AGENT_PORT`, tracer startup order. |
 | `source:otlp` | `OTEL_EXPORTER_OTLP_ENDPOINT`, protocol, port `4317` vs `4318`, exporter enablement. |
-| `payload-kind:metric` | OTLP metrics exporter, export interval, endpoint. DogStatsD is not accepted directly. |
+| `payload-kind:metric` | OTLP metrics exporter, export interval, endpoint. DogStatsD is not accepted directly; use the Collector StatsD bridge when the app only emits UDP metrics. |
 | `service:<name>` | `DD_SERVICE`, `DD_ENV`, `DD_VERSION`, `OTEL_SERVICE_NAME`, resource attributes. |
 | `session:<id>` | Browser workflow did not run, SDK session sampling, SDK init order, RUM/Faro session context. |
 | `trace:<id>` | Trace exporter routing or trace/log correlation propagation. |

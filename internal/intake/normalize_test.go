@@ -414,6 +414,44 @@ func TestNormalizeOTLPLogAttributePairsForTraceContext(t *testing.T) {
 	}
 }
 
+func TestNormalizeOTLPMetricsPreferApplicationVersionTag(t *testing.T) {
+	n := Normalize(event.SourceOTLP, map[string]any{
+		"resourceMetrics": []any{
+			map[string]any{
+				"scopeMetrics": []any{
+					map[string]any{
+						"scope": map[string]any{
+							"name":    "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver",
+							"version": "0.151.0",
+						},
+						"metrics": []any{
+							map[string]any{
+								"name": "dogtap.bridge.request.count",
+								"sum": map[string]any{
+									"dataPoints": []any{
+										map[string]any{
+											"asInt": "1",
+											"attributes": []any{
+												attribute("service", "api"),
+												attribute("env", "local"),
+												attribute("version", "smoke"),
+												attribute("http.route", "/orders"),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+	if n.Version != "smoke" {
+		t.Fatalf("expected app version tag to win over collector scope version: %#v", n)
+	}
+}
+
 func attribute(key string, value any) map[string]any {
 	encoded := map[string]any{}
 	switch typed := value.(type) {

@@ -22,7 +22,7 @@ func Normalize(source event.Source, decoded any) event.NormalizedTelemetry {
 	}
 	n.Service = coalesce(findString(root, "service", "dd.service", "service.name"), tags["service"], tags["service.name"])
 	n.Env = coalesce(findString(root, "env", "dd.env", "deployment.environment", "deployment.environment.name"), tags["env"], tags["deployment.environment"], tags["deployment.environment.name"])
-	n.Version = coalesce(findString(root, "version", "dd.version", "service.version"), tags["version"], tags["service.version"])
+	n.Version = coalesce(tags["version"], tags["service.version"], findString(root, "version", "dd.version", "service.version"))
 	n.Host = findString(root, "host", "hostname", "host.name")
 	n.Timestamp = findString(root, "timestamp", "date", "time")
 	n.TraceID = coalesce(

@@ -516,9 +516,9 @@ Gate:
   target.
 - [x] T212 Document that Dogtap still does not tail logs or replace Datadog
   Agent container/Kubernetes log collection behavior.
-- [ ] T213 Add DogStatsD-to-OTLP guidance or a fixture-backed bridge example
+- [x] T213 Add DogStatsD-to-OTLP guidance or a fixture-backed bridge example
   without making Dogtap bind UDP `8125`.
 
 Gate:
 
-- [x] G8 Release Candidate agent gap bridge log subset
+- [x] G8 Release Candidate agent gap bridge subset

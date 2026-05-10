@@ -193,6 +193,17 @@ DogStatsD is not currently supported. If a service emits only DogStatsD metrics,
 keep Datadog Agent in the production lane and add an OTLP metrics path for
 Dogtap validation where practical.
 
+For local, CI, or preview validation of DogStatsD-style metrics, use the
+OpenTelemetry Collector StatsD bridge:
+
+```bash
+make smoke-statsd-bridge
+```
+
+Use `examples/adoption-kit/otel-statsd-bridge.md` as the copyable starting
+point. Applications point StatsD traffic at the Collector; the Collector exports
+OTLP HTTP JSON metrics to Dogtap. Dogtap still does not bind UDP `8125`.
+
 ## Definition Of Done For A Real Adoption
 
 A real app adoption profile should prove:
@@ -212,7 +223,7 @@ A real app adoption profile should prove:
 
 - Dogtap is not a full Datadog Agent replacement.
 - Dogtap does not tail container stdout or arbitrary log files by itself.
-- Dogtap does not receive DogStatsD metrics.
+- Dogtap does not receive DogStatsD metrics directly on UDP `8125`.
 - Dogtap does not run Datadog Agent integrations or Autodiscovery checks.
 - RUM external injection still requires the app to expose the Datadog RUM
   `proxy` option.

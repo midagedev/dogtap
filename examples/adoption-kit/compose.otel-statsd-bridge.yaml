@@ -1,0 +1,53 @@
+services:
+  dogtap:
+    build:
+      context: ${DOGTAP_REPO:-../..}
+    image: ${DOGTAP_IMAGE:-dogtap:statsd-bridge-local}
+    ports:
+      - "${DOGTAP_STATSD_BRIDGE_HTTP_PORT:-8080}:8080"
+      - "${DOGTAP_STATSD_BRIDGE_OTLP_HTTP_PORT:-4318}:4318"
+    environment:
+      DOGTAP_MODE: local
+      DOGTAP_STORAGE_KIND: file
+      DOGTAP_STORAGE_PATH: /data/events.json
+      DOGTAP_STORAGE_MAX_EVENTS: ${DOGTAP_STORAGE_MAX_EVENTS:-1000}
+      DOGTAP_STORAGE_TTL: ${DOGTAP_STORAGE_TTL:-2h}
+    volumes:
+      - dogtap-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  otel-collector:
+    image: ${OTELCOL_CONTRIB_IMAGE:-otel/opentelemetry-collector-contrib:0.151.0}
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    ports:
+      - "${DOGTAP_STATSD_BRIDGE_STATSD_PORT:-8125}:8125/udp"
+    environment:
+      DOGTAP_OTLP_HTTP_ENDPOINT: http://dogtap:4318
+    volumes:
+      - ./otel-statsd-bridge.yaml:/etc/otelcol-contrib/config.yaml:ro
+    depends_on:
+      dogtap:
+        condition: service_healthy
+
+  metrics-sender:
+    image: alpine:3.20
+    command:
+      - /bin/sh
+      - -c
+      - |
+        for _ in $(seq 1 10); do
+          printf 'dogtap.bridge.request.count:1|c|#service:statsd-bridge-backend,env:local,version:smoke,http.route:/bridge/metrics\n' | nc -u -w 1 otel-collector 8125 || true
+          printf 'dogtap.bridge.queue.depth:3|g|#service:statsd-bridge-backend,env:local,version:smoke,http.route:/bridge/metrics\n' | nc -u -w 1 otel-collector 8125 || true
+          sleep 0.5
+        done
+        sleep 300
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+volumes:
+  dogtap-data:

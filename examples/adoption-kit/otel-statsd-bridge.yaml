@@ -1,0 +1,43 @@
+# OpenTelemetry Collector StatsD bridge for Dogtap.
+#
+# Intent:
+# - Preserve applications that currently emit DogStatsD/StatsD-style metrics.
+# - Let a collector receive UDP StatsD metrics and send an inspection copy to
+#   Dogtap as OTLP metrics.
+# - Keep Dogtap from binding UDP 8125 or claiming Datadog Agent parity.
+#
+# Requires the OpenTelemetry Collector Contrib distribution because this uses
+# the statsd receiver.
+
+receivers:
+  statsd/dogstatsd:
+    endpoint: 0.0.0.0:8125
+    transport: udp
+    aggregation_interval: 1s
+    enable_metric_type: true
+    enable_simple_tags: true
+    is_monotonic_counter: true
+
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 256
+  batch:
+    timeout: 1s
+    send_batch_size: 128
+
+exporters:
+  otlphttp/dogtap:
+    endpoint: ${env:DOGTAP_OTLP_HTTP_ENDPOINT}
+    encoding: json
+    compression: none
+
+service:
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    metrics/dogtap:
+      receivers: [statsd/dogstatsd]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/dogtap]
