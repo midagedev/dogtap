@@ -412,9 +412,9 @@ Evidence note 2026-05-10:
 - [x] T163 Add `dogtap diagnose -workflow-contract` and optional
   `-fail-on-workflow-contract` support for CI adoption.
 - [x] T164 Surface built-in workflow contract results in the dashboard.
-- [ ] T165 Add more workflow templates for checkout/case-open/report-export
+- [x] T165 Add more workflow templates for checkout/case-open/report-export
   once public fixture evidence exists.
-- [ ] T166 Add a reusable GitHub Actions example that runs a project E2E suite,
+- [x] T166 Add a reusable GitHub Actions example that runs a project E2E suite,
   then asserts a workflow contract through Dogtap diagnostics.
 
 Gate:
@@ -428,3 +428,6 @@ Evidence note 2026-05-10:
 - Diagnostics tests cover CLI artifacts, diagnostics API JSON, and archive file
   inclusion for `workflow-contracts.json`.
 - Dashboard build succeeds with the built-in frontend/backend readiness panel.
+- Follow-up templates cover login, case-open, checkout, and report-export, and
+  `examples/github-actions/workflow-contract.yml` shows the intended CI
+  assertion step after an existing E2E suite.

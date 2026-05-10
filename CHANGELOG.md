@@ -23,6 +23,8 @@ All notable changes to Dogtap will be documented in this file.
 - Workflow observability contracts through diagnostics API, diagnostics archive,
   `dogtap diagnose -workflow-contract`, built-in dashboard readiness checks,
   and example contracts under `configs/contracts/`.
+- Workflow contract templates for login, case-open, checkout, and report-export,
+  plus a GitHub Actions recipe under `examples/github-actions/`.
 
 ### Notes
 

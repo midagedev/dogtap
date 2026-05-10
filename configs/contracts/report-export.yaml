@@ -1,0 +1,45 @@
+name: report-export-workflow
+description: Verifies that report export or file generation is observable from browser action to backend completion.
+labels:
+  workflow: report-export
+  scope: local-dev
+checks:
+  - id: report-export-rum-context
+    type: event
+    source: rum
+    routeRegex: "/(reports?|exports?)"
+    fields:
+      - sessionId
+      - userId
+    hint: Trigger report export from the browser and check RUM route/action context.
+  - id: report-export-backend-log
+    type: log-message
+    source: logs
+    pattern: "(?i)report.*export|export.*report|file.*generated"
+    hint: Route backend structured logs and include a stable export completion marker.
+  - id: report-export-backend-trace
+    type: event
+    payloadKind: trace
+    service: api-service
+    routeRegex: "/(reports?|exports?)"
+    hint: Check backend tracer route naming for report/export handlers.
+  - id: report-export-duration-metric
+    type: metric
+    pattern: "^(http\\.server\\.request\\.duration|report\\.export\\..*|export\\..*)$"
+    hint: Export HTTP duration or report-export specific duration metrics.
+  - id: report-export-browser-to-api-trace
+    type: trace-correlation
+    from:
+      source: rum
+      routeRegex: "/(reports?|exports?)"
+      fields:
+        - sessionId
+        - traceId
+    to:
+      payloadKind: trace
+      service: api-service
+      routeRegex: "/(reports?|exports?)"
+    hint: Propagate browser resource trace context into backend export spans.
+  - id: report-export-no-sensitive-values
+    type: no-sensitive-values
+    hint: Redact file names, emails, authorization headers, cookies, and JWTs before telemetry leaves the app.

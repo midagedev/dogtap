@@ -227,6 +227,10 @@ go run ./cmd/dogtap diagnose \
   -fail-on-workflow-contract
 ```
 
+Starter contracts are available for `login`, `case-open`, `checkout`,
+`report-export`, and generic frontend/backend readiness. A reusable GitHub
+Actions template lives under `examples/github-actions/`.
+
 The diagnostics API accepts the same idea inline:
 
 ```bash

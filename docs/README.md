@@ -12,6 +12,8 @@ Dogtap.
   preserve existing Datadog usage with sidecars and endpoint overrides
 - [Workflow Contracts](WORKFLOW_CONTRACTS.md): assert real user paths through
   received RUM, replay, logs, traces, metrics, and correlation evidence
+- [GitHub Actions Workflow Contract Example](../examples/github-actions/):
+  run Dogtap beside an app E2E suite and assert telemetry afterward
 - [RUM Proxy Canary](runbooks/RUM_PROXY_CANARY.md): safely test Browser RUM and
   Session Replay proxying through Dogtap
 - [Support Matrix](SUPPORT_MATRIX.md): supported surfaces and explicit limits

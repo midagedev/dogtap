@@ -1,0 +1,50 @@
+name: checkout-workflow
+description: Verifies that checkout or purchase completion is observable across browser, backend, and metrics.
+labels:
+  workflow: checkout
+  scope: local-dev
+checks:
+  - id: checkout-rum-context
+    type: event
+    source: rum
+    routeRegex: "^/(checkout|cart|payment|purchase)"
+    fields:
+      - sessionId
+      - userId
+    hint: Run the browser checkout path, then check RUM route naming and user/session context.
+  - id: checkout-replay
+    type: event
+    source: rum
+    payloadKind: replay
+    hint: Enable Session Replay for the checkout sample path, respecting consent and sampling.
+  - id: checkout-backend-log
+    type: log-message
+    source: logs
+    pattern: "(?i)checkout|payment|purchase|order"
+    hint: Route backend structured logs to Dogtap and include a stable checkout marker.
+  - id: checkout-backend-trace
+    type: event
+    payloadKind: trace
+    service: api-service
+    routeRegex: "/(checkout|payment|purchase|orders?)"
+    hint: Check backend tracer endpoint and route names for checkout/payment handlers.
+  - id: checkout-latency-metric
+    type: metric
+    pattern: "^(http\\.server\\.request\\.duration|checkout\\..*|payment\\..*)$"
+    hint: Export HTTP duration or checkout/payment specific metrics.
+  - id: checkout-browser-to-api-trace
+    type: trace-correlation
+    from:
+      source: rum
+      routeRegex: "^/(checkout|cart|payment|purchase)"
+      fields:
+        - sessionId
+        - traceId
+    to:
+      payloadKind: trace
+      service: api-service
+      routeRegex: "/(checkout|payment|purchase|orders?)"
+    hint: Propagate browser resource trace context into backend checkout spans.
+  - id: checkout-no-sensitive-values
+    type: no-sensitive-values
+    hint: Redact emails, payment identifiers, authorization headers, cookies, and JWTs before telemetry leaves the app.
