@@ -9,9 +9,23 @@ const events = [
     endpoint: "/datadog-intake-proxy",
     method: "POST",
     decoded: {
-      replay: { format: "multipart", contentType: "multipart/form-data", bytes: 512, recordCount: 3, segmentBytes: 280 },
+      replay: {
+        format: "multipart",
+        contentType: "multipart/form-data",
+        bytes: 512,
+        recordCount: 3,
+        segmentBytes: 280,
+      },
       records: [
-        { type: 4, timestamp: 1778206500000, data: { href: "http://localhost/cloud/cases/case-123", width: 1024, height: 720 } },
+        {
+          type: 4,
+          timestamp: 1778206500000,
+          data: {
+            href: "http://localhost/cloud/cases/case-123",
+            width: 1024,
+            height: 720,
+          },
+        },
         {
           type: 2,
           timestamp: 1778206500100,
@@ -66,14 +80,22 @@ const events = [
                               id: 9,
                               tagName: "h1",
                               attributes: {},
-                              childNodes: [{ type: 3, id: 10, textContent: "Case #123" }],
+                              childNodes: [
+                                { type: 3, id: 10, textContent: "Case #123" },
+                              ],
                             },
                             {
                               type: 2,
                               id: 11,
                               tagName: "p",
                               attributes: {},
-                              childNodes: [{ type: 3, id: 12, textContent: "Workspace replay preview" }],
+                              childNodes: [
+                                {
+                                  type: 3,
+                                  id: 12,
+                                  textContent: "Workspace replay preview",
+                                },
+                              ],
                             },
                             {
                               type: 2,
@@ -86,7 +108,9 @@ const events = [
                                   id: 14,
                                   tagName: "button",
                                   attributes: { class: "export" },
-                                  childNodes: [{ type: 3, id: 15, textContent: "Export" }],
+                                  childNodes: [
+                                    { type: 3, id: 15, textContent: "Export" },
+                                  ],
                                 },
                               ],
                             },
@@ -101,7 +125,11 @@ const events = [
             initialOffset: { top: 0, left: 0 },
           },
         },
-        { type: 3, timestamp: 1778206500200, data: { source: 2, text: "export button click" } },
+        {
+          type: 3,
+          timestamp: 1778206500200,
+          data: { source: 2, text: "export button click" },
+        },
       ],
     },
     details: {
@@ -139,7 +167,7 @@ const events = [
     source: "rum",
     endpoint: "/rum",
     method: "POST",
-    rawBody: "{\"type\":\"view\"}",
+    rawBody: '{"type":"view"}',
     decoded: { type: "view" },
     normalized: {
       source: "rum",
@@ -177,7 +205,11 @@ const events = [
     payloadKind: "log",
     endpoint: "/api/v2/logs",
     method: "POST",
-    decoded: { status: "error", message: "case export failed", trace_id: "123456789" },
+    decoded: {
+      status: "error",
+      message: "case export failed",
+      trace_id: "123456789",
+    },
     details: {
       logs: [
         {
@@ -208,6 +240,44 @@ const events = [
     },
   },
   {
+    id: "evt-rum-resource-export",
+    receivedAt: "2026-05-08T08:15:02.500Z",
+    source: "rum",
+    payloadKind: "event",
+    endpoint: "/datadog-intake-proxy",
+    method: "POST",
+    decoded: {
+      type: "resource",
+      _dd: { trace_id: "123456789", span_id: "555555555" },
+      resource: {
+        method: "POST",
+        status_code: 500,
+        url: "https://localhost:8080/api/cases/case-123/exports?token=redacted",
+      },
+    },
+    normalized: {
+      source: "rum",
+      service: "web-frontend",
+      env: "local",
+      version: "dev",
+      traceId: "123456789",
+      spanId: "555555555",
+      sessionId: "session-123",
+      userId: "user-123",
+      accountId: "account-123",
+      workspaceId: "workspace-123",
+      caseId: "case-123",
+      route: "/api/cases/{caseId}/exports",
+      method: "POST",
+      statusCode: 500,
+    },
+    validation: {
+      status: "pass",
+      summary: "passed",
+      rules: [],
+    },
+  },
+  {
     id: "evt-apm-export",
     receivedAt: "2026-05-08T08:15:03Z",
     source: "apm",
@@ -217,16 +287,16 @@ const events = [
     decoded: [
       [
         {
-          trace_id: "123456789",
+          trace_id: "000000000000000000000000075bcd15",
           span_id: "987654321",
-          parent_id: "0",
+          parent_id: "00000000211d1ae3",
           name: "web.request",
           resource: "POST /api/cases/{caseId}/exports",
           service: "edge-gateway",
           duration: 32000000,
         },
         {
-          trace_id: "123456789",
+          trace_id: "000000000000000000000000075bcd15",
           span_id: "987654322",
           parent_id: "987654321",
           name: "case.export.render",
@@ -238,19 +308,19 @@ const events = [
     ],
     details: {
       trace: {
-        traceId: "123456789",
+        traceId: "000000000000000000000000075bcd15",
         spans: [
           {
-            traceId: "123456789",
+            traceId: "000000000000000000000000075bcd15",
             spanId: "987654321",
-            parentSpanId: "0",
+            parentSpanId: "00000000211d1ae3",
             name: "web.request",
             resource: "POST /api/cases/{caseId}/exports",
             service: "edge-gateway",
             durationMs: 32,
           },
           {
-            traceId: "123456789",
+            traceId: "000000000000000000000000075bcd15",
             spanId: "987654322",
             parentSpanId: "987654321",
             name: "case.export.render",
@@ -266,7 +336,7 @@ const events = [
       service: "api-service",
       env: "local",
       version: "dev",
-      traceId: "123456789",
+      traceId: "000000000000000000000000075bcd15",
       spanId: "987654321",
       route: "POST /api/cases/{caseId}/exports",
     },
@@ -299,7 +369,9 @@ const events = [
                         attributes: [
                           {
                             key: "http.route",
-                            value: { stringValue: "/api/cases/{caseId}/exports" },
+                            value: {
+                              stringValue: "/api/cases/{caseId}/exports",
+                            },
                           },
                         ],
                       },
@@ -372,7 +444,11 @@ const events = [
     method: "POST",
     decoded: {
       meta: {
-        app: { name: "faro-smoke-frontend", version: "dev", environment: "local" },
+        app: {
+          name: "faro-smoke-frontend",
+          version: "dev",
+          environment: "local",
+        },
         session: { id: "faro-session-1" },
       },
       events: [{ name: "faro.workflow.run" }],
@@ -429,21 +505,35 @@ async function mockDashboardApi(page: Page, nextEvents = events) {
   });
 }
 
-test("dashboard renders stream detail, failure inbox, correlation, and query builder", async ({ page }) => {
+test("dashboard renders stream detail, failure inbox, correlation, and query builder", async ({
+  page,
+}) => {
   await mockDashboardApi(page);
   await page.goto("/");
 
   await expect(
     page.getByRole("heading", { name: "Dogtap", exact: true }),
   ).toBeVisible();
-  await expect(page.getByLabel("Validation summary").getByText("Received")).toBeVisible();
+  await expect(
+    page.getByLabel("Validation summary").getByText("Received"),
+  ).toBeVisible();
   await expect(page.getByLabel("Apply Dogtap to an app")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Service Map" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Service Map" }),
+  ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Traffic" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Metrics Snapshot" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Intake Health" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Session Timeline" })).toBeVisible();
-  await expect(page.getByLabel("Intake sources").getByText("faro")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Metrics Snapshot" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Intake Health" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Session Timeline" }),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("Intake sources").getByText("faro"),
+  ).toBeVisible();
   await expect(
     page.getByLabel("Intake endpoints").getByText("/collect/faro-smoke"),
   ).toBeVisible();
@@ -455,32 +545,60 @@ test("dashboard renders stream detail, failure inbox, correlation, and query bui
   await expect(
     page.getByLabel("Browser session timeline").getByText("case export failed"),
   ).toBeVisible();
-  await expect(page.getByLabel("Service edges").getByText("edge-gateway")).toBeVisible();
-  await expect(page.getByLabel("Service edges").getByText("api-service")).toBeVisible();
-  await expect(page.getByLabel("Metric samples").getByText("http.server.request.duration")).toBeVisible();
-  await expect(page.getByRole("button").filter({ hasText: "/cases/missing-context" })).toBeVisible();
+  await expect(
+    page.getByLabel("Service edges").getByText("edge-gateway").first(),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("Service edges").getByText("api-service").first(),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("Service edges").getByText("web-frontend").first(),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("Metric samples").getByText("http.server.request.duration"),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button").filter({ hasText: "/cases/missing-context" }),
+  ).toBeVisible();
   await expect(page.getByText("Payload")).toBeVisible();
 
-  await page.getByRole("button").filter({ hasText: "/cases/case-123" }).first().click();
-  await expect(page.getByRole("heading", { name: "Session Replay" })).toBeVisible();
+  await page
+    .getByRole("button")
+    .filter({ hasText: "/cases/case-123" })
+    .first()
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Session Replay" }),
+  ).toBeVisible();
   await expect(page.getByText("DOM replay")).toBeVisible();
   await expect(page.getByLabel("DOM replay position")).toBeVisible();
   const replayFrame = page.frameLocator(".replay-dom-stage iframe").first();
   await expect(replayFrame.getByText("Case #123")).toBeVisible();
-  await expect(replayFrame.getByRole("button", { name: "Export" })).toBeVisible();
+  await expect(
+    replayFrame.getByRole("button", { name: "Export" }),
+  ).toBeVisible();
 
   await page.getByRole("tab", { name: /Failures/ }).click();
-  await expect(page.getByLabel("Validation failure inbox filters")).toBeVisible();
+  await expect(
+    page.getByLabel("Validation failure inbox filters"),
+  ).toBeVisible();
   await page.getByLabel("Failure rule").selectOption("required.rum.user.id");
-  await expect(page.getByRole("button").filter({ hasText: "required.rum.user.id" })).toBeVisible();
+  await expect(
+    page.getByRole("button").filter({ hasText: "required.rum.user.id" }),
+  ).toBeVisible();
 
   await page.getByRole("tab", { name: /Events/ }).click();
-  await page.getByRole("button").filter({ hasText: "/api/cases/{caseId}/exports" }).first().click();
-  await expect(page.getByRole("heading", { name: "Correlation" })).toBeVisible();
-  await expect(page.getByText("trace spans 2 sources")).toBeVisible();
-  await expect(page.getByText("1 peer").first()).toBeVisible();
+  await page.getByPlaceholder("Filter payloads").fill("case export failed");
+  await page.locator(".event-row").first().click();
+  await expect(
+    page.getByRole("heading", { name: "Correlation" }),
+  ).toBeVisible();
+  await expect(page.getByText("trace spans 3 sources")).toBeVisible();
+  await expect(page.getByText("2 peers").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Log Viewer" })).toBeVisible();
-  await expect(page.locator(".log-viewer").getByText("case export failed")).toBeVisible();
+  await expect(
+    page.locator(".log-viewer").getByText("case export failed"),
+  ).toBeVisible();
 
   const query = page.getByLabel("Datadog search query");
   await expect(query).toHaveValue(/service:api-service/);
@@ -490,14 +608,27 @@ test("dashboard renders stream detail, failure inbox, correlation, and query bui
   await page.getByRole("button", { name: "Copy" }).click();
   await expect(page.getByRole("button", { name: "Copied" })).toBeVisible();
 
-  await page.getByRole("button").filter({ hasText: "POST /api/cases/{caseId}/exports" }).first().click();
-  await expect(page.getByRole("heading", { name: "Trace Spans" })).toBeVisible();
-  await expect(page.locator(".trace-viewer").getByText("case.export.render")).toBeVisible();
-
-  await page.getByPlaceholder("Filter payloads").fill("http.server.request.duration");
+  await page
+    .getByPlaceholder("Filter payloads")
+    .fill("POST /api/cases/{caseId}/exports");
   await page.locator(".event-row").first().click();
-  await expect(page.getByRole("heading", { name: "Metric Viewer" })).toBeVisible();
-  await expect(page.locator(".metric-detail-list").getByText("48.5 ms")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Trace Spans" }),
+  ).toBeVisible();
+  await expect(
+    page.locator(".trace-viewer").getByText("case.export.render"),
+  ).toBeVisible();
+
+  await page
+    .getByPlaceholder("Filter payloads")
+    .fill("http.server.request.duration");
+  await page.locator(".event-row").first().click();
+  await expect(
+    page.getByRole("heading", { name: "Metric Viewer" }),
+  ).toBeVisible();
+  await expect(
+    page.locator(".metric-detail-list").getByText("48.5 ms"),
+  ).toBeVisible();
 });
 
 test("empty dashboard shows generic adoption targets", async ({ page }) => {
@@ -505,7 +636,9 @@ test("empty dashboard shows generic adoption targets", async ({ page }) => {
   await page.goto("/");
 
   const setup = page.getByLabel("Apply Dogtap to an app");
-  await expect(setup.getByRole("heading", { name: "Apply Dogtap" })).toBeVisible();
+  await expect(
+    setup.getByRole("heading", { name: "Apply Dogtap" }),
+  ).toBeVisible();
   await expect(setup.getByText("Browser RUM")).toBeVisible();
   await expect(setup.getByText(/datadog-intake-proxy/)).toBeVisible();
   await expect(setup.getByText("APM")).toBeVisible();

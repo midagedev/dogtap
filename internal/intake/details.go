@@ -86,7 +86,7 @@ func logEntry(row any, normalized event.NormalizedTelemetry) event.LogEntry {
 		Timestamp: coalesce(findString(row, "timestamp", "date", "time", "timeUnixNano", "observedTimeUnixNano"), normalized.Timestamp),
 		Level:     strings.ToUpper(level),
 		Message:   message,
-		TraceID:   coalesce(findString(row, "trace_id", "traceId", "dd.trace_id", "trace.id"), normalized.TraceID),
+		TraceID:   coalesce(findString(row, "_dd.trace_id", "trace_id", "traceId", "dd.trace_id", "trace.id"), normalized.TraceID),
 	}
 }
 
@@ -96,8 +96,8 @@ func traceDetail(decoded any, normalized event.NormalizedTelemetry) *event.Trace
 	spans := make([]event.SpanDetail, 0, len(rows)+1)
 	for _, row := range rows {
 		spans = append(spans, event.SpanDetail{
-			TraceID:      coalesce(findString(row, "trace_id", "traceId", "dd.trace_id", "trace.id"), normalized.TraceID),
-			SpanID:       coalesce(findString(row, "span_id", "spanId", "dd.span_id", "span.id"), normalized.SpanID),
+			TraceID:      coalesce(findString(row, "_dd.trace_id", "trace_id", "traceId", "dd.trace_id", "trace.id"), normalized.TraceID),
+			SpanID:       coalesce(findString(row, "_dd.span_id", "span_id", "spanId", "dd.span_id", "span.id"), normalized.SpanID),
 			ParentSpanID: coalesce(findString(row, "parent_id", "parentSpanId", "parent.span.id"), normalized.ParentSpanID),
 			Name:         coalesce(findString(row, "name", "operationName"), normalized.Route, "span"),
 			Resource:     findString(row, "resource", "resource.name", "route", "http.route"),

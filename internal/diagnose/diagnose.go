@@ -3,9 +3,12 @@ package diagnose
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"mime"
 	"net/http"
 	"net/url"
@@ -501,7 +504,7 @@ func BuildAssertions(events []event.EventEnvelope, expectations Expectations, pr
 	addExpectedChecks(&checks, "payload-kind", expectations.PayloadKinds, observed.PayloadKinds)
 	addExpectedChecks(&checks, "service", expectations.Services, observed.Services)
 	addExpectedChecks(&checks, "session", expectations.Sessions, observed.Sessions)
-	addExpectedChecks(&checks, "trace", expectations.Traces, observed.Traces)
+	addExpectedTraceChecks(&checks, expectations.Traces, observed.Traces)
 	addExpectedChecks(&checks, "case", expectations.Cases, observed.Cases)
 	addExpectedChecks(&checks, "route", expectations.Routes, observed.Routes)
 	addExpectedChecks(&checks, "metric", expectations.Metrics, observed.Metrics)
@@ -549,6 +552,9 @@ func observe(events []event.EventEnvelope) Observed {
 		addObserved(observed.Services, e.Normalized.Service)
 		addObserved(observed.Sessions, e.Normalized.SessionID)
 		addObserved(observed.Traces, e.Normalized.TraceID)
+		if canonical := canonicalTraceID(e.Normalized.TraceID); canonical != "" && canonical != e.Normalized.TraceID {
+			addObserved(observed.Traces, canonical)
+		}
 		addObserved(observed.Cases, e.Normalized.CaseID)
 		addObserved(observed.Routes, e.Normalized.Route)
 		addObserved(observed.Endpoints, e.Endpoint)
@@ -584,6 +590,61 @@ func addObserved(values map[string]int, value string) {
 	values[value]++
 }
 
+func canonicalTraceID(value string) string {
+	raw := strings.TrimSpace(value)
+	lower := strings.ToLower(raw)
+	if raw == "" || raw == "0" {
+		return ""
+	}
+	if isDecimal(raw) {
+		parsed, ok := new(big.Int).SetString(raw, 10)
+		if !ok {
+			return ""
+		}
+		return leftPad(parsed.Text(16), 32)
+	}
+	if isHex(lower) {
+		return leftPad(lower, 32)
+	}
+	if decoded, err := base64.StdEncoding.DecodeString(raw); err == nil {
+		switch len(decoded) {
+		case 16:
+			return hex.EncodeToString(decoded)
+		case 8:
+			return leftPad(hex.EncodeToString(decoded), 32)
+		}
+	}
+	return ""
+}
+
+func isDecimal(value string) bool {
+	for _, r := range value {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return value != ""
+}
+
+func isHex(value string) bool {
+	if value == "" || len(value) > 32 {
+		return false
+	}
+	for _, r := range value {
+		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
+			return false
+		}
+	}
+	return true
+}
+
+func leftPad(value string, width int) string {
+	if len(value) >= width {
+		return value
+	}
+	return strings.Repeat("0", width-len(value)) + value
+}
+
 func probeCheck(id string, ok bool, passMessage, failHint string) CheckResult {
 	if ok {
 		return CheckResult{ID: id, Status: "pass", Message: passMessage, Matched: 1}
@@ -616,6 +677,31 @@ func addExpectedChecks(checks *[]CheckResult, kind string, expected []string, ob
 			Status:  "fail",
 			Message: fmt.Sprintf("Expected %s %q was not observed.", kind, value),
 			Hint:    missingHint(kind, value),
+		})
+	}
+}
+
+func addExpectedTraceChecks(checks *[]CheckResult, expected []string, observed map[string]int) {
+	for _, value := range expected {
+		id := "trace:" + value
+		count := observed[value]
+		if canonical := canonicalTraceID(value); count == 0 && canonical != "" && canonical != value {
+			count += observed[canonical]
+		}
+		if count > 0 {
+			*checks = append(*checks, CheckResult{
+				ID:      id,
+				Status:  "pass",
+				Message: fmt.Sprintf("Observed expected trace %q.", value),
+				Matched: count,
+			})
+			continue
+		}
+		*checks = append(*checks, CheckResult{
+			ID:      id,
+			Status:  "fail",
+			Message: fmt.Sprintf("Expected trace %q was not observed.", value),
+			Hint:    missingHint("trace", value),
 		})
 	}
 }

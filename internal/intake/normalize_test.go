@@ -31,6 +31,48 @@ func TestNormalizeRUMContext(t *testing.T) {
 	}
 }
 
+func TestNormalizeRUMBatchTraceContextFromResourceEvent(t *testing.T) {
+	n := Normalize(event.SourceRUM, []any{
+		map[string]any{
+			"type":    "view",
+			"service": "web-frontend",
+			"env":     "local",
+			"session": map[string]any{"id": "session-1"},
+			"view":    map[string]any{"url_path": "/cloud"},
+		},
+		map[string]any{
+			"type": "resource",
+			"resource": map[string]any{
+				"method":      "POST",
+				"status_code": 0,
+				"url":         "https://www.google-analytics.com/g/collect",
+			},
+		},
+		map[string]any{
+			"type": "resource",
+			"_dd": map[string]any{
+				"trace_id": "123456789",
+				"span_id":  "987654321",
+			},
+			"resource": map[string]any{
+				"method":      "GET",
+				"status_code": 404,
+				"url":         "https://localhost:8080/api/cloud/__dogtap-log-probe?debug=true",
+			},
+		},
+	})
+
+	if n.TraceID != "123456789" || n.SpanID != "987654321" {
+		t.Fatalf("unexpected RUM trace normalization: %#v", n)
+	}
+	if n.Route != "/api/cloud/__dogtap-log-probe" || n.Method != "GET" || n.StatusCode != 404 {
+		t.Fatalf("unexpected RUM resource normalization: %#v", n)
+	}
+	if n.Service != "web-frontend" || n.Env != "local" || n.SessionID != "session-1" {
+		t.Fatalf("unexpected RUM batch context normalization: %#v", n)
+	}
+}
+
 func TestCaptureFaroPayloads(t *testing.T) {
 	tests := []struct {
 		name        string
