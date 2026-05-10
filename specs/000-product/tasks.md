@@ -586,13 +586,13 @@ Gate:
 
 ## Phase 26: API, Dashboard, And Dev-Cluster Readiness
 
-- [ ] T260 Add structured log fields to the redacted event detail model when raw
+- [x] T260 Add structured log fields to the redacted event detail model when raw
   payloads are unavailable.
 - [x] T261 Add structured log dashboard drilldown with trace, route, status,
   service, env, and preserved payload access.
 - [x] T262 Add retained metric charts and metric detail summaries in the
   dashboard.
-- [ ] T263 Add Datadog-compatible API refinements for structured log and metric
+- [x] T263 Add Datadog-compatible API refinements for structured log and metric
   query scenarios discovered by dashboard/agent usage.
 - [ ] T264 Add an EKS dev-cluster deployment overlay and smoke runbook with
   private-by-default networking, bounded retention, and rollback steps.

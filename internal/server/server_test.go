@@ -428,6 +428,66 @@ func TestDatadogLogsSearchCompatibilityReturnsRetainedLogs(t *testing.T) {
 	}
 }
 
+func TestDatadogLogsSearchMatchesStructuredLogFields(t *testing.T) {
+	app := newTestApp(t, config.ModeLocal)
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/v2/logs",
+		bytes.NewBufferString(`{
+			"message":"login failed",
+			"status":"error",
+			"service":"api",
+			"env":"local",
+			"version":"dev",
+			"trace_id":"trace-1",
+			"span_id":"span-1",
+			"route":"/api/login",
+			"http.method":"POST",
+			"http.status_code":500,
+			"request_id":"req-1",
+			"correlation_id":"corr-1"
+		}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	app.Handler().ServeHTTP(httptest.NewRecorder(), req)
+
+	searchReq := httptest.NewRequest(
+		http.MethodPost,
+		"/api/v2/logs/events/search",
+		bytes.NewBufferString(`{"filter":{"query":"service:api env:local @http.status_code:500 @http.method:POST @endpoint:/api/v2/logs @request_id:req-1 @correlation_id:corr-1 @payload_kind:log @validation.status:pass"},"page":{"limit":5}}`),
+	)
+	searchReq.Header.Set("Content-Type", "application/json")
+	searchRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(searchRec, searchReq)
+
+	if searchRec.Code != http.StatusOK {
+		t.Fatalf("got status %d: %s", searchRec.Code, searchRec.Body.String())
+	}
+	var got struct {
+		Data []struct {
+			Attributes struct {
+				Attributes map[string]any `json:"attributes"`
+			} `json:"attributes"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(searchRec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Data) != 1 {
+		t.Fatalf("unexpected structured log search response: %#v", got)
+	}
+	attrs := got.Data[0].Attributes.Attributes
+	if attrs["http.method"] != "POST" || attrs["request_id"] != "req-1" || attrs["correlation_id"] != "corr-1" {
+		t.Fatalf("missing structured attributes: %#v", attrs)
+	}
+	if attrs["http.status_code"].(float64) != 500 {
+		t.Fatalf("missing http status code: %#v", attrs)
+	}
+	if _, exists := attrs["raw_body"]; exists {
+		t.Fatalf("Datadog-compatible log attributes should not expose raw body: %#v", attrs)
+	}
+}
+
 func TestDatadogRUMSearchCompatibilityReturnsRetainedRUM(t *testing.T) {
 	app := newTestApp(t, config.ModeLocal)
 	req := httptest.NewRequest(http.MethodPost, "/rum", bytes.NewBufferString(`{
@@ -523,6 +583,41 @@ func TestDatadogSpansSearchCompatibilityReturnsRetainedSpans(t *testing.T) {
 	}
 }
 
+func TestDatadogSpansSearchMatchesTraceIDAlias(t *testing.T) {
+	app := newTestApp(t, config.ModeLocal)
+	req := httptest.NewRequest(
+		http.MethodPut,
+		"/v0.5/traces",
+		bytes.NewBufferString(`[[{"trace_id":"0000000000000000000000000000007b","span_id":"span-1","service":"api","name":"web.request","resource":"GET /login"}]]`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	app.Handler().ServeHTTP(httptest.NewRecorder(), req)
+
+	searchReq := httptest.NewRequest(
+		http.MethodPost,
+		"/api/v2/spans/events/search",
+		bytes.NewBufferString(`{"data":{"attributes":{"filter":{"query":"service:api trace_id:123"},"page":{"limit":5}}}}`),
+	)
+	searchReq.Header.Set("Content-Type", "application/json")
+	searchRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(searchRec, searchReq)
+
+	if searchRec.Code != http.StatusOK {
+		t.Fatalf("got status %d: %s", searchRec.Code, searchRec.Body.String())
+	}
+	var got struct {
+		Data []struct {
+			Type string `json:"type"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(searchRec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Data) != 1 || got.Data[0].Type != "span" {
+		t.Fatalf("expected trace-id alias match, got %#v", got)
+	}
+}
+
 func TestDatadogMetricQueryCompatibilityReturnsTimeseries(t *testing.T) {
 	app := newTestApp(t, config.ModeLocal)
 	body := `{
@@ -539,7 +634,11 @@ func TestDatadogMetricQueryCompatibilityReturnsTimeseries(t *testing.T) {
 					"gauge": {"dataPoints": [{
 						"asDouble": 42.5,
 						"timeUnixNano": "1778206500000000000",
-						"attributes": [{"key":"http.route","value":{"stringValue":"/login"}}]
+						"attributes": [
+							{"key":"http.route","value":{"stringValue":"/login"}},
+							{"key":"http.request.method","value":{"stringValue":"POST"}},
+							{"key":"http.response.status_code","value":{"intValue":"200"}}
+						]
 					}]}
 				}]
 			}]
@@ -549,7 +648,7 @@ func TestDatadogMetricQueryCompatibilityReturnsTimeseries(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	app.Handler().ServeHTTP(httptest.NewRecorder(), req)
 
-	queryReq := httptest.NewRequest(http.MethodGet, "/api/v1/query?from=0&to=9999999999&query=avg:http.server.request.duration%7Bservice:api-service%7D", nil)
+	queryReq := httptest.NewRequest(http.MethodGet, "/api/v1/query?from=0&to=9999999999&query=avg:http.server.request.duration%7Bhttp.route:%2Flogin,http.request.method:POST,http.response.status_code:200%7D", nil)
 	queryRec := httptest.NewRecorder()
 	app.Handler().ServeHTTP(queryRec, queryReq)
 
@@ -559,9 +658,10 @@ func TestDatadogMetricQueryCompatibilityReturnsTimeseries(t *testing.T) {
 	var got struct {
 		Status string `json:"status"`
 		Series []struct {
-			Metric    string  `json:"metric"`
-			Scope     string  `json:"scope"`
-			Pointlist [][]any `json:"pointlist"`
+			Metric    string   `json:"metric"`
+			Scope     string   `json:"scope"`
+			Pointlist [][]any  `json:"pointlist"`
+			EventIDs  []string `json:"dogtap_event_ids"`
 		} `json:"series"`
 	}
 	if err := json.Unmarshal(queryRec.Body.Bytes(), &got); err != nil {
@@ -572,6 +672,12 @@ func TestDatadogMetricQueryCompatibilityReturnsTimeseries(t *testing.T) {
 	}
 	if got.Series[0].Metric != "http.server.request.duration" || !strings.Contains(got.Series[0].Scope, "service:api-service") || len(got.Series[0].Pointlist) != 1 {
 		t.Fatalf("unexpected metric series: %#v", got.Series[0])
+	}
+	if !strings.Contains(got.Series[0].Scope, "http.request.method:POST") || !strings.Contains(got.Series[0].Scope, "http.response.status_code:200") {
+		t.Fatalf("metric scope did not retain OTLP point tags: %#v", got.Series[0])
+	}
+	if len(got.Series[0].EventIDs) != 1 {
+		t.Fatalf("missing dogtap event ids: %#v", got.Series[0])
 	}
 	if got.Series[0].Pointlist[0][1].(float64) != 42.5 {
 		t.Fatalf("unexpected metric value: %#v", got.Series[0].Pointlist)

@@ -68,6 +68,8 @@ Current release-candidate state:
 
 - [G2 SQLite Storage](gates/G2_SQLITE_STORAGE.md): persistent queryable store
   subset passed
+- [G5 Datadog API Compatibility](gates/G5_DATADOG_API_COMPATIBILITY.md):
+  read-only compatibility and structured debugging maintenance slice passed
 - [G4 Dashboard Observability UX](gates/G4_DASHBOARD_OBSERVABILITY_UX.md):
   structured log and metric chart subset passed
 - [G8 Generic Adoption Smoke](gates/G8_GENERIC_ADOPTION_SMOKE.md): generic

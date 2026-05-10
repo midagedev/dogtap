@@ -74,6 +74,7 @@ func logDetails(decoded any, normalized event.NormalizedTelemetry) []event.LogEn
 }
 
 func logEntry(row any, normalized event.NormalizedTelemetry) event.LogEntry {
+	tags := collectTags(row)
 	level := coalesce(findString(row, "status", "level", "severityText", "severity"), "info")
 	message := coalesce(
 		findString(row, "message", "msg", "body.stringValue", "body", "error.message", "error"),
@@ -83,10 +84,23 @@ func logEntry(row any, normalized event.NormalizedTelemetry) event.LogEntry {
 		message = "log payload"
 	}
 	return event.LogEntry{
-		Timestamp: coalesce(findString(row, "timestamp", "date", "time", "timeUnixNano", "observedTimeUnixNano"), normalized.Timestamp),
-		Level:     strings.ToUpper(level),
-		Message:   message,
-		TraceID:   coalesce(findString(row, "_dd.trace_id", "trace_id", "traceId", "dd.trace_id", "trace.id"), normalized.TraceID),
+		Timestamp:     coalesce(findString(row, "timestamp", "date", "time", "timeUnixNano", "observedTimeUnixNano"), normalized.Timestamp),
+		Level:         strings.ToUpper(level),
+		Message:       message,
+		TraceID:       coalesce(findString(row, "_dd.trace_id", "trace_id", "traceId", "dd.trace_id", "trace.id"), tags["_dd.trace_id"], tags["trace_id"], tags["trace.id"], normalized.TraceID),
+		SpanID:        coalesce(findString(row, "_dd.span_id", "span_id", "spanId", "dd.span_id", "span.id"), tags["_dd.span_id"], tags["span_id"], tags["span.id"], normalized.SpanID),
+		Route:         coalesce(pathFromURL(findString(row, "http.url", "url.full")), findString(row, "route", "resource", "resource.name", "url.path", "http.route"), tags["http.route"], tags["resource.name"], tags["url.path"], normalized.Route),
+		Method:        coalesce(findString(row, "method", "http.method", "http.request.method"), tags["http.method"], tags["http.request.method"], normalized.Method),
+		StatusCode:    firstPositiveInt(findInt(row, "status_code", "statusCode", "http.status_code", "http.response.status_code"), firstTagInt(tags, "http.status_code", "http.response.status_code", "status_code"), normalized.StatusCode),
+		Service:       coalesce(findString(row, "service", "dd.service", "service.name"), tags["service"], tags["service.name"], normalized.Service),
+		Env:           coalesce(findString(row, "env", "dd.env", "deployment.environment", "deployment.environment.name"), tags["env"], tags["deployment.environment"], tags["deployment.environment.name"], normalized.Env),
+		Version:       coalesce(findString(row, "version", "dd.version", "service.version"), tags["version"], tags["service.version"], normalized.Version),
+		UserID:        coalesce(findString(row, "usr.id", "user.id", "user_id", "userId", "context.user.id"), normalized.UserID),
+		AccountID:     coalesce(findString(row, "account.id", "account_id", "accountId", "context.account.id"), normalized.AccountID),
+		WorkspaceID:   coalesce(findString(row, "workspace.id", "workspace_id", "workspaceId", "context.workspace.id"), normalized.WorkspaceID),
+		CaseID:        coalesce(findString(row, "case.id", "case_id", "caseId", "context.case.id"), normalized.CaseID),
+		RequestID:     findString(row, "request_id", "requestId", "http.request_id", "x-request-id"),
+		CorrelationID: findString(row, "correlation_id", "correlationId", "x-correlation-id"),
 	}
 }
 
@@ -262,12 +276,15 @@ func faroMeasurementDetails(decoded any, normalized event.NormalizedTelemetry) [
 }
 
 func faroMetricEntry(name string, value float64, row map[string]any, normalized event.NormalizedTelemetry) event.MetricEntry {
+	tags := metricTags(row, row)
+	enrichMetricTags(tags, normalized)
 	return event.MetricEntry{
 		Name:      name,
 		Service:   normalized.Service,
 		Value:     value,
-		Route:     coalesce(findString(row, "context.route"), normalized.Route),
+		Route:     coalesce(tags["http.route"], tags["route"], findString(row, "context.route"), normalized.Route),
 		Timestamp: coalesce(findString(row, "timestamp"), normalized.Timestamp),
+		Tags:      tags,
 	}
 }
 
@@ -319,6 +336,7 @@ func metricDataPoints(row map[string]any) (string, []any) {
 }
 
 func metricEntry(name, unit, aggregation string, value float64, point map[string]any, tags map[string]string, normalized event.NormalizedTelemetry) event.MetricEntry {
+	enrichMetricTags(tags, normalized)
 	return event.MetricEntry{
 		Name:        name,
 		Service:     coalesce(tags["service"], tags["service.name"], normalized.Service),
@@ -327,6 +345,7 @@ func metricEntry(name, unit, aggregation string, value float64, point map[string
 		Aggregation: aggregation,
 		Route:       coalesce(tags["http.route"], tags["route"], tags["resource.name"], normalized.Route),
 		Timestamp:   coalesce(findString(point, "timestamp", "time", "timeUnixNano", "time_unix_nano"), normalized.Timestamp),
+		Tags:        tags,
 	}
 }
 
@@ -334,7 +353,63 @@ func metricTags(metric map[string]any, point map[string]any) map[string]string {
 	tags := map[string]string{}
 	collectAttributePairs(metric, tags)
 	collectAttributePairs(point, tags)
-	return tags
+	return filterMetricTags(tags)
+}
+
+func enrichMetricTags(tags map[string]string, normalized event.NormalizedTelemetry) {
+	addMetricTag(tags, "service", normalized.Service)
+	addMetricTag(tags, "env", normalized.Env)
+	addMetricTag(tags, "version", normalized.Version)
+	addMetricTag(tags, "route", normalized.Route)
+	addMetricTag(tags, "http.route", normalized.Route)
+	addMetricTag(tags, "method", normalized.Method)
+	addMetricTag(tags, "http.method", normalized.Method)
+	if normalized.StatusCode > 0 {
+		status := strconv.Itoa(normalized.StatusCode)
+		addMetricTag(tags, "status_code", status)
+		addMetricTag(tags, "http.status_code", status)
+	}
+}
+
+func addMetricTag(tags map[string]string, key string, value string) {
+	if strings.TrimSpace(value) == "" {
+		return
+	}
+	if _, exists := tags[key]; !exists {
+		tags[key] = value
+	}
+}
+
+func filterMetricTags(tags map[string]string) map[string]string {
+	if len(tags) == 0 {
+		return tags
+	}
+	allowed := map[string]bool{
+		"deployment.environment":      true,
+		"deployment.environment.name": true,
+		"env":                         true,
+		"http.method":                 true,
+		"http.request.method":         true,
+		"http.response.status_code":   true,
+		"http.route":                  true,
+		"http.status_code":            true,
+		"method":                      true,
+		"resource.name":               true,
+		"route":                       true,
+		"service":                     true,
+		"service.name":                true,
+		"service.version":             true,
+		"status_code":                 true,
+		"url.path":                    true,
+		"version":                     true,
+	}
+	filtered := map[string]string{}
+	for key, value := range tags {
+		if allowed[key] && strings.TrimSpace(value) != "" {
+			filtered[key] = value
+		}
+	}
+	return filtered
 }
 
 func metricNumber(root any, paths ...string) (float64, bool) {

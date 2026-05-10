@@ -34,6 +34,22 @@ go test ./...
 The server tests cover retained log, RUM, span, and metric sample queries
 through Datadog-compatible paths and assert Datadog-shaped response fields.
 
+Maintenance slice, 2026-05-11:
+
+- Structured log fields are now retained in the redacted detail model for
+  route, method, status, service/env/version, trace/span IDs, context IDs,
+  request ID, and correlation ID.
+- Logs search matches common field aliases such as `@http.status_code`,
+  `@http.method`, `@endpoint`, `@payload_kind`, `@validation.status`,
+  `@dogtap.id`, `@request_id`, and `@correlation_id`.
+- Metric query scope matching uses retained redacted point tags for service,
+  env, version, route, method, and HTTP status aliases.
+- Metric series include additive `dogtap_event_ids` so agents can jump from a
+  Datadog-compatible query result back to retained Dogtap events.
+- Trace search understands exact IDs, leading-zero hex forms, and decimal IDs
+  that match the low 64 bits of a 128-bit trace ID.
+
 ## Gate Status
 
-Passed for the first read-only compatibility subset.
+Passed for the first read-only compatibility subset and the structured
+debugging maintenance slice.

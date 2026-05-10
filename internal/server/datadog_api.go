@@ -170,6 +170,7 @@ func (a *App) handleDatadogMetricQuery(w http.ResponseWriter, r *http.Request) {
 				seriesByKey[key] = series
 			}
 			series.Pointlist = append(series.Pointlist, []any{float64(ts), metric.Value})
+			series.DogtapEventIDs = appendUniqueString(series.DogtapEventIDs, e.ID)
 		}
 	}
 
@@ -285,9 +286,11 @@ func datadogLogEvent(e event.EventEnvelope) datadogEvent {
 	n := e.Normalized
 	message := n.ErrorMessage
 	status := "info"
+	var log event.LogEntry
 	if e.Details != nil && len(e.Details.Logs) > 0 {
-		message = e.Details.Logs[0].Message
-		status = strings.ToLower(e.Details.Logs[0].Level)
+		log = e.Details.Logs[0]
+		message = log.Message
+		status = strings.ToLower(log.Level)
 	}
 	if message == "" {
 		message = "dogtap log event"
@@ -296,25 +299,67 @@ func datadogLogEvent(e event.EventEnvelope) datadogEvent {
 		Type: "log",
 		ID:   e.ID,
 		Attributes: map[string]any{
-			"timestamp": timestampString(e),
-			"service":   n.Service,
-			"host":      n.Host,
-			"status":    status,
-			"message":   message,
-			"tags":      datadogTags(e),
-			"attributes": map[string]any{
-				"env":        n.Env,
-				"version":    n.Version,
-				"trace_id":   n.TraceID,
-				"span_id":    n.SpanID,
-				"route":      n.Route,
-				"source":     e.Source,
-				"endpoint":   e.Endpoint,
-				"validation": e.Validation,
-				"dogtap_id":  e.ID,
-			},
+			"timestamp":  timestampString(e),
+			"service":    n.Service,
+			"host":       n.Host,
+			"status":     status,
+			"message":    message,
+			"tags":       datadogTags(e),
+			"attributes": datadogLogAttributes(e, log),
 		},
 	}
+}
+
+func datadogLogAttributes(e event.EventEnvelope, log event.LogEntry) map[string]any {
+	n := e.Normalized
+	attrs := map[string]any{
+		"env":               coalesce(log.Env, n.Env),
+		"version":           coalesce(log.Version, n.Version),
+		"trace_id":          coalesce(log.TraceID, n.TraceID),
+		"span_id":           coalesce(log.SpanID, n.SpanID),
+		"route":             coalesce(log.Route, n.Route),
+		"source":            e.Source,
+		"endpoint":          e.Endpoint,
+		"payload_kind":      e.PayloadKind,
+		"validation":        e.Validation,
+		"validation.status": e.Validation.Status,
+		"dogtap_id":         e.ID,
+		"dogtap.id":         e.ID,
+	}
+	addAttributeString(attrs, "service", coalesce(log.Service, n.Service))
+	addAttributeString(attrs, "host", n.Host)
+	addAttributeString(attrs, "method", coalesce(log.Method, n.Method))
+	addAttributeString(attrs, "http.method", coalesce(log.Method, n.Method))
+	addAttributeInt(attrs, "status_code", firstPositive(log.StatusCode, n.StatusCode))
+	addAttributeInt(attrs, "http.status_code", firstPositive(log.StatusCode, n.StatusCode))
+	addAttributeString(attrs, "usr.id", coalesce(log.UserID, n.UserID))
+	addAttributeString(attrs, "account.id", coalesce(log.AccountID, n.AccountID))
+	addAttributeString(attrs, "workspace.id", coalesce(log.WorkspaceID, n.WorkspaceID))
+	addAttributeString(attrs, "case.id", coalesce(log.CaseID, n.CaseID))
+	addAttributeString(attrs, "request_id", log.RequestID)
+	addAttributeString(attrs, "correlation_id", log.CorrelationID)
+	return attrs
+}
+
+func addAttributeString(attrs map[string]any, key string, value string) {
+	if strings.TrimSpace(value) != "" {
+		attrs[key] = value
+	}
+}
+
+func addAttributeInt(attrs map[string]any, key string, value int) {
+	if value > 0 {
+		attrs[key] = value
+	}
+}
+
+func firstPositive(values ...int) int {
+	for _, value := range values {
+		if value > 0 {
+			return value
+		}
+	}
+	return 0
 }
 
 func datadogRUMEvent(e event.EventEnvelope) datadogEvent {
@@ -454,16 +499,43 @@ func datadogFieldMatches(e event.EventEnvelope, kind datadogEventKind, key strin
 		candidates = append(candidates, n.CaseID)
 	case "route", "http.route", "resource_name", "resource.name":
 		candidates = append(candidates, n.Route)
+	case "method", "http.method", "http.request.method":
+		candidates = append(candidates, n.Method, e.Method)
+	case "status_code", "http.status_code", "http.response.status_code":
+		if n.StatusCode > 0 {
+			candidates = append(candidates, strconv.Itoa(n.StatusCode))
+		}
+	case "endpoint":
+		candidates = append(candidates, e.Endpoint)
 	case "source":
 		candidates = append(candidates, string(e.Source))
-	case "type":
+	case "type", "payload_kind":
 		candidates = append(candidates, e.PayloadKind)
-	case "status":
+	case "status", "validation.status":
 		candidates = append(candidates, e.Validation.Status)
 		if kind == datadogKindLog && e.Details != nil {
 			for _, log := range e.Details.Logs {
 				candidates = append(candidates, strings.ToLower(log.Level))
 			}
+		}
+	case "dogtap.id", "dogtap_id":
+		candidates = append(candidates, e.ID)
+	case "request_id", "request.id":
+		if kind == datadogKindLog && e.Details != nil {
+			for _, log := range e.Details.Logs {
+				candidates = append(candidates, log.RequestID)
+			}
+		}
+	case "correlation_id", "correlation.id":
+		if kind == datadogKindLog && e.Details != nil {
+			for _, log := range e.Details.Logs {
+				candidates = append(candidates, log.CorrelationID)
+			}
+		}
+	}
+	if kind == datadogKindLog && e.Details != nil {
+		for _, log := range e.Details.Logs {
+			candidates = append(candidates, datadogLogFieldCandidates(log, key)...)
 		}
 	}
 	if kind == datadogKindSpan && e.Details != nil && e.Details.Trace != nil {
@@ -472,11 +544,66 @@ func datadogFieldMatches(e event.EventEnvelope, kind datadogEventKind, key strin
 		}
 	}
 	for _, candidate := range candidates {
-		if datadogValueMatches(candidate, value) {
+		if datadogCandidateMatches(key, candidate, value) {
 			return true
 		}
 	}
 	return false
+}
+
+func datadogLogFieldCandidates(log event.LogEntry, key string) []string {
+	switch key {
+	case "service":
+		return []string{log.Service}
+	case "env":
+		return []string{log.Env}
+	case "version":
+		return []string{log.Version}
+	case "trace_id", "trace.id", "traceid", "dd.trace_id":
+		return []string{log.TraceID}
+	case "span_id", "span.id", "spanid", "dd.span_id":
+		return []string{log.SpanID}
+	case "usr.id", "user.id", "user_id", "userid":
+		return []string{log.UserID}
+	case "account.id", "account_id", "accountid":
+		return []string{log.AccountID}
+	case "workspace.id", "workspace_id", "workspaceid":
+		return []string{log.WorkspaceID}
+	case "case.id", "case_id", "caseid":
+		return []string{log.CaseID}
+	case "route", "http.route", "resource_name", "resource.name":
+		return []string{log.Route}
+	case "method", "http.method", "http.request.method":
+		return []string{log.Method}
+	case "status_code", "http.status_code", "http.response.status_code":
+		if log.StatusCode > 0 {
+			return []string{strconv.Itoa(log.StatusCode)}
+		}
+	case "request_id", "request.id":
+		return []string{log.RequestID}
+	case "correlation_id", "correlation.id":
+		return []string{log.CorrelationID}
+	}
+	return nil
+}
+
+func datadogCandidateMatches(key string, candidate string, want string) bool {
+	if datadogValueMatches(candidate, want) {
+		return true
+	}
+	if isTraceIDField(key) {
+		return datadogTraceIDMatches(candidate, want)
+	}
+	return false
+}
+
+func isTraceIDField(key string) bool {
+	switch key {
+	case "trace_id", "trace.id", "traceid", "dd.trace_id":
+		return true
+	default:
+		return false
+	}
 }
 
 func datadogValueMatches(candidate string, want string) bool {
@@ -490,11 +617,79 @@ func datadogValueMatches(candidate string, want string) bool {
 	return strings.EqualFold(candidate, want)
 }
 
+func datadogTraceIDMatches(candidate string, want string) bool {
+	candidate = cleanTraceID(candidate)
+	want = cleanTraceID(want)
+	if candidate == "" || want == "" {
+		return false
+	}
+	if strings.EqualFold(candidate, want) {
+		return true
+	}
+	if trimLeadingTraceZeros(candidate) == trimLeadingTraceZeros(want) {
+		return true
+	}
+	if candidateDecimal, ok := parseDecimalTraceID(candidate); ok {
+		if lowHex, ok := lowTraceHex(want); ok {
+			return candidateDecimal == lowHex
+		}
+	}
+	if wantDecimal, ok := parseDecimalTraceID(want); ok {
+		if lowHex, ok := lowTraceHex(candidate); ok {
+			return wantDecimal == lowHex
+		}
+	}
+	return false
+}
+
+func cleanTraceID(value string) string {
+	value = strings.Trim(strings.ToLower(strings.TrimSpace(value)), `"`)
+	value = strings.TrimPrefix(value, "0x")
+	return value
+}
+
+func trimLeadingTraceZeros(value string) string {
+	trimmed := strings.TrimLeft(value, "0")
+	if trimmed == "" {
+		return "0"
+	}
+	return trimmed
+}
+
+func parseDecimalTraceID(value string) (uint64, bool) {
+	if value == "" {
+		return 0, false
+	}
+	for _, r := range value {
+		if r < '0' || r > '9' {
+			return 0, false
+		}
+	}
+	parsed, err := strconv.ParseUint(value, 10, 64)
+	return parsed, err == nil
+}
+
+func lowTraceHex(value string) (uint64, bool) {
+	if value == "" {
+		return 0, false
+	}
+	for _, r := range value {
+		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
+			return 0, false
+		}
+	}
+	if len(value) > 16 {
+		value = value[len(value)-16:]
+	}
+	parsed, err := strconv.ParseUint(value, 16, 64)
+	return parsed, err == nil
+}
+
 func datadogSearchText(e event.EventEnvelope, kind datadogEventKind) string {
 	parts := []string{e.ID, string(e.Source), e.PayloadKind, e.Endpoint, e.Normalized.Service, e.Normalized.Env, e.Normalized.Route, e.Normalized.TraceID, e.Normalized.SessionID, e.Normalized.UserID, e.Normalized.ErrorMessage}
 	if kind == datadogKindLog && e.Details != nil {
 		for _, log := range e.Details.Logs {
-			parts = append(parts, log.Message, log.Level, log.TraceID)
+			parts = append(parts, log.Message, log.Level, log.TraceID, log.SpanID, log.Route, log.Method, log.RequestID, log.CorrelationID)
 		}
 	}
 	if kind == datadogKindSpan && e.Details != nil && e.Details.Trace != nil {
@@ -551,19 +746,20 @@ type datadogMetricQueryResponse struct {
 }
 
 type datadogMetricSeries struct {
-	Aggr        string   `json:"aggr,omitempty"`
-	DisplayName string   `json:"display_name"`
-	End         int64    `json:"end,omitempty"`
-	Expression  string   `json:"expression"`
-	Interval    int64    `json:"interval,omitempty"`
-	Length      int      `json:"length"`
-	Metric      string   `json:"metric"`
-	Pointlist   [][]any  `json:"pointlist"`
-	QueryIndex  int      `json:"query_index"`
-	Scope       string   `json:"scope,omitempty"`
-	Start       int64    `json:"start,omitempty"`
-	TagSet      []string `json:"tag_set,omitempty"`
-	Unit        []ddUnit `json:"unit,omitempty"`
+	Aggr           string   `json:"aggr,omitempty"`
+	DisplayName    string   `json:"display_name"`
+	DogtapEventIDs []string `json:"dogtap_event_ids,omitempty"`
+	End            int64    `json:"end,omitempty"`
+	Expression     string   `json:"expression"`
+	Interval       int64    `json:"interval,omitempty"`
+	Length         int      `json:"length"`
+	Metric         string   `json:"metric"`
+	Pointlist      [][]any  `json:"pointlist"`
+	QueryIndex     int      `json:"query_index"`
+	Scope          string   `json:"scope,omitempty"`
+	Start          int64    `json:"start,omitempty"`
+	TagSet         []string `json:"tag_set,omitempty"`
+	Unit           []ddUnit `json:"unit,omitempty"`
 }
 
 type ddUnit struct {
@@ -594,18 +790,54 @@ func parseMetricExpression(query string) (string, map[string]string) {
 }
 
 func metricTags(metric event.MetricEntry, e event.EventEnvelope) []string {
-	tags := []string{}
+	seen := map[string]string{}
 	add := func(key, value string) {
 		if strings.TrimSpace(value) != "" {
-			tags = append(tags, key+":"+value)
+			seen[key] = value
 		}
 	}
+	for key, value := range metric.Tags {
+		add(key, value)
+	}
 	add("service", coalesce(metric.Service, e.Normalized.Service))
+	add("service.name", coalesce(metric.Tags["service.name"], metric.Service, e.Normalized.Service))
 	add("env", e.Normalized.Env)
+	add("deployment.environment", coalesce(metric.Tags["deployment.environment"], e.Normalized.Env))
 	add("version", e.Normalized.Version)
-	add("route", coalesce(metric.Route, e.Normalized.Route))
+	add("service.version", coalesce(metric.Tags["service.version"], e.Normalized.Version))
+	route := coalesce(metric.Route, metric.Tags["http.route"], metric.Tags["route"], e.Normalized.Route)
+	add("route", route)
+	add("http.route", route)
+	add("resource.name", coalesce(metric.Tags["resource.name"], route))
+	method := coalesce(metric.Tags["http.request.method"], metric.Tags["http.method"], metric.Tags["method"], e.Normalized.Method)
+	add("method", method)
+	add("http.method", method)
+	add("http.request.method", method)
+	status := coalesce(metric.Tags["http.response.status_code"], metric.Tags["http.status_code"], metric.Tags["status_code"])
+	if status == "" && e.Normalized.StatusCode > 0 {
+		status = strconv.Itoa(e.Normalized.StatusCode)
+	}
+	add("status_code", status)
+	add("http.status_code", status)
+	add("http.response.status_code", status)
+	tags := make([]string, 0, len(seen))
+	for key, value := range seen {
+		tags = append(tags, key+":"+value)
+	}
 	slices.Sort(tags)
 	return tags
+}
+
+func appendUniqueString(values []string, next string) []string {
+	if next == "" {
+		return values
+	}
+	for _, value := range values {
+		if value == next {
+			return values
+		}
+	}
+	return append(values, next)
 }
 
 func tagsMatchScope(tags []string, scope map[string]string) bool {

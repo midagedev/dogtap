@@ -79,15 +79,29 @@ often need while debugging missing telemetry:
 - `workspace.id`
 - `case.id`
 - `route`, `http.route`, `resource_name`
+- `method`, `http.method`, `http.request.method`
+- `status_code`, `http.status_code`, `http.response.status_code`
+- `endpoint`
 - `source`
-- `type`
-- `status`
+- `type`, `payload_kind`
+- `status`, `validation.status`
+- `dogtap.id`
+- `request_id`, `correlation_id` for structured logs
 - free-text tokens for log messages and span names/resources
 
 Wildcard suffixes such as `service:api-*` are supported for simple prefix
 matching. Boolean expression parsing, facets, indexes, storage tiers, cursor
 pagination, quoted phrase matching, permissions, formulas, rollups, and
 Datadog's full query language are outside this first slice.
+
+Trace ID matching is conservative but understands common local debugging
+forms: exact strings, hex strings with leading zero padding, and Datadog-style
+decimal IDs that match the low 64 bits of a 128-bit hex trace ID.
+
+Metric scope matching supports retained, redacted point tags for service, env,
+version, route, method, and HTTP status aliases. Metric series also include the
+Dogtap extension field `dogtap_event_ids`; agents can use those IDs with
+Dogtap's native event APIs when they need the original retained envelope.
 
 ## Examples
 
@@ -96,7 +110,7 @@ Search logs that mention login for a trace:
 ```bash
 curl -sS -X POST http://127.0.0.1:8080/api/v2/logs/events/search \
   -H 'Content-Type: application/json' \
-  -d '{"filter":{"query":"service:api @trace_id:trace-1 login"},"page":{"limit":5}}'
+  -d '{"filter":{"query":"service:api @trace_id:trace-1 @http.status_code:500 @http.method:POST login"},"page":{"limit":5}}'
 ```
 
 Search Browser RUM by session:
@@ -119,6 +133,12 @@ Query metric samples:
 
 ```bash
 curl -sS 'http://127.0.0.1:8080/api/v1/query?from=0&to=9999999999&query=avg:http.server.request.duration{service:api}'
+```
+
+Query metric samples by retained HTTP tags:
+
+```bash
+curl -sS 'http://127.0.0.1:8080/api/v1/query?from=0&to=9999999999&query=avg:http.server.request.duration{http.route:/login,http.request.method:POST,http.response.status_code:200}'
 ```
 
 ## Safety Boundary
