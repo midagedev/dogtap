@@ -80,8 +80,8 @@ real app.
 
 | File | Purpose |
 | --- | --- |
-| `summary.md` | Human-readable status, observed dimensions, and failing hints. |
-| `assertions.json` | Machine-readable pass/fail checks for agents and CI. |
+| `summary.md` | Human-readable status, observed dimensions, likely causes, and failing hints. |
+| `assertions.json` | Machine-readable pass/fail checks, `rootCauses`, evidence, and next checks for agents and CI. |
 | `workflow-contracts.json` | Optional machine-readable workflow contract results for paths such as login, checkout, or case open. |
 | `events.json` | Raw retained event envelopes from `/api/events`. |
 | `report.json` | Latest validation report from `/api/reports/latest`. |

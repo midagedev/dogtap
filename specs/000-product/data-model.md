@@ -213,6 +213,16 @@ AssertionReport
   observed
   expectations
   checks
+  rootCauses
+```
+
+```text
+RootCause
+  id
+  title
+  evidence
+  nextChecks
+  relatedChecks
 ```
 
 Diagnostics archives contain the same evidence as the API response, split into

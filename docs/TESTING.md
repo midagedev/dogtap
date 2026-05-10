@@ -81,6 +81,9 @@ go run ./cmd/dogtap diagnose \
 The API archive and CLI command write `summary.md`, `assertions.json`,
 `events.json`, `report.json`, `debug-bundle.json`, and `metrics.txt` so humans
 and agents can triage missing telemetry without scraping console output.
+When diagnostics expectations fail, `assertions.json` includes `rootCauses`
+with evidence and next checks for common missing browser, log, trace, metric,
+OTLP exporter, endpoint routing, context, and Dogtap API failures.
 When workflow contracts are requested they also write
 `workflow-contracts.json`, which is the easiest file for an agent to inspect
 when a real path such as login emitted incomplete telemetry.

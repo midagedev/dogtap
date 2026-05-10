@@ -492,3 +492,18 @@ Evidence note 2026-05-10:
 Gate:
 
 - [x] G4 Product Usability workflow contract evidence subset
+
+## Phase 20: Diagnostics Root-Cause Classifier
+
+- [x] T200 Add `assertions.rootCauses` for common missing telemetry causes.
+- [x] T201 Classify Dogtap API reachability, no retained events, browser
+  telemetry/replay/session, backend logs, traces, metrics, OTLP exporter,
+  endpoint routing, and context propagation failures.
+- [x] T202 Include observed evidence, next checks, and related assertion IDs in
+  machine-readable diagnostics output.
+- [x] T203 Render likely causes in `summary.md`.
+- [x] T204 Document root-cause diagnostics in testing and agent triage docs.
+
+Gate:
+
+- [x] G5 CI Contract root-cause diagnostics subset

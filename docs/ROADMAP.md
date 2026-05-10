@@ -224,15 +224,18 @@ for humans and coding agents.
 
 Goal: make missing telemetry diagnosis more mechanical.
 
-Status: proposed.
+Status: first slice complete.
 
 - Add a diagnostics section that classifies likely causes: SDK not initialized,
   endpoint not reachable, wrong route/service selector, sampling disabled,
   replay consent/sample mismatch, log forwarder missing, OTLP exporter disabled,
-  trace propagation missing.
-- Include source-specific next commands and expected network targets.
+  trace propagation missing: first slice complete for common source, payload
+  kind, context, metric, trace, endpoint routing, OTLP exporter, and Dogtap API
+  failures.
+- Include source-specific next commands and expected network targets: first
+  slice complete in `assertions.rootCauses` and `summary.md`.
 - Keep it evidence-backed by observed endpoints, sources, sessions, traces, and
-  recent validation failures.
+  recent validation failures: first slice complete from diagnostics assertions.
 
 Why it matters: Dogtap should help agents explain why telemetry did not arrive,
 not only state that it is missing.

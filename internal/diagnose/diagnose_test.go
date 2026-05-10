@@ -205,9 +205,15 @@ func TestCollectFailsWithActionableHintForMissingExpectation(t *testing.T) {
 	}
 
 	assertions := readFile(t, filepath.Join(output, "assertions.json"))
-	for _, want := range []string{"source:logs", "payload-kind:replay", "Dogtap does not tail containers", "session replay"} {
+	for _, want := range []string{"source:logs", "payload-kind:replay", "Dogtap does not tail containers", "session replay", "rootCauses", "backend-logs-not-forwarded", "browser-telemetry-not-reaching-dogtap"} {
 		if !strings.Contains(assertions, want) {
 			t.Fatalf("assertions missing %q:\n%s", want, assertions)
+		}
+	}
+	summary := readFile(t, filepath.Join(output, "summary.md"))
+	for _, want := range []string{"## Likely Causes", "backend-logs-not-forwarded", "browser-telemetry-not-reaching-dogtap"} {
+		if !strings.Contains(summary, want) {
+			t.Fatalf("summary missing %q:\n%s", want, summary)
 		}
 	}
 }
@@ -241,6 +247,35 @@ func TestBuildAssertionsMatchesTraceAliases(t *testing.T) {
 	}
 	if traceCheck == nil || traceCheck.Status != "pass" {
 		t.Fatalf("expected trace alias check to pass: %#v", report.Checks)
+	}
+}
+
+func TestBuildAssertionsClassifiesOTLPAndEndpointFailures(t *testing.T) {
+	report := BuildAssertions(
+		[]event.EventEnvelope{
+			{
+				ID:          "rum-1",
+				Source:      event.SourceRUM,
+				PayloadKind: "event",
+				Endpoint:    "/datadog-intake-proxy",
+				Normalized: event.NormalizedTelemetry{
+					Source: event.SourceRUM,
+				},
+				Validation: event.ValidationResult{Status: "pass"},
+			},
+		},
+		Expectations{Sources: []string{"otlp"}, Endpoints: []string{"/v1/traces"}},
+		map[string]bool{"healthz": true, "readyz": true, "events": true, "report": true, "metrics": true, "debug-bundle": true},
+	)
+
+	got := map[string]bool{}
+	for _, cause := range report.RootCauses {
+		got[cause.ID] = true
+	}
+	for _, want := range []string{"otel-exporter-not-reaching-dogtap", "endpoint-routing-mismatch"} {
+		if !got[want] {
+			t.Fatalf("root causes missing %q: %#v", want, report.RootCauses)
+		}
 	}
 }
 

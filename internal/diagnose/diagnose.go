@@ -125,6 +125,7 @@ type AssertionReport struct {
 	Observed     Observed      `json:"observed"`
 	Expectations Expectations  `json:"expectations"`
 	Checks       []CheckResult `json:"checks"`
+	RootCauses   []RootCause   `json:"rootCauses,omitempty"`
 }
 
 type CheckSummary struct {
@@ -167,6 +168,14 @@ type CheckResult struct {
 	Message string `json:"message"`
 	Matched int    `json:"matched,omitempty"`
 	Hint    string `json:"hint,omitempty"`
+}
+
+type RootCause struct {
+	ID            string   `json:"id"`
+	Title         string   `json:"title"`
+	Evidence      []string `json:"evidence"`
+	NextChecks    []string `json:"nextChecks"`
+	RelatedChecks []string `json:"relatedChecks,omitempty"`
 }
 
 func Collect(ctx context.Context, opt Options) (Result, error) {
@@ -582,7 +591,198 @@ func BuildAssertions(events []event.EventEnvelope, expectations Expectations, pr
 		Observed:     observed,
 		Expectations: expectations,
 		Checks:       checks,
+		RootCauses:   ClassifyRootCauses(observed, checks, probes),
 	}
+}
+
+func ClassifyRootCauses(observed Observed, checks []CheckResult, probes map[string]bool) []RootCause {
+	failed := failedCheckIDs(checks)
+	causes := []RootCause{}
+	addCause := func(cause RootCause) {
+		if len(cause.RelatedChecks) == 0 {
+			return
+		}
+		causes = append(causes, cause)
+	}
+
+	probeFailures := relatedChecks(failed, "dogtap:healthz", "dogtap:readyz", "dogtap:events-api", "dogtap:report-api", "dogtap:metrics", "dogtap:debug-bundle")
+	if len(probeFailures) > 0 {
+		addCause(RootCause{
+			ID:            "dogtap-api-unreachable",
+			Title:         "Dogtap API or artifact endpoint was not reachable.",
+			Evidence:      append(observedEvidence(observed), "failed probes: "+strings.Join(probeFailures, ", ")),
+			NextChecks:    []string{"Verify -base-url points at Dogtap's HTTP port, not the APM/OTLP port.", "Open /healthz and /api/events from the same network namespace that runs diagnostics.", "Check Docker Compose service names, port publishing, and startup logs."},
+			RelatedChecks: probeFailures,
+		})
+	}
+
+	noEventFailures := relatedChecks(failed, "events:non-empty")
+	if len(noEventFailures) > 0 || observed.Total == 0 && hasExpectationFailure(failed) {
+		related := append([]string{}, noEventFailures...)
+		related = append(related, expectationFailures(failed)...)
+		addCause(RootCause{
+			ID:            "no-retained-events",
+			Title:         "No retained telemetry matched the diagnostics window.",
+			Evidence:      observedEvidence(observed),
+			NextChecks:    []string{"Trigger the app workflow again while Dogtap is running.", "Check SDK/tracer/collector endpoint URLs from inside the browser or container.", "Increase diagnostics limit or confirm retention settings did not evict the workflow events."},
+			RelatedChecks: uniqueStrings(related),
+		})
+	}
+
+	browserFailures := relatedCheckPrefixes(failed, "source:rum", "source:faro", "session:", "payload-kind:replay")
+	if len(browserFailures) > 0 {
+		addCause(RootCause{
+			ID:            "browser-telemetry-not-reaching-dogtap",
+			Title:         "Browser telemetry, session context, or replay did not reach Dogtap.",
+			Evidence:      observedEvidence(observed),
+			NextChecks:    []string{"Inspect browser network calls for /datadog-intake-proxy, /api/v2/replay, /faro, or /collect.", "Verify runtime RUM proxy or Faro collector config is injected before SDK initialization.", "Check RUM session sampling, replay sampling, consent, and user/session context setters."},
+			RelatedChecks: browserFailures,
+		})
+	}
+
+	logFailures := relatedCheckPrefixes(failed, "source:logs", "payload-kind:log")
+	if len(logFailures) > 0 {
+		addCause(RootCause{
+			ID:            "backend-logs-not-forwarded",
+			Title:         "Backend logs are not being forwarded to a Dogtap log intake.",
+			Evidence:      observedEvidence(observed),
+			NextChecks:    []string{"If logs only go to stdout, add a log forwarder bridge; Dogtap does not tail containers by itself.", "Send logs to /api/v2/logs, /v1/input, OTLP /v1/logs, or a collector pipeline.", "Keep DD_LOGS_INJECTION enabled when trace/log correlation is expected."},
+			RelatedChecks: logFailures,
+		})
+	}
+
+	traceFailures := relatedCheckPrefixes(failed, "source:apm", "payload-kind:trace", "trace:")
+	if len(traceFailures) > 0 {
+		addCause(RootCause{
+			ID:            "traces-not-exported",
+			Title:         "Trace spans did not reach Dogtap or did not preserve the expected trace ID.",
+			Evidence:      observedEvidence(observed),
+			NextChecks:    []string{"For Datadog tracers, verify DD_TRACE_AGENT_URL or DD_AGENT_HOST/DD_TRACE_AGENT_PORT points to Dogtap.", "For OTLP traces, verify OTEL_EXPORTER_OTLP_ENDPOINT and protocol selection.", "Confirm trace propagation from browser/resource requests into backend spans."},
+			RelatedChecks: traceFailures,
+		})
+	}
+
+	otlpFailures := relatedCheckPrefixes(failed, "source:otlp")
+	if len(otlpFailures) > 0 {
+		addCause(RootCause{
+			ID:            "otel-exporter-not-reaching-dogtap",
+			Title:         "OpenTelemetry exporter or collector output did not reach Dogtap.",
+			Evidence:      observedEvidence(observed),
+			NextChecks:    []string{"Verify OTEL_EXPORTER_OTLP_ENDPOINT, protocol, and enabled signal exporters from inside the app container.", "Check collector routing if the app sends telemetry to an intermediate collector.", "Confirm traces, logs, or metrics are not disabled by signal-specific exporter settings."},
+			RelatedChecks: otlpFailures,
+		})
+	}
+
+	metricFailures := relatedCheckPrefixes(failed, "payload-kind:metric", "metric:")
+	if len(metricFailures) > 0 {
+		addCause(RootCause{
+			ID:            "metrics-not-exported",
+			Title:         "Metrics did not reach Dogtap through OTLP.",
+			Evidence:      observedEvidence(observed),
+			NextChecks:    []string{"Verify OTLP metrics exporter enablement, endpoint, protocol, and export interval.", "Confirm the expected metric name is emitted during the tested workflow.", "Bridge DogStatsD to OTLP if the app only emits DogStatsD metrics."},
+			RelatedChecks: metricFailures,
+		})
+	}
+
+	endpointFailures := relatedCheckPrefixes(failed, "endpoint:")
+	if len(endpointFailures) > 0 {
+		addCause(RootCause{
+			ID:            "endpoint-routing-mismatch",
+			Title:         "Telemetry arrived on a different intake endpoint than expected.",
+			Evidence:      observedEvidence(observed),
+			NextChecks:    []string{"Compare the expected endpoint with events.json observed endpoints.", "Check SDK proxy, tracer agent URL, collector exporter URL, and Docker Compose service aliases.", "Confirm browser runtime config is injected before SDK initialization."},
+			RelatedChecks: endpointFailures,
+		})
+	}
+
+	contextFailures := relatedCheckPrefixes(failed, "service:", "route:", "case:")
+	if len(contextFailures) > 0 {
+		addCause(RootCause{
+			ID:            "telemetry-context-not-propagated",
+			Title:         "Telemetry arrived but required workflow context was missing.",
+			Evidence:      observedEvidence(observed),
+			NextChecks:    []string{"Check unified service tags and OpenTelemetry resource attributes.", "Attach route templates and workflow identifiers before logs, spans, RUM events, or metrics are emitted.", "Compare events.json with the expected service, route, case, and tenant fields."},
+			RelatedChecks: contextFailures,
+		})
+	}
+
+	return causes
+}
+
+func failedCheckIDs(checks []CheckResult) map[string]bool {
+	failed := map[string]bool{}
+	for _, check := range checks {
+		if check.Status == "fail" {
+			failed[check.ID] = true
+		}
+	}
+	return failed
+}
+
+func relatedChecks(failed map[string]bool, ids ...string) []string {
+	out := []string{}
+	for _, id := range ids {
+		if failed[id] {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+func relatedCheckPrefixes(failed map[string]bool, prefixes ...string) []string {
+	out := []string{}
+	for id := range failed {
+		for _, prefix := range prefixes {
+			if strings.HasPrefix(id, prefix) {
+				out = append(out, id)
+				break
+			}
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+func hasExpectationFailure(failed map[string]bool) bool {
+	return len(expectationFailures(failed)) > 0
+}
+
+func expectationFailures(failed map[string]bool) []string {
+	return relatedCheckPrefixes(failed, "source:", "payload-kind:", "service:", "session:", "trace:", "case:", "route:", "metric:", "endpoint:")
+}
+
+func observedEvidence(observed Observed) []string {
+	return []string{
+		fmt.Sprintf("events=%d", observed.Total),
+		"observed sources: " + mapEvidence(observed.Sources),
+		"observed payload kinds: " + mapEvidence(observed.PayloadKinds),
+		"observed endpoints: " + mapEvidence(observed.Endpoints),
+	}
+}
+
+func mapEvidence(values map[string]int) string {
+	if len(values) == 0 {
+		return "none"
+	}
+	parts := []string{}
+	for _, key := range sortedKeys(values) {
+		parts = append(parts, fmt.Sprintf("%s=%d", key, values[key]))
+	}
+	return strings.Join(parts, ", ")
+}
+
+func uniqueStrings(values []string) []string {
+	seen := map[string]bool{}
+	out := []string{}
+	for _, value := range values {
+		if value == "" || seen[value] {
+			continue
+		}
+		seen[value] = true
+		out = append(out, value)
+	}
+	sort.Strings(out)
+	return out
 }
 
 func observe(events []event.EventEnvelope) Observed {
@@ -871,6 +1071,24 @@ func RenderSummary(result Result) string {
 			markdownCell(check.Message),
 			markdownCell(check.Hint),
 		)
+	}
+	if len(result.Assertions.RootCauses) > 0 {
+		fmt.Fprintln(&b)
+		fmt.Fprintln(&b, "## Likely Causes")
+		fmt.Fprintln(&b)
+		fmt.Fprintln(&b, "| Cause | Evidence | Next Checks | Related Checks |")
+		fmt.Fprintln(&b, "| --- | --- | --- | --- |")
+		for _, cause := range result.Assertions.RootCauses {
+			fmt.Fprintf(
+				&b,
+				"| `%s` %s | %s | %s | %s |\n",
+				markdownCell(cause.ID),
+				markdownCell(cause.Title),
+				markdownCell(strings.Join(cause.Evidence, "; ")),
+				markdownCell(strings.Join(cause.NextChecks, "; ")),
+				markdownCell(strings.Join(cause.RelatedChecks, ", ")),
+			)
+		}
 	}
 	if len(result.WorkflowContracts) > 0 {
 		fmt.Fprintln(&b)
