@@ -602,13 +602,38 @@ select {
   min-height: 74px;
   padding: 9px 10px;
   display: grid;
-  gap: 5px;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 5px 8px;
+}
+
+.workflow-check-row.workflow-pass {
+  border-color: #dbe8d3;
+  background: #fbfdf9;
+}
+
+.workflow-check-row.workflow-fail {
+  border-color: #f3c7c7;
+  background: #fffafa;
+}
+
+.workflow-check-row small,
+.workflow-check-row em,
+.workflow-check-row .workflow-evidence-list {
+  grid-column: 1 / -1;
 }
 
 .workflow-check-row em {
   font-style: normal;
   white-space: normal;
   overflow-wrap: anywhere;
+}
+
+.workflow-check-row code {
+  border-radius: 5px;
+  padding: 3px 7px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 11px;
 }
 
 .workflow-evidence-list {
@@ -626,6 +651,17 @@ select {
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
+}
+
+.workflow-evidence-list code {
+  min-width: 0;
+  border-radius: 5px;
+  padding: 3px 7px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .session-timeline {

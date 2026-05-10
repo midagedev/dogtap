@@ -479,3 +479,16 @@ Evidence note 2026-05-10:
 - `dogtap contract validate` supports text and JSON output and keeps
   `dogtap diagnose -workflow-contract` behavior unchanged.
 - `make contract-check` validates bundled templates in CI before smoke runs.
+
+## Phase 19: Dashboard Contract Evidence Drilldown
+
+- [x] T190 Show pass and fail workflow contract checks in the dashboard.
+- [x] T191 Link matched event IDs from workflow checks to the event detail pane.
+- [x] T192 Link trace IDs to a matching retained trace event when available.
+- [x] T193 Add dashboard E2E coverage for workflow contract evidence links.
+- [ ] T194 Show evaluated selectors and closest observed alternatives for
+  failing checks after contract results carry selector metadata.
+
+Gate:
+
+- [x] G4 Product Usability workflow contract evidence subset

@@ -30,6 +30,8 @@ All notable changes to Dogtap will be documented in this file.
 - Workflow contract authoring guardrails with
   `dogtap contract validate <path>`, `make contract-check`, and a JSON Schema
   at `schemas/workflow-contract.schema.json`.
+- Dashboard workflow contract evidence now shows pass and fail checks with
+  event and trace evidence links.
 
 ### Notes
 

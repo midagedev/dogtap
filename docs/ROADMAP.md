@@ -209,10 +209,11 @@ but users need fast feedback before they run a full app workflow.
 
 Goal: make the dashboard explain why each contract passed or failed.
 
-Status: proposed.
+Status: first slice complete.
 
-- Show pass and fail checks, not only failing checks.
-- Link matched event IDs and trace IDs directly into the stream/detail pane.
+- Show pass and fail checks, not only failing checks: complete.
+- Link matched event IDs and trace IDs directly into the stream/detail pane:
+  first slice complete.
 - Show the selector that was evaluated and the closest observed alternatives
   when a check fails.
 
