@@ -507,3 +507,18 @@ Gate:
 Gate:
 
 - [x] G5 CI Contract root-cause diagnostics subset
+
+## Phase 21: Agent Gap Bridge Recipes
+
+- [x] T210 Add an executable OpenTelemetry Collector filelog bridge recipe for
+  JSON stdout/file logs into Dogtap OTLP logs.
+- [x] T211 Add a Compose smoke stack and `make smoke-log-bridge` verification
+  target.
+- [x] T212 Document that Dogtap still does not tail logs or replace Datadog
+  Agent container/Kubernetes log collection behavior.
+- [ ] T213 Add DogStatsD-to-OTLP guidance or a fixture-backed bridge example
+  without making Dogtap bind UDP `8125`.
+
+Gate:
+
+- [x] G8 Release Candidate agent gap bridge log subset

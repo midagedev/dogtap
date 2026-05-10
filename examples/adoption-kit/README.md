@@ -38,6 +38,9 @@ change that restores the original Datadog or OTLP endpoints.
 | `otel-collector-tee.yaml` | OpenTelemetry Collector config with Datadog primary and Dogtap secondary exporters |
 | `compose.otel-collector-tee.yaml` | Compose wrapper for the Collector tee pattern |
 | `otel-collector-tee.md` | Collector tee usage, sampling, and safety notes |
+| `otel-filelog-bridge.yaml` | OpenTelemetry Collector filelog receiver config for stdout/file log bridge inspection |
+| `compose.otel-filelog-bridge.yaml` | Runnable Dogtap plus Collector filelog bridge smoke stack |
+| `otel-filelog-bridge.md` | Filelog bridge usage, field expectations, and rollback notes |
 
 ## Compose Use
 
@@ -75,6 +78,13 @@ make smoke-external-injection
 For applications that already send OTLP to an OpenTelemetry Collector, use
 `otel-collector-tee.md` to keep Datadog as the primary exporter while sending a
 bounded inspection copy to Dogtap.
+
+For applications whose logs only reach Datadog because an Agent or collector
+tails stdout/files, use `otel-filelog-bridge.md` or run:
+
+```bash
+make smoke-log-bridge
+```
 
 Before routing Browser RUM or Session Replay through Dogtap outside a local-only
 environment, follow `docs/runbooks/RUM_PROXY_CANARY.md` for Browser SDK version,

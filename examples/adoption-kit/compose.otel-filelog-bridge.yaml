@@ -1,0 +1,55 @@
+services:
+  dogtap:
+    build:
+      context: ${DOGTAP_REPO:-../..}
+    image: ${DOGTAP_IMAGE:-dogtap:filelog-bridge-local}
+    ports:
+      - "${DOGTAP_LOG_BRIDGE_HTTP_PORT:-8080}:8080"
+      - "${DOGTAP_LOG_BRIDGE_OTLP_HTTP_PORT:-4318}:4318"
+    environment:
+      DOGTAP_MODE: local
+      DOGTAP_STORAGE_KIND: file
+      DOGTAP_STORAGE_PATH: /data/events.json
+      DOGTAP_STORAGE_MAX_EVENTS: ${DOGTAP_STORAGE_MAX_EVENTS:-1000}
+      DOGTAP_STORAGE_TTL: ${DOGTAP_STORAGE_TTL:-2h}
+    volumes:
+      - dogtap-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  log-writer:
+    image: alpine:3.20
+    command:
+      - /bin/sh
+      - -c
+      - |
+        mkdir -p /logs
+        cat > /logs/app.log <<'EOF'
+        {"timestamp":"2026-05-10T00:00:00.000Z","level":"info","service":"filelog-bridge-backend","env":"local","version":"smoke","message":"dogtap filelog bridge started","http.route":"/bridge/health","http.method":"GET","trace_id":"4bf92f3577b34da6a3ce929d0e0e4736"}
+        {"timestamp":"2026-05-10T00:00:01.000Z","level":"error","service":"filelog-bridge-backend","env":"local","version":"smoke","message":"dogtap filelog bridge failed","http.route":"/bridge/jobs","http.method":"POST","status_code":500,"trace_id":"4bf92f3577b34da6a3ce929d0e0e4736"}
+        EOF
+        sleep 300
+    volumes:
+      - filelog-data:/logs
+
+  otel-collector:
+    image: ${OTELCOL_CONTRIB_IMAGE:-otel/opentelemetry-collector-contrib:0.151.0}
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    environment:
+      DOGTAP_FILELOG_INCLUDE: /logs/*.log
+      DOGTAP_OTLP_HTTP_ENDPOINT: http://dogtap:4318
+    volumes:
+      - ./otel-filelog-bridge.yaml:/etc/otelcol-contrib/config.yaml:ro
+      - filelog-data:/logs:ro
+    depends_on:
+      dogtap:
+        condition: service_healthy
+      log-writer:
+        condition: service_started
+
+volumes:
+  dogtap-data:
+  filelog-data:

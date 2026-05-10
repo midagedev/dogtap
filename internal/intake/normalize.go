@@ -25,9 +25,33 @@ func Normalize(source event.Source, decoded any) event.NormalizedTelemetry {
 	n.Version = coalesce(findString(root, "version", "dd.version", "service.version"), tags["version"], tags["service.version"])
 	n.Host = findString(root, "host", "hostname", "host.name")
 	n.Timestamp = findString(root, "timestamp", "date", "time")
-	n.TraceID = findString(traceRoot, "_dd.trace_id", "trace_id", "traceId", "dd.trace_id", "trace.id")
-	n.SpanID = findString(traceRoot, "_dd.span_id", "span_id", "spanId", "dd.span_id", "span.id")
-	n.ParentSpanID = findString(traceRoot, "parent_id", "parentSpanId", "parent.span.id")
+	n.TraceID = coalesce(
+		findString(traceRoot, "_dd.trace_id", "trace_id", "traceId", "dd.trace_id", "trace.id"),
+		tags["_dd.trace_id"],
+		tags["trace_id"],
+		tags["traceId"],
+		tags["dd.trace_id"],
+		tags["trace.id"],
+	)
+	n.SpanID = coalesce(
+		findString(traceRoot, "_dd.span_id", "span_id", "spanId", "dd.span_id", "span.id"),
+		tags["_dd.span_id"],
+		tags["span_id"],
+		tags["spanId"],
+		tags["dd.span_id"],
+		tags["span.id"],
+	)
+	n.ParentSpanID = coalesce(
+		findString(traceRoot, "parent_id", "parentSpanId", "parent.span.id"),
+		tags["parent_id"],
+		tags["parentSpanId"],
+		tags["parent.span.id"],
+	)
+	dropTagKeys(tags,
+		"_dd.trace_id", "trace_id", "traceId", "dd.trace_id", "trace.id",
+		"_dd.span_id", "span_id", "spanId", "dd.span_id", "span.id",
+		"parent_id", "parentSpanId", "parent.span.id",
+	)
 	n.SessionID = findString(root, "event.session.id", "session.id", "session_id", "sessionId", "application.id")
 	n.ViewID = findString(root, "event.view.id", "view.id", "view_id", "viewId")
 	n.UserID = findString(root, "usr.id", "user.id", "user_id", "userId", "context.user.id")
@@ -273,6 +297,12 @@ func collectAttributePairs(v any, tags map[string]string) {
 		for _, item := range typed {
 			collectAttributePairs(item, tags)
 		}
+	}
+}
+
+func dropTagKeys(tags map[string]string, keys ...string) {
+	for _, key := range keys {
+		delete(tags, key)
 	}
 }
 
