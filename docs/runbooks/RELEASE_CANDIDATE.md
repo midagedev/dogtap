@@ -23,7 +23,11 @@ The sanitized adoption profile evidence is recorded in
    go test ./...
    npm --prefix web run build
    make shell-check
+   make doc-check
+   make contract-check
    make smoke-adoption
+   make smoke-log-bridge
+   make smoke-statsd-bridge
    make smoke-external-injection
    make demo-visual-check
    go run ./cmd/dogtap replay \

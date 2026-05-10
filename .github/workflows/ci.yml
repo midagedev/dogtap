@@ -110,6 +110,16 @@ jobs:
           DOGTAP_ARTIFACT_DIR: .dogtap/diagnostics/generic
         run: make smoke-adoption
 
+      - name: Run filelog bridge smoke
+        env:
+          DOGTAP_ARTIFACT_DIR: .dogtap/diagnostics/log-bridge
+        run: make smoke-log-bridge
+
+      - name: Run StatsD bridge smoke
+        env:
+          DOGTAP_ARTIFACT_DIR: .dogtap/diagnostics/statsd-bridge
+        run: make smoke-statsd-bridge
+
       - name: Run external injection smoke
         env:
           DOGTAP_ARTIFACT_DIR: .dogtap/diagnostics/external-injection

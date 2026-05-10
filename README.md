@@ -468,10 +468,11 @@ Before tagging a release:
 2. Run `npm --prefix web run build`.
 3. Run `make shell-check`.
 4. Run `make smoke-adoption`.
-5. Re-run the public-surface scan for company/private strings and secret
+5. Run `make smoke-log-bridge` and `make smoke-statsd-bridge`.
+6. Re-run the public-surface scan for company/private strings and secret
    patterns.
-6. Update `CHANGELOG.md`.
-7. Confirm the draft tag name matches the changelog entry.
+7. Update `CHANGELOG.md`.
+8. Confirm the draft tag name matches the changelog entry.
 
 ## License
 
