@@ -332,14 +332,15 @@ restarts while staying bounded.
 
 Goal: make logs and metrics easier to inspect without hiding payload truth.
 
-Status: planned.
+Status: first slice complete.
 
 - Add structured log drilldown for service, env, route, status, trace/span IDs,
-  severity, and safe attributes.
+  severity, and safe attributes: complete.
 - Add retained metric charts and metric detail summaries using existing metric
-  samples.
-- Verify desktop and mobile dashboard states visually with Playwright.
-- Keep raw/decoded payload access visible in local and CI modes.
+  samples: complete.
+- Verify desktop and mobile dashboard states visually with Playwright: complete
+  for the mocked dashboard state.
+- Keep raw/decoded payload access visible in local and CI modes: complete.
 
 Why it matters: Dogtap's strongest user-facing value is answering whether a
 workflow emitted usable logs, traces, metrics, RUM, and replay evidence.

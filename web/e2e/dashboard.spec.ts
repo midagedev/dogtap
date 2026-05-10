@@ -209,6 +209,10 @@ const events = [
       status: "error",
       message: "case export failed",
       trace_id: "123456789",
+      span_id: "987654321",
+      route: "/api/cases/{caseId}/exports",
+      status_code: 500,
+      account_id: "account-123",
     },
     details: {
       logs: [
@@ -393,6 +397,16 @@ const events = [
           value: 48.5,
           aggregation: "gauge",
           route: "/api/cases/{caseId}/exports",
+          timestamp: "2026-05-08T08:15:04Z",
+        },
+        {
+          name: "http.server.request.duration",
+          service: "api-service",
+          unit: "ms",
+          value: 64.25,
+          aggregation: "gauge",
+          route: "/api/cases/{caseId}/exports",
+          timestamp: "2026-05-08T08:15:05Z",
         },
       ],
     },
@@ -640,6 +654,12 @@ test("dashboard renders stream detail, failure inbox, correlation, and query bui
   await expect(
     page.getByLabel("Metric samples").getByText("http.server.request.duration"),
   ).toBeVisible();
+  await expect(
+    page.getByRole("img", {
+      name: "http.server.request.duration retained metric chart",
+    }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Metric samples").getByText("2 samples")).toBeVisible();
   const workflowContracts = page.getByLabel("Workflow contract diagnostics");
   await expect(
     workflowContracts.getByText("browser-session-context", { exact: true }),
@@ -715,6 +735,13 @@ test("dashboard renders stream detail, failure inbox, correlation, and query bui
   await expect(
     page.locator(".log-viewer").getByText("case export failed"),
   ).toBeVisible();
+  const logFields = page.getByLabel("Structured log fields");
+  await expect(logFields.getByText("route")).toBeVisible();
+  await expect(
+    logFields.getByText("/api/cases/{caseId}/exports"),
+  ).toBeVisible();
+  await expect(logFields.getByText("500")).toBeVisible();
+  await expect(logFields.getByText("987654321")).toBeVisible();
 
   const query = page.getByLabel("Datadog search query");
   await expect(query).toHaveValue(/service:api-service/);
@@ -742,8 +769,12 @@ test("dashboard renders stream detail, failure inbox, correlation, and query bui
   await expect(
     page.getByRole("heading", { name: "Metric Viewer" }),
   ).toBeVisible();
+  await expect(page.getByLabel("Metric summary")).toBeVisible();
   await expect(
     page.locator(".metric-detail-list").getByText("48.5 ms"),
+  ).toBeVisible();
+  await expect(
+    page.locator(".metric-detail-list").getByText("64.25 ms"),
   ).toBeVisible();
 });
 

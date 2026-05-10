@@ -588,9 +588,9 @@ Gate:
 
 - [ ] T260 Add structured log fields to the redacted event detail model when raw
   payloads are unavailable.
-- [ ] T261 Add structured log dashboard drilldown with trace, route, status,
+- [x] T261 Add structured log dashboard drilldown with trace, route, status,
   service, env, and preserved payload access.
-- [ ] T262 Add retained metric charts and metric detail summaries in the
+- [x] T262 Add retained metric charts and metric detail summaries in the
   dashboard.
 - [ ] T263 Add Datadog-compatible API refinements for structured log and metric
   query scenarios discovered by dashboard/agent usage.
@@ -599,5 +599,5 @@ Gate:
 
 Gate:
 
-- [ ] G4 Product Usability dashboard observability subset
+- [x] G4 Product Usability dashboard observability subset
 - [ ] G8 Release Candidate dev-cluster subset

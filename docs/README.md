@@ -68,6 +68,8 @@ Current release-candidate state:
 
 - [G2 SQLite Storage](gates/G2_SQLITE_STORAGE.md): persistent queryable store
   subset passed
+- [G4 Dashboard Observability UX](gates/G4_DASHBOARD_OBSERVABILITY_UX.md):
+  structured log and metric chart subset passed
 - [G8 Generic Adoption Smoke](gates/G8_GENERIC_ADOPTION_SMOKE.md): generic
   quickstart subset passed
 - [G8 External Injection Adoption](gates/G8_EXTERNAL_INJECTION_ADOPTION.md):
