@@ -121,7 +121,6 @@ candidate.
 - sample apps
 - validation profile examples
 - OpenTelemetry Collector recipes
-- Helm chart or ECS task example
 - generic frontend/backend adoption kit: complete
 - copyable Docker Compose and environment snippets: complete
 - Datadog-preserving external injection strategy: complete
@@ -261,3 +260,18 @@ Status: first slice implemented by `make doc-check`.
 - Run the check in CI alongside shell syntax checks.
 
 Why it matters: Dogtap is spec-driven, so stale specs are a product quality bug.
+
+### Chunk F: Public Deployment Packaging
+
+Goal: make Dogtap easy to trial in common deployment environments.
+
+Status: proposed.
+
+- Add a Helm values example for sidecar or companion-service deployment.
+- Add an ECS task definition example for Dogtap as an internal inspection
+  target.
+- Include explicit retention, sampling, forwarding, and private-network
+  warnings in each recipe.
+
+Why it matters: Docker Compose is enough for local adoption, but public users
+need copyable deployment shapes before they can run team-level trials.

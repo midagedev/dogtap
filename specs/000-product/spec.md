@@ -62,7 +62,9 @@ Acceptance criteria:
 
 ### Scenario 2: Backend trace and log correlation
 
-Given a Spring service instrumented for Datadog APM and JSON logs, when an API call fails, Dogtap shows the inbound request, outgoing trace spans, structured logs, status code, route, service, env, version, and correlation IDs.
+Given a backend service instrumented for Datadog APM and JSON logs, when an API
+call fails, Dogtap shows the inbound request, outgoing trace spans, structured
+logs, status code, route, service, env, version, and correlation IDs.
 
 Acceptance criteria:
 

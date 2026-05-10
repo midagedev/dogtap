@@ -26,10 +26,13 @@ Cover deterministic logic:
 Use fixture payloads from real SDKs and tracers:
 
 - Datadog Browser RUM
-- Datadog Java tracer
+- Datadog tracer fixture-backed payloads, currently from Node `dd-trace`
 - Datadog logs HTTP intake
 - OTLP HTTP
 - OTLP gRPC
+
+Java/Spring tracer evidence and `dd-apm-test-agent` comparison are deferred by
+ADR 0005 and should be added only with fixture-backed evidence.
 
 Each fixture should assert:
 
@@ -101,7 +104,8 @@ diagnostics snapshots, workflow contracts, and workflow contract CI examples.
 Run sample apps against Dogtap:
 
 - browser app with Datadog RUM
-- Spring app with Datadog Java tracer
+- backend app with a Datadog tracer fixture; Java/Spring integration is
+  deferred until it has captured evidence
 - log sender
 - OpenTelemetry sample
 

@@ -443,7 +443,8 @@ Evidence note 2026-05-10:
   returning in CI.
 - [x] T173 Record the next implementation roadmap discovered during alignment,
   including contract authoring guardrails, dashboard evidence drilldown,
-  diagnostics root-cause classification, and Agent gap bridge recipes.
+  diagnostics root-cause classification, Agent gap bridge recipes, and public
+  deployment packaging.
 
 Gate:
 

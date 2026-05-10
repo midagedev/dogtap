@@ -74,7 +74,8 @@ Parallel work:
 
 - RUM Agent captures browser RUM fixtures.
 - Logs Agent captures JSON, text, and gzip log fixtures.
-- APM Agent captures Datadog Java tracer fixtures and evaluates `dd-apm-test-agent`.
+- APM Agent captures fixture-backed Datadog tracer payloads and tracks
+  Java/Spring plus `dd-apm-test-agent` comparison as deferred evidence work.
 - OTLP Agent captures OTLP HTTP/gRPC fixtures.
 
 Integration gate:
