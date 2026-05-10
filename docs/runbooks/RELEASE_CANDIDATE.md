@@ -25,6 +25,7 @@ The sanitized adoption profile evidence is recorded in
    make shell-check
    make doc-check
    make contract-check
+   make deployment-check
    make smoke-adoption
    make smoke-log-bridge
    make smoke-statsd-bridge

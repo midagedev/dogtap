@@ -47,6 +47,7 @@ jobs:
           make shell-check
           make doc-check
           make contract-check
+          make deployment-check
           DOGTAP_ARTIFACT_DIR=.dogtap/diagnostics/generic make smoke-adoption
           DOGTAP_ARTIFACT_DIR=.dogtap/diagnostics/log-bridge make smoke-log-bridge
           DOGTAP_ARTIFACT_DIR=.dogtap/diagnostics/statsd-bridge make smoke-statsd-bridge

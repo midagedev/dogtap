@@ -1,0 +1,113 @@
+# Helm values fragment for adding Dogtap to an existing application pod.
+#
+# This shape matches common chart extension points. Rename these keys to your
+# chart's actual values schema. The important part is the same-pod sidecar and
+# env configuration, not these exact top-level names.
+#
+# Private-network warning: keep Dogtap ports reachable only from the pod,
+# namespace, VPN, port-forward, or other internal network boundary.
+app:
+  extraEnv:
+    # Keep existing Datadog tracer code while redirecting the agent endpoint to
+    # the same-pod Dogtap sidecar for a trial. Dogtap inspects APM but does not
+    # forward APM to Datadog, so keep Datadog Agent or Collector as the primary
+    # production path when trace continuity matters.
+    - name: DD_TRACE_AGENT_URL
+      value: http://127.0.0.1:8126
+    - name: DD_AGENT_HOST
+      value: "127.0.0.1"
+    - name: DD_TRACE_AGENT_PORT
+      value: "8126"
+    - name: DD_LOGS_INJECTION
+      value: "true"
+    # Keep existing OpenTelemetry SDK code by overriding exporter endpoints for
+    # traces/logs/metrics. Use a Collector tee when Datadog must remain primary.
+    - name: OTEL_EXPORTER_OTLP_PROTOCOL
+      value: http/protobuf
+    - name: OTEL_EXPORTER_OTLP_ENDPOINT
+      value: http://127.0.0.1:4318
+    - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+      value: http://127.0.0.1:4318/v1/traces
+    - name: OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
+      value: http://127.0.0.1:4318/v1/logs
+    - name: OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+      value: http://127.0.0.1:4318/v1/metrics
+
+  extraContainers:
+    - name: dogtap
+      # Replace latest with a released version tag for shared or production-like
+      # trials after the first smoke succeeds.
+      image: ghcr.io/midagedev/dogtap:latest
+      imagePullPolicy: IfNotPresent
+      env:
+        - name: DOGTAP_MODE
+          value: tee
+        - name: DOGTAP_HTTP_ADDR
+          value: 0.0.0.0:8080
+        - name: DOGTAP_APM_ADDR
+          value: 0.0.0.0:8126
+        - name: DOGTAP_OTLP_HTTP_ADDR
+          value: 0.0.0.0:4318
+        - name: DOGTAP_GRPC_ADDR
+          value: 0.0.0.0:4317
+        # Retention warning: this is a short diagnostic buffer, not a log or
+        # trace archive.
+        - name: DOGTAP_STORAGE_KIND
+          value: file
+        - name: DOGTAP_STORAGE_PATH
+          value: /data/events.json
+        - name: DOGTAP_STORAGE_MAX_EVENTS
+          value: "2000"
+        - name: DOGTAP_STORAGE_TTL
+          value: 2h
+        # Sampling warning: production-like traffic should always set this
+        # explicitly so Dogtap copy volume stays bounded.
+        - name: DOGTAP_SAMPLING_RATE
+          value: "0.10"
+        - name: DOGTAP_QUEUE_MAX_IN_FLIGHT
+          value: "100"
+        - name: DOGTAP_BACKPRESSURE_POLICY
+          value: drop-newest
+        # Raw payload warning: keep raw production telemetry disabled by
+        # default. Enable only for a documented incident window.
+        - name: DOGTAP_ALLOW_RAW_PAYLOADS
+          value: "false"
+        # Forwarding warning: leave disabled unless the owning team has
+        # approved a bounded forwarding experiment and injected secrets from a
+        # secret manager, not this values file.
+        - name: DOGTAP_FORWARDING_ENABLED
+          value: "false"
+        - name: DOGTAP_FORWARDING_MAX_ATTEMPTS
+          value: "1"
+        - name: DOGTAP_FORWARDING_TIMEOUT
+          value: 5s
+      ports:
+        - name: dogtap-http
+          containerPort: 8080
+        - name: dogtap-apm
+          containerPort: 8126
+        - name: dogtap-otlp-grpc
+          containerPort: 4317
+        - name: dogtap-otlp-http
+          containerPort: 4318
+      readinessProbe:
+        httpGet:
+          path: /readyz
+          port: dogtap-http
+        initialDelaySeconds: 2
+        periodSeconds: 5
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+      volumeMounts:
+        - name: dogtap-data
+          mountPath: /data
+
+  extraVolumes:
+    - name: dogtap-data
+      emptyDir:
+        sizeLimit: 1Gi

@@ -7,6 +7,7 @@
 - [ ] `go test ./...`
 - [ ] `npm --prefix web run build`
 - [ ] `make shell-check`
+- [ ] `make deployment-check`
 - [ ] `make smoke-adoption`
 - [ ] Dashboard E2E or screenshot evidence, if UI changed
 

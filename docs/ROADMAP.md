@@ -276,13 +276,15 @@ Why it matters: Dogtap is spec-driven, so stale specs are a product quality bug.
 
 Goal: make Dogtap easy to trial in common deployment environments.
 
-Status: proposed.
+Status: first slice complete.
 
-- Add a Helm values example for sidecar or companion-service deployment.
+- Add a Helm values example for sidecar or companion-service deployment:
+  complete for sidecar and companion values models under
+  `examples/deployment/`.
 - Add an ECS task definition example for Dogtap as an internal inspection
-  target.
+  target: complete with Dogtap marked non-essential.
 - Include explicit retention, sampling, forwarding, and private-network
-  warnings in each recipe.
+  warnings in each recipe: complete and checked by `make deployment-check`.
 
 Why it matters: Docker Compose is enough for local adoption, but public users
 need copyable deployment shapes before they can run team-level trials.

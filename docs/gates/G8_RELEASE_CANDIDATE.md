@@ -1,6 +1,6 @@
 # G8 Release Candidate Evidence
 
-Date: 2026-05-09
+Date: 2026-05-11
 
 ## Status
 
@@ -16,10 +16,12 @@ the first public release candidate.
   templates exist.
 - CI runs Go tests, dashboard build/E2E, seeded demo visual verification,
   generic adoption smoke, filelog bridge smoke, StatsD bridge smoke, shell
-  syntax checks, docs/spec checks, workflow contract checks, and container
-  build.
+  syntax checks, docs/spec checks, workflow contract checks, deployment example
+  checks, and container build.
 - Tag-based release automation exists for binary archives and GHCR images.
 - Generic adoption kit and seeded demo are public and reproducible.
+- Public deployment examples cover Helm sidecar, Helm companion service, and
+  ECS/Fargate trial shapes with explicit safety markers.
 - G0 through G7 evidence is documented, with APM and OTLP forwarding explicitly
   scoped out of the first forwarding slice.
 - Sanitized adoption profile evidence is recorded in
@@ -59,6 +61,7 @@ npm --prefix web run build
 make shell-check
 make doc-check
 make contract-check
+make deployment-check
 make smoke-adoption
 make smoke-log-bridge
 make smoke-statsd-bridge
