@@ -486,7 +486,7 @@ Evidence note 2026-05-10:
 - [x] T191 Link matched event IDs from workflow checks to the event detail pane.
 - [x] T192 Link trace IDs to a matching retained trace event when available.
 - [x] T193 Add dashboard E2E coverage for workflow contract evidence links.
-- [ ] T194 Show evaluated selectors and closest observed alternatives for
+- [x] T194 Show evaluated selectors and closest observed alternatives for
   failing checks after contract results carry selector metadata.
 
 Gate:

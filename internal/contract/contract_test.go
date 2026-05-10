@@ -72,6 +72,90 @@ func TestMissingRequiredSignalFailsWithHint(t *testing.T) {
 	}
 }
 
+func TestFailedEventCheckIncludesSelectorAlternatives(t *testing.T) {
+	result := Evaluate(Definition{
+		Name: "login-workflow",
+		Checks: []CheckDefinition{{
+			ID:     "login-rum-context",
+			Type:   "event",
+			Source: "rum",
+			Route:  "/login",
+			Fields: []string{"accountId", "userId"},
+		}},
+	}, representativeEvents())
+
+	check := result.Checks[0]
+	if check.Status != "fail" || len(check.Selectors) != 1 {
+		t.Fatalf("unexpected check: %#v", check)
+	}
+	selector := check.Selectors[0]
+	if selector.Criteria.Source != "rum" || selector.Criteria.Route != "/login" || selector.Matched != 0 {
+		t.Fatalf("unexpected selector: %#v", selector)
+	}
+	if len(selector.Alternatives) == 0 || selector.Alternatives[0].EventID != "rum-1" {
+		t.Fatalf("expected rum-1 as closest alternative: %#v", selector.Alternatives)
+	}
+	if !hasString(selector.Alternatives[0].MissingFields, "accountId") || !hasString(selector.Alternatives[0].PresentFields, "userId") {
+		t.Fatalf("unexpected alternative fields: %#v", selector.Alternatives[0])
+	}
+}
+
+func TestFailedLogCheckIncludesPatternAlternative(t *testing.T) {
+	result := Evaluate(Definition{
+		Name: "login-workflow",
+		Checks: []CheckDefinition{{
+			ID:      "login-log",
+			Type:    "log-message",
+			Source:  "logs",
+			Pattern: "login succeeded",
+		}},
+	}, representativeEvents())
+
+	check := result.Checks[0]
+	if check.Status != "fail" || len(check.Selectors) != 1 {
+		t.Fatalf("unexpected check: %#v", check)
+	}
+	selector := check.Selectors[0]
+	if selector.Pattern != "login succeeded" || selector.Matched != 1 {
+		t.Fatalf("unexpected selector: %#v", selector)
+	}
+	if len(selector.Alternatives) == 0 || selector.Alternatives[0].EventID != "log-1" || !hasString(selector.Alternatives[0].Differences, "log pattern did not match") {
+		t.Fatalf("unexpected log alternatives: %#v", selector.Alternatives)
+	}
+}
+
+func TestFailedTraceCorrelationIncludesFromAndToSelectors(t *testing.T) {
+	result := Evaluate(Definition{
+		Name: "login-workflow",
+		Checks: []CheckDefinition{{
+			ID:   "browser-to-billing-trace",
+			Type: "trace-correlation",
+			From: Selector{
+				Source: "rum",
+				Fields: []string{"traceId"},
+			},
+			To: Selector{
+				PayloadKind: "trace",
+				Service:     "billing-service",
+			},
+		}},
+	}, representativeEvents())
+
+	check := result.Checks[0]
+	if check.Status != "fail" || len(check.Selectors) != 2 {
+		t.Fatalf("unexpected check: %#v", check)
+	}
+	if check.Selectors[0].Label != "from" || check.Selectors[0].Matched != 1 {
+		t.Fatalf("unexpected from selector: %#v", check.Selectors[0])
+	}
+	if check.Selectors[1].Label != "to" || check.Selectors[1].Matched != 0 {
+		t.Fatalf("unexpected to selector: %#v", check.Selectors[1])
+	}
+	if len(check.Selectors[1].Alternatives) == 0 || check.Selectors[1].Alternatives[0].EventID != "trace-1" {
+		t.Fatalf("expected trace-1 as closest to alternative: %#v", check.Selectors[1].Alternatives)
+	}
+}
+
 func TestNoSensitiveValuesFindsLowercaseEmailBearerAndJWT(t *testing.T) {
 	events := []event.EventEnvelope{
 		{
@@ -318,6 +402,15 @@ func validationMessages(report ValidationReport) string {
 		messages = append(messages, issue.Message)
 	}
 	return strings.Join(messages, "\n")
+}
+
+func hasString(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }
 
 func representativeEvents() []event.EventEnvelope {

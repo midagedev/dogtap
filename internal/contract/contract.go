@@ -66,15 +66,39 @@ type Summary struct {
 }
 
 type CheckResult struct {
-	ID          string   `json:"id"`
-	Type        string   `json:"type"`
-	Status      string   `json:"status"`
-	Message     string   `json:"message"`
-	Matched     int      `json:"matched,omitempty"`
-	EventIDs    []string `json:"eventIds,omitempty"`
-	TraceIDs    []string `json:"traceIds,omitempty"`
-	Description string   `json:"description,omitempty"`
-	Hint        string   `json:"hint,omitempty"`
+	ID          string           `json:"id"`
+	Type        string           `json:"type"`
+	Status      string           `json:"status"`
+	Message     string           `json:"message"`
+	Matched     int              `json:"matched,omitempty"`
+	EventIDs    []string         `json:"eventIds,omitempty"`
+	TraceIDs    []string         `json:"traceIds,omitempty"`
+	Selectors   []SelectorResult `json:"selectors,omitempty"`
+	Description string           `json:"description,omitempty"`
+	Hint        string           `json:"hint,omitempty"`
+}
+
+type SelectorResult struct {
+	Label        string                `json:"label,omitempty"`
+	Criteria     Selector              `json:"criteria"`
+	Pattern      string                `json:"pattern,omitempty"`
+	Metric       string                `json:"metric,omitempty"`
+	Matched      int                   `json:"matched"`
+	EventIDs     []string              `json:"eventIds,omitempty"`
+	Alternatives []SelectorAlternative `json:"alternatives,omitempty"`
+}
+
+type SelectorAlternative struct {
+	EventID       string   `json:"eventId"`
+	Source        string   `json:"source,omitempty"`
+	PayloadKind   string   `json:"payloadKind,omitempty"`
+	Service       string   `json:"service,omitempty"`
+	Route         string   `json:"route,omitempty"`
+	TraceID       string   `json:"traceId,omitempty"`
+	SessionID     string   `json:"sessionId,omitempty"`
+	PresentFields []string `json:"presentFields,omitempty"`
+	Differences   []string `json:"differences,omitempty"`
+	MissingFields []string `json:"missingFields,omitempty"`
 }
 
 type ValidationReport struct {
@@ -522,16 +546,13 @@ func evaluateCheck(check CheckDefinition, events []event.EventEnvelope) CheckRes
 }
 
 func evaluateEventCheck(check CheckDefinition, events []event.EventEnvelope) CheckResult {
-	selector := Selector{
-		Source:      check.Source,
-		PayloadKind: check.PayloadKind,
-		Service:     check.Service,
-		Route:       check.Route,
-		RouteRegex:  check.RouteRegex,
-		Fields:      check.Fields,
-	}
+	selector := checkSelector(check)
 	matches := matchingEvents(events, selector)
-	return countResult(check, len(matches), eventIDs(matches), nil, fmt.Sprintf("Observed %d matching event(s).", len(matches)))
+	result := countResult(check, len(matches), eventIDs(matches), nil, fmt.Sprintf("Observed %d matching event(s).", len(matches)))
+	if result.Status == "fail" {
+		result.Selectors = []SelectorResult{evaluatedSelector("", selector, matches, events, "", "", "")}
+	}
+	return result
 }
 
 func evaluateLogMessageCheck(check CheckDefinition, events []event.EventEnvelope) CheckResult {
@@ -539,17 +560,11 @@ func evaluateLogMessageCheck(check CheckDefinition, events []event.EventEnvelope
 	if err != nil {
 		return invalidPatternResult(check, err)
 	}
-	selector := Selector{
-		Source:      check.Source,
-		PayloadKind: check.PayloadKind,
-		Service:     check.Service,
-		Route:       check.Route,
-		RouteRegex:  check.RouteRegex,
-		Fields:      check.Fields,
-	}
+	selector := checkSelector(check)
+	selectorMatches := matchingEvents(events, selector)
 	matches := []event.EventEnvelope{}
-	for _, e := range events {
-		if !matchesSelector(e, selector) || e.Details == nil {
+	for _, e := range selectorMatches {
+		if e.Details == nil {
 			continue
 		}
 		for _, log := range e.Details.Logs {
@@ -559,25 +574,24 @@ func evaluateLogMessageCheck(check CheckDefinition, events []event.EventEnvelope
 			}
 		}
 	}
-	return countResult(check, len(matches), eventIDs(matches), nil, fmt.Sprintf("Observed %d matching log event(s).", len(matches)))
+	result := countResult(check, len(matches), eventIDs(matches), nil, fmt.Sprintf("Observed %d matching log event(s).", len(matches)))
+	if result.Status == "fail" {
+		result.Selectors = []SelectorResult{evaluatedSelector("", selector, selectorMatches, events, effectivePattern(check.Pattern), "", "log pattern did not match")}
+	}
+	return result
 }
 
 func evaluateMetricCheck(check CheckDefinition, events []event.EventEnvelope) CheckResult {
-	pattern, err := compilePattern(coalesce(check.Pattern, regexp.QuoteMeta(check.Metric)))
+	effectiveMetricPattern := coalesce(check.Pattern, regexp.QuoteMeta(check.Metric))
+	pattern, err := compilePattern(effectiveMetricPattern)
 	if err != nil {
 		return invalidPatternResult(check, err)
 	}
-	selector := Selector{
-		Source:      check.Source,
-		PayloadKind: check.PayloadKind,
-		Service:     check.Service,
-		Route:       check.Route,
-		RouteRegex:  check.RouteRegex,
-		Fields:      check.Fields,
-	}
+	selector := checkSelector(check)
+	selectorMatches := matchingEvents(events, selector)
 	matches := []event.EventEnvelope{}
-	for _, e := range events {
-		if !matchesSelector(e, selector) || e.Details == nil {
+	for _, e := range selectorMatches {
+		if e.Details == nil {
 			continue
 		}
 		for _, metric := range e.Details.Metrics {
@@ -587,7 +601,11 @@ func evaluateMetricCheck(check CheckDefinition, events []event.EventEnvelope) Ch
 			}
 		}
 	}
-	return countResult(check, len(matches), eventIDs(matches), nil, fmt.Sprintf("Observed %d matching metric event(s).", len(matches)))
+	result := countResult(check, len(matches), eventIDs(matches), nil, fmt.Sprintf("Observed %d matching metric event(s).", len(matches)))
+	if result.Status == "fail" {
+		result.Selectors = []SelectorResult{evaluatedSelector("", selector, selectorMatches, events, effectivePattern(effectiveMetricPattern), check.Metric, "metric pattern did not match")}
+	}
+	return result
 }
 
 func evaluateTraceCorrelationCheck(check CheckDefinition, events []event.EventEnvelope) CheckResult {
@@ -617,7 +635,14 @@ func evaluateTraceCorrelationCheck(check CheckDefinition, events []event.EventEn
 			}
 		}
 	}
-	return countResult(check, len(matchedEvents), eventIDs(matchedEvents), sortedSet(matchedTraces), fmt.Sprintf("Observed %d correlated trace event(s).", len(matchedEvents)))
+	result := countResult(check, len(matchedEvents), eventIDs(matchedEvents), sortedSet(matchedTraces), fmt.Sprintf("Observed %d correlated trace event(s).", len(matchedEvents)))
+	if result.Status == "fail" {
+		result.Selectors = []SelectorResult{
+			evaluatedSelector("from", check.From, fromEvents, events, "", "", ""),
+			evaluatedSelector("to", check.To, toEvents, events, "", "", ""),
+		}
+	}
+	return result
 }
 
 func evaluateNoSensitiveValuesCheck(check CheckDefinition, events []event.EventEnvelope) CheckResult {
@@ -650,6 +675,140 @@ func evaluateNoSensitiveValuesCheck(check CheckDefinition, events []event.EventE
 		Description: check.Description,
 		Hint:        coalesce(check.Hint, "Review RUM context, log messages, tags, headers, and query strings before forwarding telemetry."),
 	}
+}
+
+func checkSelector(check CheckDefinition) Selector {
+	return Selector{
+		Source:      check.Source,
+		PayloadKind: check.PayloadKind,
+		Service:     check.Service,
+		Route:       check.Route,
+		RouteRegex:  check.RouteRegex,
+		Fields:      check.Fields,
+	}
+}
+
+func evaluatedSelector(label string, selector Selector, matches []event.EventEnvelope, events []event.EventEnvelope, pattern string, metric string, unmatchedReason string) SelectorResult {
+	result := SelectorResult{
+		Label:    strings.TrimSpace(label),
+		Criteria: normalizeSelector(selector),
+		Pattern:  strings.TrimSpace(pattern),
+		Metric:   strings.TrimSpace(metric),
+		Matched:  len(matches),
+		EventIDs: firstN(eventIDs(matches), 5),
+	}
+	if len(matches) == 0 {
+		result.Alternatives = closestAlternatives(events, selector, 3)
+		return result
+	}
+	if strings.TrimSpace(unmatchedReason) != "" {
+		result.Alternatives = alternativesFromEvents(matches, selector, 3, unmatchedReason)
+	}
+	return result
+}
+
+func closestAlternatives(events []event.EventEnvelope, selector Selector, limit int) []SelectorAlternative {
+	type scoredAlternative struct {
+		alternative SelectorAlternative
+		score       int
+	}
+	scored := make([]scoredAlternative, 0, len(events))
+	for _, e := range events {
+		alternative, score := selectorAlternative(e, selector)
+		scored = append(scored, scoredAlternative{alternative: alternative, score: score})
+	}
+	sort.SliceStable(scored, func(i, j int) bool {
+		if scored[i].score == scored[j].score {
+			return scored[i].alternative.EventID < scored[j].alternative.EventID
+		}
+		return scored[i].score > scored[j].score
+	})
+	alternatives := make([]SelectorAlternative, 0, minInt(limit, len(scored)))
+	for _, candidate := range scored {
+		if limit > 0 && len(alternatives) >= limit {
+			break
+		}
+		alternatives = append(alternatives, candidate.alternative)
+	}
+	return alternatives
+}
+
+func alternativesFromEvents(events []event.EventEnvelope, selector Selector, limit int, extraDifference string) []SelectorAlternative {
+	alternatives := make([]SelectorAlternative, 0, minInt(limit, len(events)))
+	for _, e := range events {
+		if limit > 0 && len(alternatives) >= limit {
+			break
+		}
+		alternative, _ := selectorAlternative(e, selector)
+		if strings.TrimSpace(extraDifference) != "" {
+			alternative.Differences = normalizeList(append(alternative.Differences, extraDifference))
+		}
+		alternatives = append(alternatives, alternative)
+	}
+	return alternatives
+}
+
+func selectorAlternative(e event.EventEnvelope, selector Selector) (SelectorAlternative, int) {
+	alternative := SelectorAlternative{
+		EventID:     e.ID,
+		Source:      string(e.Source),
+		PayloadKind: e.PayloadKind,
+		Service:     e.Normalized.Service,
+		Route:       e.Normalized.Route,
+		TraceID:     e.Normalized.TraceID,
+		SessionID:   e.Normalized.SessionID,
+	}
+	score := 0
+	if selector.Source != "" {
+		if string(e.Source) == selector.Source {
+			score += 5
+		} else {
+			alternative.Differences = append(alternative.Differences, fmt.Sprintf("source expected %s, saw %s", selector.Source, visibleValue(string(e.Source))))
+		}
+	}
+	if selector.PayloadKind != "" {
+		if e.PayloadKind == selector.PayloadKind {
+			score += 4
+		} else {
+			alternative.Differences = append(alternative.Differences, fmt.Sprintf("payloadKind expected %s, saw %s", selector.PayloadKind, visibleValue(e.PayloadKind)))
+		}
+	}
+	if selector.Service != "" {
+		if e.Normalized.Service == selector.Service {
+			score += 3
+		} else {
+			alternative.Differences = append(alternative.Differences, fmt.Sprintf("service expected %s, saw %s", selector.Service, visibleValue(e.Normalized.Service)))
+		}
+	}
+	if selector.Route != "" {
+		if e.Normalized.Route == selector.Route {
+			score += 3
+		} else {
+			alternative.Differences = append(alternative.Differences, fmt.Sprintf("route expected %s, saw %s", selector.Route, visibleValue(e.Normalized.Route)))
+		}
+	}
+	if selector.RouteRegex != "" {
+		pattern, err := regexp.Compile(selector.RouteRegex)
+		if err != nil {
+			alternative.Differences = append(alternative.Differences, fmt.Sprintf("routeRegex invalid: %v", err))
+		} else if pattern.MatchString(e.Normalized.Route) {
+			score += 3
+		} else {
+			alternative.Differences = append(alternative.Differences, fmt.Sprintf("routeRegex %s did not match %s", selector.RouteRegex, visibleValue(e.Normalized.Route)))
+		}
+	}
+	for _, field := range selector.Fields {
+		if fieldValue(e, field) == "" {
+			alternative.MissingFields = append(alternative.MissingFields, field)
+			continue
+		}
+		alternative.PresentFields = append(alternative.PresentFields, field)
+		score++
+	}
+	alternative.PresentFields = normalizeList(alternative.PresentFields)
+	alternative.MissingFields = normalizeList(alternative.MissingFields)
+	alternative.Differences = normalizeList(alternative.Differences)
+	return alternative, score
 }
 
 func matchingEvents(events []event.EventEnvelope, selector Selector) []event.EventEnvelope {
@@ -778,10 +937,14 @@ func defaultHint(check CheckDefinition) string {
 }
 
 func compilePattern(pattern string) (*regexp.Regexp, error) {
+	return regexp.Compile(effectivePattern(pattern))
+}
+
+func effectivePattern(pattern string) string {
 	if strings.TrimSpace(pattern) == "" {
-		pattern = ".+"
+		return ".+"
 	}
-	return regexp.Compile(pattern)
+	return strings.TrimSpace(pattern)
 }
 
 func eventIDs(events []event.EventEnvelope) []string {
@@ -957,6 +1120,20 @@ func coalesce(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func visibleValue(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return "none"
+	}
+	return value
+}
+
+func minInt(a int, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func fileExt(path string) string {

@@ -512,7 +512,7 @@ async function mockDashboardApi(page: Page, nextEvents = events) {
             name: "frontend-backend-readiness",
             description: "Checks browser and backend telemetry.",
             status: "fail",
-            summary: { total: 4, passed: 3, failed: 1 },
+            summary: { total: 5, passed: 3, failed: 2 },
             checks: [
               {
                 id: "browser-session-context",
@@ -538,6 +538,38 @@ async function mockDashboardApi(page: Page, nextEvents = events) {
                 message: "Observed 1 matching metric event(s).",
                 matched: 1,
                 eventIds: ["evt-otlp-metric"],
+              },
+              {
+                id: "missing-rum-context",
+                type: "event",
+                status: "fail",
+                message: "Expected workflow telemetry was not observed.",
+                matched: 0,
+                hint: "Check Browser RUM context setters.",
+                selectors: [
+                  {
+                    criteria: {
+                      source: "rum",
+                      route: "/cases/case-123",
+                      fields: ["sessionId", "userId"],
+                    },
+                    matched: 0,
+                    alternatives: [
+                      {
+                        eventId: "evt-rum-missing",
+                        source: "rum",
+                        payloadKind: "event",
+                        service: "web-frontend",
+                        route: "/cases/missing-context",
+                        presentFields: ["sessionId"],
+                        missingFields: ["userId"],
+                        differences: [
+                          "route expected /cases/case-123, saw /cases/missing-context",
+                        ],
+                      },
+                    ],
+                  },
+                ],
               },
               {
                 id: "no-sensitive-values",
@@ -619,6 +651,19 @@ test("dashboard renders stream detail, failure inbox, correlation, and query bui
     workflowContracts.getByText("no-sensitive-values", { exact: true }),
   ).toBeVisible();
   await expect(
+    workflowContracts.getByText("missing-rum-context", { exact: true }),
+  ).toBeVisible();
+  await expect(workflowContracts.getByText("Evaluated selector")).toBeVisible();
+  await expect(workflowContracts.getByText("source: rum")).toBeVisible();
+  await expect(
+    workflowContracts.getByText("Closest alternatives"),
+  ).toBeVisible();
+  await expect(
+    workflowContracts
+      .locator(".workflow-alternative-list")
+      .getByRole("button", { name: /evt-rum-missing/ }),
+  ).toBeVisible();
+  await expect(
     workflowContracts.getByRole("button", { name: "evt-rum-login" }),
   ).toBeVisible();
   await workflowContracts.getByRole("button", { name: "evt-apm-export" }).click();
@@ -626,7 +671,10 @@ test("dashboard renders stream detail, failure inbox, correlation, and query bui
     page.getByRole("heading", { name: "Trace Spans" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button").filter({ hasText: "/cases/missing-context" }),
+    page
+      .locator(".event-list")
+      .getByRole("button")
+      .filter({ hasText: "/cases/missing-context" }),
   ).toBeVisible();
   await expect(page.getByText("Payload")).toBeVisible();
 

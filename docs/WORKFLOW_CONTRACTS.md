@@ -127,4 +127,7 @@ The dashboard requests the built-in frontend/backend readiness contract. It
 checks for browser context, Session Replay payloads, backend logs, backend
 traces, at least one metric, and obvious sensitive value leaks. The dashboard
 shows pass and fail checks, matched event IDs, and trace IDs that can be opened
-in the event detail pane when matching retained telemetry is available.
+in the event detail pane when matching retained telemetry is available. Failed
+checks also show evaluated selector criteria and nearby retained events so a
+user can see whether the wrong source, route, service, or context fields were
+observed.
