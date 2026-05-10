@@ -378,6 +378,206 @@ func TestOTLPGRPCMetricsStoresMetricDetails(t *testing.T) {
 	}
 }
 
+func TestDatadogLogsSearchCompatibilityReturnsRetainedLogs(t *testing.T) {
+	app := newTestApp(t, config.ModeLocal)
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/v2/logs",
+		bytes.NewBufferString(`{"message":"login failed","ddtags":"service:api,env:local,version:dev","trace_id":"trace-1","span_id":"span-1","status":"error"}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	app.Handler().ServeHTTP(httptest.NewRecorder(), req)
+
+	searchReq := httptest.NewRequest(
+		http.MethodPost,
+		"/api/v2/logs/events/search",
+		bytes.NewBufferString(`{"filter":{"query":"service:api @trace_id:trace-1 login"},"page":{"limit":5},"sort":"-timestamp"}`),
+	)
+	searchReq.Header.Set("Content-Type", "application/json")
+	searchRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(searchRec, searchReq)
+
+	if searchRec.Code != http.StatusOK {
+		t.Fatalf("got status %d: %s", searchRec.Code, searchRec.Body.String())
+	}
+	var got struct {
+		Data []struct {
+			Type       string `json:"type"`
+			ID         string `json:"id"`
+			Attributes struct {
+				Message    string         `json:"message"`
+				Service    string         `json:"service"`
+				Attributes map[string]any `json:"attributes"`
+			} `json:"attributes"`
+		} `json:"data"`
+		Meta struct {
+			Status string `json:"status"`
+		} `json:"meta"`
+	}
+	if err := json.Unmarshal(searchRec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Meta.Status != "done" || len(got.Data) != 1 {
+		t.Fatalf("unexpected search response: %#v", got)
+	}
+	if got.Data[0].Type != "log" || got.Data[0].Attributes.Service != "api" || got.Data[0].Attributes.Message != "login failed" {
+		t.Fatalf("unexpected log event: %#v", got.Data[0])
+	}
+	if got.Data[0].Attributes.Attributes["trace_id"] != "trace-1" {
+		t.Fatalf("missing trace id in Datadog-compatible attributes: %#v", got.Data[0].Attributes.Attributes)
+	}
+}
+
+func TestDatadogRUMSearchCompatibilityReturnsRetainedRUM(t *testing.T) {
+	app := newTestApp(t, config.ModeLocal)
+	req := httptest.NewRequest(http.MethodPost, "/rum", bytes.NewBufferString(`{
+		"service":"web",
+		"env":"local",
+		"version":"dev",
+		"session":{"id":"session-1"},
+		"view":{"id":"view-1","url_path":"/login"},
+		"usr":{"id":"user-1"},
+		"context":{"account":{"id":"acct-1"},"workspace":{"id":"ws-1"}}
+	}`))
+	req.Header.Set("Content-Type", "application/json")
+	app.Handler().ServeHTTP(httptest.NewRecorder(), req)
+
+	searchReq := httptest.NewRequest(
+		http.MethodPost,
+		"/api/v2/rum/events/search",
+		bytes.NewBufferString(`{"filter":{"query":"service:web @session.id:session-1 @usr.id:user-1"},"page":{"limit":5}}`),
+	)
+	searchReq.Header.Set("Content-Type", "application/json")
+	searchRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(searchRec, searchReq)
+
+	if searchRec.Code != http.StatusOK {
+		t.Fatalf("got status %d: %s", searchRec.Code, searchRec.Body.String())
+	}
+	var got struct {
+		Data []struct {
+			Type       string `json:"type"`
+			Attributes struct {
+				Service string `json:"service"`
+				Session struct {
+					ID string `json:"id"`
+				} `json:"session"`
+				Usr struct {
+					ID string `json:"id"`
+				} `json:"usr"`
+			} `json:"attributes"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(searchRec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Data) != 1 || got.Data[0].Type != "rum" {
+		t.Fatalf("unexpected rum response: %#v", got)
+	}
+	if got.Data[0].Attributes.Service != "web" || got.Data[0].Attributes.Session.ID != "session-1" || got.Data[0].Attributes.Usr.ID != "user-1" {
+		t.Fatalf("unexpected rum attributes: %#v", got.Data[0].Attributes)
+	}
+}
+
+func TestDatadogSpansSearchCompatibilityReturnsRetainedSpans(t *testing.T) {
+	app := newTestApp(t, config.ModeLocal)
+	req := httptest.NewRequest(
+		http.MethodPut,
+		"/v0.5/traces",
+		bytes.NewBufferString(`[[{"trace_id":"trace-1","span_id":"span-1","parent_id":"0","service":"api","name":"web.request","resource":"GET /login","duration":1000000}]]`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	app.Handler().ServeHTTP(httptest.NewRecorder(), req)
+
+	searchReq := httptest.NewRequest(
+		http.MethodPost,
+		"/api/v2/spans/events/search",
+		bytes.NewBufferString(`{"data":{"attributes":{"filter":{"query":"service:api trace_id:trace-1"},"page":{"limit":5},"sort":"-timestamp"}}}`),
+	)
+	searchReq.Header.Set("Content-Type", "application/json")
+	searchRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(searchRec, searchReq)
+
+	if searchRec.Code != http.StatusOK {
+		t.Fatalf("got status %d: %s", searchRec.Code, searchRec.Body.String())
+	}
+	var got struct {
+		Data []struct {
+			Type       string `json:"type"`
+			Attributes struct {
+				Service      string `json:"service"`
+				TraceID      string `json:"trace_id"`
+				SpanID       string `json:"span_id"`
+				ResourceName string `json:"resource_name"`
+			} `json:"attributes"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(searchRec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Data) != 1 || got.Data[0].Type != "span" {
+		t.Fatalf("unexpected spans response: %#v", got)
+	}
+	if got.Data[0].Attributes.Service != "api" || got.Data[0].Attributes.TraceID != "trace-1" || got.Data[0].Attributes.SpanID != "span-1" || got.Data[0].Attributes.ResourceName != "GET /login" {
+		t.Fatalf("unexpected span attributes: %#v", got.Data[0].Attributes)
+	}
+}
+
+func TestDatadogMetricQueryCompatibilityReturnsTimeseries(t *testing.T) {
+	app := newTestApp(t, config.ModeLocal)
+	body := `{
+		"resourceMetrics": [{
+			"resource": {"attributes": [
+				{"key":"service.name","value":{"stringValue":"api-service"}},
+				{"key":"deployment.environment","value":{"stringValue":"local"}},
+				{"key":"service.version","value":{"stringValue":"e2e"}}
+			]},
+			"scopeMetrics": [{
+				"metrics": [{
+					"name": "http.server.request.duration",
+					"unit": "ms",
+					"gauge": {"dataPoints": [{
+						"asDouble": 42.5,
+						"timeUnixNano": "1778206500000000000",
+						"attributes": [{"key":"http.route","value":{"stringValue":"/login"}}]
+					}]}
+				}]
+			}]
+		}]
+	}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/metrics", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	app.Handler().ServeHTTP(httptest.NewRecorder(), req)
+
+	queryReq := httptest.NewRequest(http.MethodGet, "/api/v1/query?from=0&to=9999999999&query=avg:http.server.request.duration%7Bservice:api-service%7D", nil)
+	queryRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(queryRec, queryReq)
+
+	if queryRec.Code != http.StatusOK {
+		t.Fatalf("got status %d: %s", queryRec.Code, queryRec.Body.String())
+	}
+	var got struct {
+		Status string `json:"status"`
+		Series []struct {
+			Metric    string  `json:"metric"`
+			Scope     string  `json:"scope"`
+			Pointlist [][]any `json:"pointlist"`
+		} `json:"series"`
+	}
+	if err := json.Unmarshal(queryRec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Status != "ok" || len(got.Series) != 1 {
+		t.Fatalf("unexpected metric query response: %#v", got)
+	}
+	if got.Series[0].Metric != "http.server.request.duration" || !strings.Contains(got.Series[0].Scope, "service:api-service") || len(got.Series[0].Pointlist) != 1 {
+		t.Fatalf("unexpected metric series: %#v", got.Series[0])
+	}
+	if got.Series[0].Pointlist[0][1].(float64) != 42.5 {
+		t.Fatalf("unexpected metric value: %#v", got.Series[0].Pointlist)
+	}
+}
+
 func otelStringAttribute(key string, value string) *commonv1.KeyValue {
 	return &commonv1.KeyValue{
 		Key: key,

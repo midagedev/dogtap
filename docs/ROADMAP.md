@@ -288,3 +288,21 @@ Status: first slice complete.
 
 Why it matters: Docker Compose is enough for local adoption, but public users
 need copyable deployment shapes before they can run team-level trials.
+
+### Chunk G: Datadog API Compatibility Layer
+
+Goal: let Datadog-oriented tools and agents query Dogtap without learning a
+Dogtap-specific search API.
+
+Status: first slice complete.
+
+- Add read-only compatibility for Datadog logs, RUM, and spans search:
+  complete for retained Dogtap telemetry under `/api/v2/*/events/search`.
+- Add metric query compatibility:
+  complete for simple retained timeseries samples through `/api/v1/query`.
+- Keep the layer explicit about limits:
+  complete in `docs/DATADOG_API_COMPATIBILITY.md` and
+  `docs/decisions/0014-datadog-api-compatibility.md`.
+
+Why it matters: agent-driven debugging improves when the same Datadog API paths
+used in production snippets can be pointed at Dogtap during local and CI runs.

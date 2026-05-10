@@ -552,3 +552,20 @@ Gate:
 Gate:
 
 - [x] G8 Release Candidate public deployment packaging subset
+
+## Phase 24: Datadog API Compatibility Layer
+
+- [x] T240 Add read-only Datadog-compatible logs events search over retained
+  Dogtap log events.
+- [x] T241 Add read-only Datadog-compatible RUM events search over retained RUM
+  and replay metadata.
+- [x] T242 Add read-only Datadog-compatible spans events search over retained
+  APM and OTLP trace details.
+- [x] T243 Add Datadog-compatible metric query response for retained metric
+  samples.
+- [x] T244 Document compatibility scope, query subset, non-goals, and official
+  Datadog API references.
+
+Gate:
+
+- [x] G5 CI Contract Datadog API compatibility subset

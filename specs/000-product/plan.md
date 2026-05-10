@@ -70,6 +70,8 @@ Current protocol support:
 - OTLP HTTP on `4318`
 - OTLP gRPC on `4317`
 - Faro SDK smoke intake on `/faro`, `/collect`, and `/collect/`
+- Read-only Datadog API compatibility for retained logs/RUM/spans search and
+  metric query
 
 Native DogStatsD intake and profiles should be future work. DogStatsD-style
 metrics can be inspected through the Collector StatsD-to-OTLP bridge recipe.
@@ -194,6 +196,7 @@ Gate:
 - Generic frontend/backend adoption kit
 - Datadog-preserving external injection strategy
 - API-first diagnostics and downloadable diagnostics archive
+- Datadog-compatible read-only search/query paths for agent debugging
 - Agent telemetry triage runbook
 
 Gate:

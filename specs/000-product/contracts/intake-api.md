@@ -237,6 +237,63 @@ Returns latest validation report.
 
 Replays fixture payloads into the local validator.
 
+## Datadog API Compatibility
+
+These endpoints are read-only compatibility paths for tools that already know
+Datadog APIs. They query Dogtap's retained local telemetry and are not full
+Datadog API parity.
+
+### `POST /api/v2/logs/events/search`
+
+Accepts a Datadog v2-style search body:
+
+- `filter.query`
+- `filter.from`
+- `filter.to`
+- `page.limit`
+- `sort`
+
+Returns:
+
+- `data[]` with `type=log`, `id`, and Datadog-style `attributes`
+- `meta.status=done`
+- `meta.warnings[]` explaining the Dogtap compatibility subset
+
+### `POST /api/v2/rum/events/search`
+
+Accepts the same v2-style search body and returns retained RUM/replay metadata
+with `type=rum`.
+
+### `POST /api/v2/spans/events/search`
+
+Accepts either the top-level v2 search body or the nested
+`data.attributes.filter/page/sort` shape used by Datadog clients. Returns
+retained trace details expanded into `type=span` rows.
+
+### `GET /api/v1/query`
+
+Query parameters:
+
+- `query`: simple `avg:metric.name{tag:value}` style metric expression
+- `from`: Unix seconds lower bound
+- `to`: Unix seconds upper bound
+
+Returns a Datadog-style timeseries response with:
+
+- `status`
+- `res_type`
+- `series[].metric`
+- `series[].scope`
+- `series[].pointlist`
+
+Unsupported behavior:
+
+- mutating APIs
+- API key validation
+- full query language parsing
+- facets, indexes, storage tiers, cursor pagination, formulas, rollups, and
+  long-term retention
+
 ## Security Requirements
 
 - Never return configured Datadog API keys.

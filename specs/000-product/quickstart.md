@@ -172,6 +172,26 @@ curl -sS -X POST http://127.0.0.1:8080/api/diagnostics/archive \
   -o dogtap-diagnostics.zip
 ```
 
+## Datadog API-Compatible Search
+
+Agents and existing Datadog-oriented snippets can query Dogtap's retained local
+telemetry through a read-only compatibility subset:
+
+```bash
+curl -sS -X POST http://127.0.0.1:8080/api/v2/logs/events/search \
+  -H 'Content-Type: application/json' \
+  -d '{"filter":{"query":"service:your-backend env:local"},"page":{"limit":5}}'
+```
+
+Supported paths:
+
+- `POST /api/v2/logs/events/search`
+- `POST /api/v2/rum/events/search`
+- `POST /api/v2/spans/events/search`
+- `GET /api/v1/query`
+
+This is a bounded local debugging layer, not full Datadog API parity.
+
 Expected exit codes:
 
 - `0`: no blocking validation failures

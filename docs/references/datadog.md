@@ -46,6 +46,16 @@ Datadog logs support HTTP intake endpoints for JSON, text, gzip, and other forma
 
 - https://docs.datadoghq.com/api/latest/logs/
 
+## Datadog Search and Query APIs
+
+Dogtap's read-only compatibility layer targets documented Datadog query paths
+for local retained telemetry search.
+
+- Logs Events Search: https://docs.datadoghq.com/api/latest/logs/#search-logs
+- RUM Events Search: https://docs.datadoghq.com/api/latest/rum/#search-rum-events
+- Spans Events Search: https://docs.datadoghq.com/api/latest/spans/#search-spans
+- Metrics Query: https://docs.datadoghq.com/api/latest/metrics/#query-timeseries-points
+
 ## Datadog Agent Log Collection
 
 Datadog Agent log collection is an Agent behavior, not only an HTTP intake
