@@ -36,6 +36,7 @@ primary exporter.
 | --- | --- |
 | `helm-values-sidecar.yaml` | Your app Helm chart supports sidecar fragments such as `extraContainers`, `extraEnv`, and `extraVolumes`. |
 | `helm-values-companion.yaml` | You want Dogtap as a private companion service that apps can target over the cluster network. |
+| `eks-dev/` | You want a copyable private Kustomize overlay for an EKS dev cluster with SQLite PVC retention and rollback steps. |
 | `ecs-task-definition.json` | You want an ECS/Fargate task definition pattern with Dogtap as a non-essential internal inspection sidecar. |
 
 The Helm files are values fragments, not a guaranteed chart schema. Adapt the
@@ -45,3 +46,9 @@ the safety review changes them.
 Browser RUM cannot use pod or task loopback from a user's browser. For RUM,
 expose only the Dogtap HTTP proxy path through a private ingress, VPN-only
 route, localhost port-forward, or equivalent internal route.
+
+The EKS dev overlay is intentionally not a Helm chart or Terraform module. It
+keeps the public contract small: inspect the YAML, pin an image tag, apply with
+`kubectl apply -k examples/deployment/eks-dev`, run the smoke in
+`docs/runbooks/EKS_DEV_CLUSTER.md`, and delete the overlay and PVC when the
+diagnostic window is over.

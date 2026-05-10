@@ -14,6 +14,7 @@ public release.
 | workflow contracts | Supported | Assert that a named app workflow emitted useful RUM, replay, logs, traces, metrics, and correlation evidence | Use YAML/JSON contracts through diagnostics API or `dogtap diagnose -workflow-contract`. |
 | Datadog API compatibility | Partial | Agent and tool debugging against local retained Dogtap telemetry | Read-only subset for logs/RUM/spans search and metric query; see `docs/DATADOG_API_COMPATIBILITY.md`. |
 | SQLite storage | Supported | Restart-safe local, CI, isolated E2E, and dev-cluster retained telemetry | Opt in with `storage.kind=sqlite`; retention remains bounded by TTL and max event count. |
+| EKS dev-cluster overlay | Supported static example | Shared dev-cluster inspection target | Kustomize overlay under `examples/deployment/eks-dev/`; private ClusterIP, PVC-backed SQLite, NetworkPolicy, and smoke runbook. |
 | `forward` | Partial | Bounded RUM/log forwarding experiments | APM forwarding is deferred. |
 | `tee` | Experimental | Limited production diagnostic tap | Requires explicit sampling, retention, and fail-open review. |
 | `redact-only` | Experimental | Policy enforcement before forwarding | Treat as a controlled rollout mode, not a default path. |

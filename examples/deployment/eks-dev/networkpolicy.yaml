@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dogtap-private-ingress
+  namespace: dogtap-dev
+  labels:
+    app.kubernetes.io/name: dogtap
+    app.kubernetes.io/part-of: dogtap
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: dogtap
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              dogtap-access: "true"
+          podSelector:
+            matchLabels:
+              dogtap-client: "true"
+      ports:
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 8126
+        - protocol: TCP
+          port: 4317
+        - protocol: TCP
+          port: 4318
