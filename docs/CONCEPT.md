@@ -2,7 +2,8 @@
 
 ## One-Line Description
 
-Dogtap is a Datadog telemetry tap: a local mock, CI validator, and production-safe forwarding inspector for RUM, logs, traces, and OTLP.
+Dogtap is a Datadog-compatible telemetry tap and workflow contract validator
+for local development, CI, and production-safe forwarding experiments.
 
 ## Product Positioning
 
@@ -11,6 +12,11 @@ Dogtap helps teams that already use Datadog answer a practical question:
 > Did our application emit the telemetry we need, with the right context, without leaking unsafe data?
 
 Dogtap is intentionally not a Datadog clone. It does not replace Datadog dashboards, monitors, notebooks, or long-term storage. It sits before Datadog or next to Datadog and makes intake behavior visible.
+
+The strongest product promise is workflow observability testing: after a user
+path such as login or checkout runs, Dogtap can assert whether RUM, Session
+Replay, backend logs, traces, metrics, correlation, and privacy-safe context
+arrived in a debuggable shape.
 
 ## Why the Name Works
 
@@ -44,4 +50,3 @@ Telemetry often contains sensitive context. Dogtap should default to redaction, 
 ### Stay reversible
 
 Applications should use standard Datadog and OpenTelemetry configuration. Removing Dogtap should not require application code changes.
-

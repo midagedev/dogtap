@@ -255,6 +255,34 @@ type DashboardDiagnostics = {
   sessions: BrowserSessionSummary[];
 };
 
+type WorkflowContractResult = {
+  name: string;
+  description?: string;
+  status: string;
+  summary: {
+    total: number;
+    passed: number;
+    failed: number;
+  };
+  checks: WorkflowContractCheck[];
+};
+
+type WorkflowContractCheck = {
+  id: string;
+  type: string;
+  status: string;
+  message: string;
+  matched?: number;
+  eventIds?: string[];
+  traceIds?: string[];
+  description?: string;
+  hint?: string;
+};
+
+type DiagnosticsSnapshot = {
+  workflowContracts?: WorkflowContractResult[];
+};
+
 type Report = {
   summary: {
     total: number;
@@ -280,6 +308,9 @@ function App() {
   const [events, setEvents] = React.useState<EventEnvelope[]>([]);
   const [failures, setFailures] = React.useState<EventEnvelope[]>([]);
   const [report, setReport] = React.useState<Report | null>(null);
+  const [workflowContracts, setWorkflowContracts] = React.useState<
+    WorkflowContractResult[]
+  >([]);
   const [selectedId, setSelectedId] = React.useState<string>("");
   const [source, setSource] = React.useState<Source | "">("");
   const [status, setStatus] = React.useState<string>("");
@@ -310,9 +341,31 @@ function App() {
         nextReport = (await reportResult.value.json()) as Report;
       }
 
+      let nextWorkflowContracts: WorkflowContractResult[] = [];
+      if (nextEvents.length > 0) {
+        try {
+          const diagnosticsRes = await fetch("/api/diagnostics", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              limit: 100,
+              useDefaultWorkflowContracts: true,
+            }),
+          });
+          if (diagnosticsRes.ok) {
+            const snapshot =
+              (await diagnosticsRes.json()) as DiagnosticsSnapshot;
+            nextWorkflowContracts = snapshot.workflowContracts ?? [];
+          }
+        } catch {
+          nextWorkflowContracts = [];
+        }
+      }
+
       setEvents(nextEvents);
       setFailures(nextFailures);
       setReport(nextReport);
+      setWorkflowContracts(nextWorkflowContracts);
       if (selectedId && !nextEvents.some((event) => event.id === selectedId)) {
         setSelectedId("");
       }
@@ -413,6 +466,11 @@ function App() {
 
       <DashboardDiagnosticsPanel
         data={diagnostics}
+        onSelectEvent={setSelectedId}
+      />
+
+      <WorkflowContractsPanel
+        contracts={workflowContracts}
         onSelectEvent={setSelectedId}
       />
 
@@ -902,6 +960,108 @@ function DashboardDiagnosticsPanel({
             Browser sessions will appear when RUM or Faro sends a session id.
           </p>
         )}
+      </section>
+    </section>
+  );
+}
+
+function WorkflowContractsPanel({
+  contracts,
+  onSelectEvent,
+}: {
+  contracts: WorkflowContractResult[];
+  onSelectEvent: (id: string) => void;
+}) {
+  const failedChecks = contracts.flatMap((contract) =>
+    contract.checks
+      .filter((check) => check.status === "fail")
+      .map((check) => ({ contract, check })),
+  );
+  const total = contracts.reduce(
+    (sum, contract) => sum + contract.summary.total,
+    0,
+  );
+  const passed = contracts.reduce(
+    (sum, contract) => sum + contract.summary.passed,
+    0,
+  );
+  const failed = contracts.reduce(
+    (sum, contract) => sum + contract.summary.failed,
+    0,
+  );
+
+  return (
+    <section
+      className="workflow-contract-band"
+      aria-label="Workflow contract diagnostics"
+    >
+      <section className="overview-panel workflow-contract-panel">
+        <div className="panel-title">
+          <h2>
+            <ShieldCheck size={16} aria-hidden="true" /> Workflow Contracts
+          </h2>
+          <span>
+            {passed}/{total} checks · {failed} fail
+          </span>
+        </div>
+        <div className="workflow-contract-grid">
+          <div className="workflow-contract-list" aria-label="Contracts">
+            {contracts.length ? (
+              contracts.map((contract) => (
+                <div
+                  className={`workflow-contract-row workflow-${contract.status}`}
+                  key={contract.name}
+                >
+                  <div>
+                    <strong>{contract.name || "workflow"}</strong>
+                    <span>{contract.description || "contract checks"}</span>
+                  </div>
+                  <code>{contract.status}</code>
+                  <small>
+                    {contract.summary.passed} pass · {contract.summary.failed}{" "}
+                    fail
+                  </small>
+                </div>
+              ))
+            ) : (
+              <p className="viewer-empty">No workflow contracts evaluated.</p>
+            )}
+          </div>
+          <div className="workflow-check-list" aria-label="Contract findings">
+            {failedChecks.length ? (
+              failedChecks.slice(0, 6).map(({ contract, check }) => (
+                <div
+                  className="workflow-check-row"
+                  key={`${contract.name}-${check.id}`}
+                >
+                  <div>
+                    <strong>{check.id}</strong>
+                    <span>{contract.name}</span>
+                  </div>
+                  <small>{check.message}</small>
+                  {check.hint ? <em>{check.hint}</em> : null}
+                  {check.eventIds?.length ? (
+                    <div className="workflow-evidence-list">
+                      {check.eventIds.slice(0, 3).map((eventId) => (
+                        <button
+                          type="button"
+                          key={eventId}
+                          onClick={() => onSelectEvent(eventId)}
+                        >
+                          {eventId}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ))
+            ) : (
+              <p className="viewer-empty">
+                Failing workflow checks will appear here.
+              </p>
+            )}
+          </div>
+        </div>
       </section>
     </section>
   );

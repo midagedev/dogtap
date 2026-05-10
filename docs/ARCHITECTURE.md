@@ -15,6 +15,9 @@ flowchart LR
   F --> H["Dashboard API"]
   H --> I["Dashboard UI"]
   E --> J["CI reporter"]
+  F --> K["Workflow contract evaluator"]
+  K --> H
+  K --> J
 ```
 
 ## Components
@@ -63,6 +66,13 @@ Forwards payloads to Datadog when configured. Forwarding behavior is mode-specif
 
 Provides inspection, filtering, correlation hints, and debug bundle export.
 
+### Workflow contract evaluator
+
+Evaluates YAML/JSON workflow contracts against retained event envelopes. It is
+additive to validation: contracts answer whether a named path produced useful
+RUM, replay, logs, traces, metrics, correlation, and privacy evidence, while
+normal validation still checks individual payload quality.
+
 ## Deployment Shapes
 
 ### Local single container
@@ -87,4 +97,3 @@ Dogtap should receive only sampled copies or act as a fail-open forwarding layer
 - Forwarding should not require raw payload persistence.
 - Validation should not mutate the forwarded payload unless mode explicitly says `redact-only`.
 - Debug bundles must disclose whether they include raw or redacted data.
-

@@ -8,6 +8,7 @@ validation, and production-safe forwarding experiments.
 `dogtap` is designed for the fast path in local development and routine CI:
 
 - use `dogtap` as the local intake target for RUM, logs, traces, and OTLP
+- assert workflow telemetry contracts such as login, checkout, or case open
 - keep Datadog and OpenTelemetry Collector as the high-fidelity production path
 
 It makes telemetry payloads visible before they reach Datadog. It is not a
@@ -56,6 +57,8 @@ Dogtap is most useful when you want to verify:
 - Datadog APM trace/span payloads from existing tracers
 - OTLP traces, logs, and metrics from OpenTelemetry SDKs or collectors
 - service map, route traffic, metric samples, and cross-source correlation
+- workflow contract results that summarize whether a real user path is
+  observable enough to debug
 - copyable Datadog search hints for the payloads Dogtap received
 
 ## Dogtap vs Datadog / OTel Collector
@@ -215,6 +218,23 @@ curl -sS -X POST http://localhost:8080/api/diagnostics \
   -d '{"expect":{"nonEmpty":true,"sources":["rum","logs","apm","otlp"]}}'
 ```
 
+Add workflow contracts when you want to assert that a specific user path is
+observable, not just that generic telemetry arrived:
+
+```bash
+go run ./cmd/dogtap diagnose \
+  -workflow-contract configs/contracts/login.yaml \
+  -fail-on-workflow-contract
+```
+
+The diagnostics API accepts the same idea inline:
+
+```bash
+curl -sS -X POST http://localhost:8080/api/diagnostics \
+  -H 'Content-Type: application/json' \
+  -d '{"useDefaultWorkflowContracts":true}'
+```
+
 Download the same evidence as a zip archive:
 
 ```bash
@@ -225,7 +245,8 @@ curl -sS -X POST http://localhost:8080/api/diagnostics/archive \
 ```
 
 Use `go run ./cmd/dogtap diagnose` when a host-side diagnostics directory is
-more convenient than an API response.
+more convenient than an API response. Archives include `workflow-contracts.json`
+when a workflow contract is supplied or requested.
 
 ### 7. Seed The Dashboard Demo
 

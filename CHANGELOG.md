@@ -20,6 +20,9 @@ All notable changes to Dogtap will be documented in this file.
 - Release workflow for GitHub Release binaries and GHCR container images.
 - Build metadata in `dogtap version`.
 - Public support matrix and release candidate runbook.
+- Workflow observability contracts through diagnostics API, diagnostics archive,
+  `dogtap diagnose -workflow-contract`, built-in dashboard readiness checks,
+  and example contracts under `configs/contracts/`.
 
 ### Notes
 
@@ -29,5 +32,5 @@ All notable changes to Dogtap will be documented in this file.
   implemented for the current scope.
 - Supported endpoints and current limitations are maintained in
   `docs/SUPPORT_MATRIX.md`.
-- Full G8 release-candidate status remains blocked until one realistic
-  sanitized adoption profile validates successfully.
+- G8 release-candidate evidence passed for the current public scope; later
+  compatibility work should continue to add fixture-backed workflow contracts.

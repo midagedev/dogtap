@@ -80,6 +80,10 @@ Request body:
 - `filter`: same fields as `POST /api/debug-bundles`; scopes returned events,
   report, debug bundle, metrics, and assertions
 - `expect`: assertion expectations for observed telemetry
+- `workflowContract`: one inline workflow contract definition
+- `workflowContracts`: multiple inline workflow contract definitions
+- `useDefaultWorkflowContracts`: when true and no explicit workflow contracts
+  are supplied, evaluate Dogtap's built-in dashboard readiness contract
 
 `expect` fields:
 
@@ -103,10 +107,16 @@ Returns:
 - `debugBundle`
 - `metrics`
 - `assertions`
+- `workflowContracts` when workflow contracts were supplied or requested
 
 Expectation failures are represented in `assertions.status` and do not turn the
 HTTP response into an error. This lets agents parse missing-signal hints without
 special HTTP status handling.
+
+Workflow contract failures are represented in each contract result under
+`workflowContracts[].status`. They are separate from `assertions.status` so
+existing diagnostics callers can keep using missing-signal assertions without a
+semantic change.
 
 ### `POST /api/diagnostics/archive`
 
@@ -121,6 +131,7 @@ Returns `application/zip` containing:
 
 - `summary.md`
 - `assertions.json`
+- `workflow-contracts.json` when workflow contracts were supplied or requested
 - `events.json`
 - `report.json`
 - `debug-bundle.json`

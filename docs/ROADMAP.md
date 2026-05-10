@@ -162,3 +162,23 @@ not in scope.
 Gate:
 
 - G8 Release Candidate: passed for Faro SDK smoke subset
+
+## Phase 8: Workflow Observability Contracts
+
+Goal: make Dogtap valuable as a telemetry contract test runner for real
+frontend/backend workflows.
+
+Status: first workflow contract slice complete.
+
+- event-backed workflow contract evaluator
+- built-in frontend/backend readiness contract
+- login workflow contract template
+- diagnostics API `workflowContracts` field
+- diagnostics archive `workflow-contracts.json`
+- `dogtap diagnose -workflow-contract` CLI support
+- dashboard workflow contract panel
+- follow-up templates for checkout, case open, and report export remain pending
+
+Gate:
+
+- G5 CI Contract: passed for workflow contract diagnostics subset

@@ -10,6 +10,8 @@ Dogtap.
 - [Adopting Dogtap](runbooks/ADOPTING_DOGTAP.md): generic frontend/backend setup
 - [External Injection Adoption](runbooks/EXTERNAL_INJECTION_ADOPTION.md):
   preserve existing Datadog usage with sidecars and endpoint overrides
+- [Workflow Contracts](WORKFLOW_CONTRACTS.md): assert real user paths through
+  received RUM, replay, logs, traces, metrics, and correlation evidence
 - [RUM Proxy Canary](runbooks/RUM_PROXY_CANARY.md): safely test Browser RUM and
   Session Replay proxying through Dogtap
 - [Support Matrix](SUPPORT_MATRIX.md): supported surfaces and explicit limits
@@ -21,6 +23,7 @@ Dogtap.
 - [PRD](PRD.md)
 - [Final Goal](FINAL_GOAL.md)
 - [Testing Strategy](TESTING.md)
+- [Workflow Contracts](WORKFLOW_CONTRACTS.md)
 - [Support Matrix](SUPPORT_MATRIX.md)
 - [Agent Orchestration](AGENT_ORCHESTRATION.md)
 
@@ -72,3 +75,4 @@ Current notable decisions:
 - practical Datadog compatibility instead of full private endpoint parity
 - generic adoption kit instead of a Dogtap-specific SDK
 - Datadog-preserving external injection before broader Agent parity
+- workflow observability contracts as an additive diagnostics artifact

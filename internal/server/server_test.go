@@ -630,6 +630,104 @@ func TestDiagnosticsAPIReturnsScopedAssertions(t *testing.T) {
 	}
 }
 
+func TestDiagnosticsAPIReturnsWorkflowContractsWithoutChangingAssertions(t *testing.T) {
+	app := newTestApp(t, config.ModeLocal)
+	body := `{
+		"service":"web",
+		"env":"local",
+		"version":"dev",
+		"usr":{"id":"user-1"},
+		"context":{"account":{"id":"acct-1"},"workspace":{"id":"ws-1"}},
+		"view":{"url_path":"/login"}
+	}`
+	req := httptest.NewRequest(http.MethodPost, "/rum", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	app.Handler().ServeHTTP(httptest.NewRecorder(), req)
+
+	diagReq := httptest.NewRequest(http.MethodPost, "/api/diagnostics", bytes.NewBufferString(`{
+		"expect": {"nonEmpty": true, "sources": ["rum"]},
+		"workflowContract": {
+			"name": "login-workflow",
+			"checks": [{
+				"id": "login-rum-user",
+				"type": "event",
+				"source": "rum",
+				"fields": ["userId"]
+			}]
+		}
+	}`))
+	diagReq.Header.Set("Content-Type", "application/json")
+	diagRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(diagRec, diagReq)
+
+	if diagRec.Code != http.StatusOK {
+		t.Fatalf("got status %d: %s", diagRec.Code, diagRec.Body.String())
+	}
+	var got diagnose.Snapshot
+	if err := json.Unmarshal(diagRec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Assertions.Status != "pass" {
+		t.Fatalf("diagnostics assertions = %s: %#v", got.Assertions.Status, got.Assertions.Checks)
+	}
+	if len(got.WorkflowContracts) != 1 || got.WorkflowContracts[0].Status != "pass" {
+		t.Fatalf("unexpected workflow contract result: %#v", got.WorkflowContracts)
+	}
+}
+
+func TestDiagnosticsArchiveIncludesWorkflowContractWhenSupplied(t *testing.T) {
+	app := newTestApp(t, config.ModeLocal)
+	req := httptest.NewRequest(http.MethodPost, "/rum", bytes.NewBufferString(`{
+		"service":"web",
+		"env":"local",
+		"usr":{"id":"user-1"},
+		"context":{"account":{"id":"acct-1"},"workspace":{"id":"ws-1"}}
+	}`))
+	req.Header.Set("Content-Type", "application/json")
+	app.Handler().ServeHTTP(httptest.NewRecorder(), req)
+
+	archiveReq := httptest.NewRequest(http.MethodPost, "/api/diagnostics/archive", bytes.NewBufferString(`{
+		"workflowContract": {
+			"name": "login-workflow",
+			"checks": [{
+				"id": "backend-log",
+				"type": "log-message",
+				"source": "logs"
+			}]
+		}
+	}`))
+	archiveReq.Header.Set("Content-Type", "application/json")
+	archiveRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(archiveRec, archiveReq)
+
+	if archiveRec.Code != http.StatusOK {
+		t.Fatalf("got status %d: %s", archiveRec.Code, archiveRec.Body.String())
+	}
+	reader, err := zip.NewReader(bytes.NewReader(archiveRec.Body.Bytes()), int64(archiveRec.Body.Len()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := map[string]string{}
+	for _, file := range reader.File {
+		rc, err := file.Open()
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, err := io.ReadAll(rc)
+		_ = rc.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		files[file.Name] = string(body)
+	}
+	if !strings.Contains(files["workflow-contracts.json"], `"status": "fail"`) {
+		t.Fatalf("archive missing failing workflow contract:\n%s", files["workflow-contracts.json"])
+	}
+	if !strings.Contains(files["summary.md"], "## Workflow Contracts") {
+		t.Fatalf("summary missing workflow contract section:\n%s", files["summary.md"])
+	}
+}
+
 func TestDiagnosticsArchiveReturnsAgentReadableFiles(t *testing.T) {
 	app := newTestApp(t, config.ModeLocal)
 	req := httptest.NewRequest(http.MethodPost, "/rum", bytes.NewBufferString(`{

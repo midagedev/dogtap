@@ -242,6 +242,12 @@ select {
   gap: 14px;
 }
 
+.workflow-contract-band {
+  padding: 0 20px 16px;
+  border-bottom: 1px solid #d9e0e4;
+  background: #eef3f5;
+}
+
 .overview-panel {
   min-width: 0;
   border: 1px solid #d9e0e4;
@@ -509,6 +515,117 @@ select {
 .endpoint-health-row.has-failures {
   border-color: #f3c7c7;
   background: #fffafa;
+}
+
+.workflow-contract-grid {
+  padding: 12px 14px 14px;
+  display: grid;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(340px, 1.2fr);
+  gap: 12px;
+}
+
+.workflow-contract-list,
+.workflow-check-list,
+.workflow-evidence-list {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.workflow-contract-row,
+.workflow-check-row {
+  min-width: 0;
+  border: 1px solid #edf1f3;
+  border-radius: 7px;
+  background: #fbfcfd;
+}
+
+.workflow-contract-row {
+  min-height: 60px;
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 5px 8px;
+  align-items: center;
+}
+
+.workflow-contract-row.workflow-pass {
+  border-color: #c9dfbf;
+  background: #f9fcf7;
+}
+
+.workflow-contract-row.workflow-fail {
+  border-color: #f3c7c7;
+  background: #fffafa;
+}
+
+.workflow-contract-row div,
+.workflow-check-row div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.workflow-contract-row strong,
+.workflow-contract-row span,
+.workflow-contract-row small,
+.workflow-check-row strong,
+.workflow-check-row span,
+.workflow-check-row small,
+.workflow-check-row em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workflow-contract-row span,
+.workflow-contract-row small,
+.workflow-check-row span,
+.workflow-check-row small,
+.workflow-check-row em {
+  color: #667680;
+  font-size: 12px;
+}
+
+.workflow-contract-row code {
+  border-radius: 5px;
+  padding: 3px 7px;
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.workflow-contract-row small {
+  grid-column: 1 / -1;
+}
+
+.workflow-check-row {
+  min-height: 74px;
+  padding: 9px 10px;
+  display: grid;
+  gap: 5px;
+}
+
+.workflow-check-row em {
+  font-style: normal;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.workflow-evidence-list {
+  grid-template-columns: repeat(3, minmax(0, max-content));
+}
+
+.workflow-evidence-list button {
+  min-width: 0;
+  border: 1px solid #d9e0e4;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #31421f;
+  padding: 3px 7px;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
 }
 
 .session-timeline {
@@ -1488,6 +1605,7 @@ pre {
   .targets-band,
   .overview-band,
   .diagnostics-band,
+  .workflow-contract-grid,
   .workspace,
   .detail-grid {
     grid-template-columns: 1fr;

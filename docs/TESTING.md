@@ -70,6 +70,7 @@ Use `dogtap diagnose` when a host-side artifact directory is more convenient:
 go run ./cmd/dogtap diagnose \
   -base-url http://127.0.0.1:8080 \
   -output .dogtap/diagnostics/local-dev \
+  -workflow-contract configs/contracts/login.yaml \
   -expect-source rum,logs,apm,otlp \
   -expect-payload-kind replay,metric
 ```
@@ -77,6 +78,9 @@ go run ./cmd/dogtap diagnose \
 The API archive and CLI command write `summary.md`, `assertions.json`,
 `events.json`, `report.json`, `debug-bundle.json`, and `metrics.txt` so humans
 and agents can triage missing telemetry without scraping console output.
+When workflow contracts are requested they also write
+`workflow-contracts.json`, which is the easiest file for an agent to inspect
+when a real path such as login emitted incomplete telemetry.
 
 ### Integration tests
 

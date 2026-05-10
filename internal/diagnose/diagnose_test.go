@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/midagedev/dogtap/internal/contract"
 	"github.com/midagedev/dogtap/internal/event"
 	"github.com/midagedev/dogtap/internal/report"
 )
@@ -94,6 +95,78 @@ func TestCollectWritesAgentReadableBundle(t *testing.T) {
 	summary := readFile(t, filepath.Join(output, "summary.md"))
 	if !strings.Contains(summary, "source:rum") || !strings.Contains(summary, "metric:http.server.request.duration") {
 		t.Fatalf("summary missing checks:\n%s", summary)
+	}
+}
+
+func TestCollectWritesWorkflowContractArtifactWithoutChangingAssertions(t *testing.T) {
+	events := []event.EventEnvelope{
+		{
+			ID:          "rum-1",
+			ReceivedAt:  time.Date(2026, 5, 9, 12, 0, 0, 0, time.UTC),
+			Source:      event.SourceRUM,
+			PayloadKind: "event",
+			Endpoint:    "/datadog-intake-proxy",
+			Method:      http.MethodPost,
+			Normalized: event.NormalizedTelemetry{
+				Source:    event.SourceRUM,
+				Service:   "web-frontend",
+				SessionID: "session-123",
+			},
+			Validation: event.ValidationResult{Status: "pass"},
+		},
+	}
+	server := diagnosticsServer(t, events)
+	output := filepath.Join(t.TempDir(), "diagnostics")
+
+	result, err := Collect(context.Background(), Options{
+		BaseURL:   server.URL,
+		OutputDir: output,
+		WorkflowContracts: []contract.Definition{{
+			Name: "login-workflow",
+			Checks: []contract.CheckDefinition{{
+				ID:     "backend-log",
+				Type:   "log-message",
+				Source: "logs",
+			}},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+	if result.Assertions.Status != "pass" {
+		t.Fatalf("assertions status = %s, want pass", result.Assertions.Status)
+	}
+	if len(result.WorkflowContracts) != 1 || result.WorkflowContracts[0].Status != "fail" {
+		t.Fatalf("unexpected workflow contracts: %#v", result.WorkflowContracts)
+	}
+	if _, err := os.Stat(filepath.Join(output, "workflow-contracts.json")); err != nil {
+		t.Fatalf("expected workflow-contracts.json: %v", err)
+	}
+	summary := readFile(t, filepath.Join(output, "summary.md"))
+	if !strings.Contains(summary, "## Workflow Contracts") || !strings.Contains(summary, "backend-log") {
+		t.Fatalf("summary missing workflow contract section:\n%s", summary)
+	}
+}
+
+func TestCollectCanFailOnWorkflowContractWhenRequested(t *testing.T) {
+	server := diagnosticsServer(t, nil)
+	output := filepath.Join(t.TempDir(), "diagnostics")
+
+	_, err := Collect(context.Background(), Options{
+		BaseURL:                server.URL,
+		OutputDir:              output,
+		FailOnWorkflowContract: true,
+		WorkflowContracts: []contract.Definition{{
+			Name: "login-workflow",
+			Checks: []contract.CheckDefinition{{
+				ID:     "login-rum",
+				Type:   "event",
+				Source: "rum",
+			}},
+		}},
+	})
+	if !errors.Is(err, report.ErrValidationFailed) {
+		t.Fatalf("Collect error = %v, want validation failure", err)
 	}
 }
 
