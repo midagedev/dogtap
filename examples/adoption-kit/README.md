@@ -45,6 +45,11 @@ change that restores the original Datadog or OTLP endpoints.
 | `compose.otel-statsd-bridge.yaml` | Runnable Dogtap plus Collector StatsD bridge smoke stack |
 | `otel-statsd-bridge.md` | StatsD bridge usage, metric tag expectations, and rollback notes |
 
+Team-level deployment examples live one directory up under
+`examples/deployment/`. Use those when Compose adoption works and you need a
+Helm sidecar, Helm companion-service, or ECS/Fargate trial shape with explicit
+retention, sampling, forwarding, and private-network warnings.
+
 ## Compose Use
 
 From an application repository that has this file copied under `.dogtap/`:

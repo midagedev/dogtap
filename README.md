@@ -320,6 +320,13 @@ Copyable templates live under `examples/adoption-kit/`:
 - `log-forwarder-overrides.md`: log collection bridge patterns
 - `kubernetes/deployment-sidecar.template.yaml`: Kubernetes sidecar fragment
 
+Deployment trial examples live under `examples/deployment/`:
+
+- `helm-values-sidecar.yaml`: Helm values fragment for same-pod Dogtap sidecar
+- `helm-values-companion.yaml`: Helm values model for a private Dogtap service
+- `ecs-task-definition.json`: ECS/Fargate task definition with Dogtap as a
+  non-essential internal inspection sidecar
+
 Runnable demo:
 
 - `examples/demo/`: seeded dashboard walkthrough and visual check
@@ -422,6 +429,7 @@ Common checks:
 make shell-check
 make doc-check
 make contract-check
+make deployment-check
 make smoke-adoption
 make demo-visual-check
 ```
@@ -467,12 +475,13 @@ Before tagging a release:
 1. Run `go test ./...`.
 2. Run `npm --prefix web run build`.
 3. Run `make shell-check`.
-4. Run `make smoke-adoption`.
-5. Run `make smoke-log-bridge` and `make smoke-statsd-bridge`.
-6. Re-run the public-surface scan for company/private strings and secret
+4. Run `make doc-check`, `make contract-check`, and `make deployment-check`.
+5. Run `make smoke-adoption`.
+6. Run `make smoke-log-bridge` and `make smoke-statsd-bridge`.
+7. Re-run the public-surface scan for company/private strings and secret
    patterns.
-7. Update `CHANGELOG.md`.
-8. Confirm the draft tag name matches the changelog entry.
+8. Update `CHANGELOG.md`.
+9. Confirm the draft tag name matches the changelog entry.
 
 ## License
 

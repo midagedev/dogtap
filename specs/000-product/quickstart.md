@@ -80,6 +80,22 @@ export DD_LOGS_INJECTION=true
 
 For Docker Compose containers in the same project, use `DD_AGENT_HOST=dogtap`.
 
+## Team Deployment Trials
+
+After local and Compose adoption works, use `examples/deployment/` for
+deployment-shaped trials:
+
+- `helm-values-sidecar.yaml`: same-pod Dogtap sidecar values fragment.
+- `helm-values-companion.yaml`: private companion-service values model.
+- `ecs-task-definition.json`: ECS/Fargate sidecar task definition example.
+
+Keep the examples private-network only, with explicit retention, sampling,
+forwarding, and raw-payload settings. Validate local edits with:
+
+```bash
+make deployment-check
+```
+
 ## Logs HTTP Target
 
 ```bash

@@ -77,7 +77,9 @@ Run these before cutting a public tag:
 go test ./...
 npm --prefix web run build
 make shell-check
+make doc-check
 make contract-check
+make deployment-check
 make smoke-adoption
 make smoke-log-bridge
 make smoke-statsd-bridge

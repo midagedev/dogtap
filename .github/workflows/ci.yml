@@ -105,6 +105,9 @@ jobs:
       - name: Check workflow contracts
         run: make contract-check
 
+      - name: Check deployment examples
+        run: make deployment-check
+
       - name: Run generic adoption smoke
         env:
           DOGTAP_ARTIFACT_DIR: .dogtap/diagnostics/generic

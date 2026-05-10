@@ -535,3 +535,20 @@ Gate:
 Gate:
 
 - [x] G5 CI Contract bridge smoke subset
+
+## Phase 23: Public Deployment Packaging
+
+- [x] T230 Add Helm values examples for same-pod sidecar and private
+  companion-service deployment trials.
+- [x] T231 Add an ECS/Fargate task definition example with Dogtap as a
+  non-essential internal inspection sidecar.
+- [x] T232 Add a deployment example syntax and safety-marker check.
+- [x] T233 Wire deployment checks into CI, release validation, release
+  evidence commands, and maintainer checklists.
+- [x] T234 Record the deployment packaging decision and keep the examples
+  bounded by retention, sampling, forwarding, raw-payload, and private-network
+  warnings.
+
+Gate:
+
+- [x] G8 Release Candidate public deployment packaging subset

@@ -42,6 +42,9 @@ All notable changes to Dogtap will be documented in this file.
   `make smoke-statsd-bridge` for DogStatsD-style metric adoption gaps.
 - GitHub Actions now runs the filelog and StatsD bridge smokes and uploads
   bridge diagnostics artifacts on smoke failures.
+- Public deployment examples for Helm sidecar, Helm companion-service, and
+  ECS/Fargate trial shapes, plus `make deployment-check` safety-marker
+  validation.
 
 ### Notes
 

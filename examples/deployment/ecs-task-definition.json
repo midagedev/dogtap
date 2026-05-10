@@ -1,0 +1,178 @@
+{
+  "family": "dogtap-trial-service",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::<account-id>:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::<account-id>:role/ecsTaskRole",
+  "volumes": [
+    {
+      "name": "dogtap-data"
+    }
+  ],
+  "containerDefinitions": [
+    {
+      "name": "app",
+      "image": "public.ecr.aws/docker/library/nginx:stable",
+      "essential": true,
+      "environment": [
+        {
+          "name": "DD_TRACE_AGENT_URL",
+          "value": "http://127.0.0.1:8126"
+        },
+        {
+          "name": "DD_AGENT_HOST",
+          "value": "127.0.0.1"
+        },
+        {
+          "name": "DD_TRACE_AGENT_PORT",
+          "value": "8126"
+        },
+        {
+          "name": "DD_LOGS_INJECTION",
+          "value": "true"
+        },
+        {
+          "name": "OTEL_EXPORTER_OTLP_PROTOCOL",
+          "value": "http/protobuf"
+        },
+        {
+          "name": "OTEL_EXPORTER_OTLP_ENDPOINT",
+          "value": "http://127.0.0.1:4318"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/dogtap-trial-service",
+          "awslogs-region": "ap-northeast-2",
+          "awslogs-stream-prefix": "app"
+        }
+      }
+    },
+    {
+      "name": "dogtap",
+      "image": "ghcr.io/midagedev/dogtap:latest",
+      "essential": false,
+      "dockerLabels": {
+        "dogtap.warning.private-network": "Keep Dogtap behind private security groups, VPN routes, or internal load balancers only.",
+        "dogtap.warning.apm-forwarding": "Dogtap inspects APM but does not forward APM to Datadog; keep Datadog Agent or Collector primary when trace continuity matters.",
+        "dogtap.warning.retention": "Dogtap file storage is a bounded diagnostic buffer, not long-term telemetry retention.",
+        "dogtap.warning.sampling": "Set DOGTAP_SAMPLING_RATE explicitly before trialing production-like traffic.",
+        "dogtap.warning.forwarding": "DOGTAP_FORWARDING_ENABLED is false by default; enable only with owner approval and managed secrets.",
+        "dogtap.warning.raw-payloads": "DOGTAP_ALLOW_RAW_PAYLOADS must remain false outside local-only debugging.",
+        "dogtap.warning.image-tag": "Replace latest with a released version tag for shared or production-like trials after the first smoke succeeds."
+      },
+      "environment": [
+        {
+          "name": "DOGTAP_MODE",
+          "value": "tee"
+        },
+        {
+          "name": "DOGTAP_HTTP_ADDR",
+          "value": "0.0.0.0:8080"
+        },
+        {
+          "name": "DOGTAP_APM_ADDR",
+          "value": "0.0.0.0:8126"
+        },
+        {
+          "name": "DOGTAP_OTLP_HTTP_ADDR",
+          "value": "0.0.0.0:4318"
+        },
+        {
+          "name": "DOGTAP_GRPC_ADDR",
+          "value": "0.0.0.0:4317"
+        },
+        {
+          "name": "DOGTAP_STORAGE_KIND",
+          "value": "file"
+        },
+        {
+          "name": "DOGTAP_STORAGE_PATH",
+          "value": "/data/events.json"
+        },
+        {
+          "name": "DOGTAP_STORAGE_MAX_EVENTS",
+          "value": "2000"
+        },
+        {
+          "name": "DOGTAP_STORAGE_TTL",
+          "value": "2h"
+        },
+        {
+          "name": "DOGTAP_SAMPLING_RATE",
+          "value": "0.10"
+        },
+        {
+          "name": "DOGTAP_QUEUE_MAX_IN_FLIGHT",
+          "value": "100"
+        },
+        {
+          "name": "DOGTAP_BACKPRESSURE_POLICY",
+          "value": "drop-newest"
+        },
+        {
+          "name": "DOGTAP_ALLOW_RAW_PAYLOADS",
+          "value": "false"
+        },
+        {
+          "name": "DOGTAP_FORWARDING_ENABLED",
+          "value": "false"
+        },
+        {
+          "name": "DOGTAP_FORWARDING_MAX_ATTEMPTS",
+          "value": "1"
+        },
+        {
+          "name": "DOGTAP_FORWARDING_TIMEOUT",
+          "value": "5s"
+        }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "dogtap-data",
+          "containerPath": "/data",
+          "readOnly": false
+        }
+      ],
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "protocol": "tcp"
+        },
+        {
+          "containerPort": 8126,
+          "protocol": "tcp"
+        },
+        {
+          "containerPort": 4317,
+          "protocol": "tcp"
+        },
+        {
+          "containerPort": 4318,
+          "protocol": "tcp"
+        }
+      ],
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:8080/healthz || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 10
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/dogtap-trial-service",
+          "awslogs-region": "ap-northeast-2",
+          "awslogs-stream-prefix": "dogtap"
+        }
+      }
+    }
+  ]
+}

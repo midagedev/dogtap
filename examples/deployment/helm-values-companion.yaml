@@ -1,0 +1,114 @@
+# Helm values model for deploying Dogtap as a private companion service.
+#
+# This is a values example, not a complete Dogtap chart contract. Use it as a
+# model for your internal chart or platform template.
+#
+# Private-network warning: use ClusterIP, NetworkPolicy, VPN-only ingress, or
+# port-forwarding. Do not expose Dogtap as a public internet service.
+dogtap:
+  enabled: true
+  mode: companion
+
+  image:
+    repository: ghcr.io/midagedev/dogtap
+    # Replace latest with a released version tag for shared or production-like
+    # trials after the first smoke succeeds.
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    ports:
+      http: 8080
+      apm: 8126
+      otlpGrpc: 4317
+      otlpHttp: 4318
+
+  networkPolicy:
+    enabled: true
+    ingress:
+      # Replace these selectors with the namespaces and workloads allowed to
+      # send telemetry to Dogtap.
+      namespaceSelector:
+        matchLabels:
+          dogtap-access: "true"
+      podSelector:
+        matchLabels:
+          dogtap-client: "true"
+
+  env:
+    - name: DOGTAP_MODE
+      value: tee
+    - name: DOGTAP_HTTP_ADDR
+      value: 0.0.0.0:8080
+    - name: DOGTAP_APM_ADDR
+      value: 0.0.0.0:8126
+    - name: DOGTAP_OTLP_HTTP_ADDR
+      value: 0.0.0.0:4318
+    - name: DOGTAP_GRPC_ADDR
+      value: 0.0.0.0:4317
+    # Retention warning: file storage is a bounded restart buffer for a trial,
+    # not long-term telemetry retention.
+    - name: DOGTAP_STORAGE_KIND
+      value: file
+    - name: DOGTAP_STORAGE_PATH
+      value: /data/events.json
+    - name: DOGTAP_STORAGE_MAX_EVENTS
+      value: "5000"
+    - name: DOGTAP_STORAGE_TTL
+      value: 4h
+    # Sampling warning: start low and raise only for a short diagnostic window.
+    - name: DOGTAP_SAMPLING_RATE
+      value: "0.05"
+    - name: DOGTAP_QUEUE_MAX_IN_FLIGHT
+      value: "100"
+    - name: DOGTAP_BACKPRESSURE_POLICY
+      value: drop-newest
+    # Raw payload warning: production-like use should store redacted metadata,
+    # not raw telemetry bodies.
+    - name: DOGTAP_ALLOW_RAW_PAYLOADS
+      value: "false"
+    # Forwarding warning: this example keeps Dogtap as an inspection target.
+    # Enable forwarding only with owner approval and deployment-managed secrets.
+    - name: DOGTAP_FORWARDING_ENABLED
+      value: "false"
+    - name: DOGTAP_FORWARDING_MAX_ATTEMPTS
+      value: "1"
+    - name: DOGTAP_FORWARDING_TIMEOUT
+      value: 5s
+
+  persistence:
+    enabled: true
+    size: 1Gi
+    mountPath: /data
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+  probes:
+    readiness:
+      path: /readyz
+      port: http
+    liveness:
+      path: /healthz
+      port: http
+
+# Example app override for companion-service mode:
+#
+# app:
+#   env:
+#     # This redirects telemetry to Dogtap for a trial. Keep Datadog Agent or
+#     # Collector primary when production trace continuity matters.
+#     - name: DD_TRACE_AGENT_URL
+#       value: http://dogtap:8126
+#     - name: DD_AGENT_HOST
+#       value: dogtap
+#     - name: DD_TRACE_AGENT_PORT
+#       value: "8126"
+#     - name: OTEL_EXPORTER_OTLP_ENDPOINT
+#       value: http://dogtap:4318

@@ -14,6 +14,8 @@ Dogtap.
   received RUM, replay, logs, traces, metrics, and correlation evidence
 - [GitHub Actions Workflow Contract Example](../examples/github-actions/):
   run Dogtap beside an app E2E suite and assert telemetry afterward
+- [Deployment Examples](../examples/deployment/): Helm and ECS trial shapes
+  with retention, sampling, forwarding, and private-network warnings
 - [RUM Proxy Canary](runbooks/RUM_PROXY_CANARY.md): safely test Browser RUM and
   Session Replay proxying through Dogtap
 - [Support Matrix](SUPPORT_MATRIX.md): supported surfaces and explicit limits
@@ -66,6 +68,8 @@ Current release-candidate state:
   Datadog-preserving strategy and sanitized adoption profile passed
 - [G8 Sanitized Adoption Profile](gates/G8_SANITIZED_ADOPTION_PROFILE.md):
   public-safe frontend/backend adoption evidence
+- [G8 Public Deployment Packaging](gates/G8_PUBLIC_DEPLOYMENT_PACKAGING.md):
+  Helm and ECS trial examples with checked safety markers
 - [G8 Release Candidate](gates/G8_RELEASE_CANDIDATE.md): first public
   release-candidate evidence passed
 
