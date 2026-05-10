@@ -11,6 +11,8 @@ Dogtap should stay removable from the application path:
   windows
 - bound local retention with `DOGTAP_STORAGE_MAX_EVENTS` and
   `DOGTAP_STORAGE_TTL`
+- use `DOGTAP_STORAGE_KIND=sqlite` with a bounded `/data/dogtap.db` volume when
+  restart-safe dev-cluster evidence is useful
 - set `DOGTAP_SAMPLING_RATE` explicitly before trialing production-like traffic
 - keep `DOGTAP_ALLOW_RAW_PAYLOADS=false` outside local-only debugging
 - keep `DOGTAP_FORWARDING_ENABLED=false` unless the owner has approved a

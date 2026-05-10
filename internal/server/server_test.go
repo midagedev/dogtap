@@ -1311,6 +1311,95 @@ func TestFileStoragePersistsRedactedEnvelope(t *testing.T) {
 	}
 }
 
+func TestSQLiteStoragePersistsRedactedEnvelope(t *testing.T) {
+	cfg := config.Default()
+	cfg.Mode = config.ModeForward
+	cfg.Storage.Kind = "sqlite"
+	cfg.Storage.Path = t.TempDir() + "/events.db"
+	cfg.Server.HTTPAddr = ""
+	cfg.Server.APMAddr = ""
+	cfg.Server.OTLPHTTPAddr = ""
+	cfg.Server.GRPCAddr = ""
+	app, err := New(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	body := `{"message":"owner@example.com failed login","password":"plain-secret","ddtags":"service:api,env:local"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v2/logs?access_token=query-secret", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer header-secret")
+	rec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("got status %d: %s", rec.Code, rec.Body.String())
+	}
+	if closer, ok := app.store.(interface{ Close() error }); ok {
+		if err := closer.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	reopened, err := store.NewSQLite(cfg.Storage.Path, cfg.Storage.MaxEvents, cfg.Storage.TTL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reopened.Close()
+	events, err := reopened.List(context.Background(), store.Query{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("got %d events, want 1", len(events))
+	}
+	if events[0].RawBody != "" {
+		t.Fatalf("forward mode should not persist rawBody: %#v", events[0])
+	}
+	text := mustJSON(t, events)
+	for _, leaked := range []string{"owner@example.com", "plain-secret", "query-secret", "header-secret", "Bearer"} {
+		if strings.Contains(text, leaked) {
+			t.Fatalf("sqlite persisted event leaked %q:\n%s", leaked, text)
+		}
+	}
+	if !strings.Contains(text, "***REDACTED***") {
+		t.Fatalf("sqlite persisted event should include redaction markers:\n%s", text)
+	}
+}
+
+func TestSQLiteStorageFailureDropsDogtapCopyFailOpen(t *testing.T) {
+	cfg := config.Default()
+	cfg.Mode = config.ModeForward
+	cfg.Storage.Kind = "sqlite"
+	cfg.Storage.Path = t.TempDir() + "/events.db"
+	cfg.Server.HTTPAddr = ""
+	cfg.Server.APMAddr = ""
+	cfg.Server.OTLPHTTPAddr = ""
+	cfg.Server.GRPCAddr = ""
+	samplingRate := 1.0
+	cfg.Safety.SamplingRate = &samplingRate
+	app, err := New(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closer, ok := app.store.(interface{ Close() error }); ok {
+		if err := closer.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/rum", bytes.NewBufferString(`{"service":"web","env":"prod","usr":{"id":"u"},"context":{"account":{"id":"a"},"workspace":{"id":"w"}}}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("production storage failure should fail open with 202, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "storage_error") {
+		t.Fatalf("expected storage_error response: %s", rec.Body.String())
+	}
+}
+
 func mustJSON(t *testing.T, value any) string {
 	t.Helper()
 	b, err := json.Marshal(value)

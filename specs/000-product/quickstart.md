@@ -24,6 +24,11 @@ For source development with the generic local profile:
 go run ./cmd/dogtap serve -config configs/generic-local.yaml
 ```
 
+The default Compose and generic local profiles use bounded SQLite storage so
+retained events survive Dogtap restarts until `storage.ttl` or
+`storage.maxEvents` removes them. Use `DOGTAP_STORAGE_KIND=memory` for an
+ephemeral run.
+
 ## Browser RUM Target
 
 Configure Datadog Browser RUM to use Dogtap as a proxy through runtime config

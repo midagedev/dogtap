@@ -56,7 +56,11 @@ Initial rule groups:
 
 ### Event store
 
-Stores recent events and validation results. Production mode must store less, not more.
+Stores recent events and validation results. The default store is in-memory,
+with optional JSON file snapshots and optional SQLite persistence for
+restart-safe local, CI, isolated E2E, and dev-cluster inspection. All store
+kinds remain bounded by TTL and max event count. Production mode must store
+less, not more.
 
 ### Forwarder
 

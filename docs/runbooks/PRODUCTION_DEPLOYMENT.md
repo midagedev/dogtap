@@ -15,7 +15,8 @@ mode, unless the owning team explicitly accepts the added operational risk.
 - `DOGTAP_ALLOW_RAW_PAYLOADS=false`
 - `DOGTAP_STORAGE_MAX_EVENTS` sized to a short diagnostic window
 - `DOGTAP_STORAGE_TTL` set to a short retention period
-- `DOGTAP_STORAGE_KIND=file` only when local restart persistence is required
+- `DOGTAP_STORAGE_KIND=sqlite` only when bounded restart persistence is
+  required; keep `memory` for the smallest production-facing diagnostic tap
 - `DOGTAP_SAMPLING_RATE` set explicitly for the production diagnostic window
 - `DOGTAP_QUEUE_MAX_IN_FLIGHT` sized to bound concurrent Dogtap work
 - `DOGTAP_BACKPRESSURE_POLICY=drop-newest`

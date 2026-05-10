@@ -37,15 +37,17 @@ Decision:
 
 ### Storage
 
-Storage currently uses bounded in-memory retention with optional JSON file
-persistence. SQLite remains deferred until forwarding or production metadata
-retention needs require a relational store.
+Storage uses bounded in-memory retention by default, optional JSON file
+persistence for simple local snapshots, and optional SQLite persistence for
+restart-safe retained telemetry in local, CI, isolated E2E, and dev-cluster
+runs. SQLite is still bounded by TTL and max event count; it is not a
+long-term observability warehouse.
 
 Modes:
 
-- `local`: bounded memory plus optional file snapshot path
-- `ci`: bounded memory plus replay reports or diagnostics artifacts
-- `forward`: bounded memory/file metadata plus forwarding results
+- `local`: bounded memory, file snapshot, or SQLite path
+- `ci`: bounded memory or SQLite plus replay reports or diagnostics artifacts
+- `forward`: bounded memory/file/SQLite metadata plus forwarding results
 - production-facing modes: redacted metadata only, bounded by TTL and count
 
 ### Dashboard
@@ -225,6 +227,19 @@ Gate:
 Gate:
 
 - G5 CI Contract workflow contract subset
+
+### M9: Persistent queryable inspection lane
+
+- Opt-in SQLite event store with indexed metadata columns and envelope JSON
+- Datadog-compatible APIs continue to read through the store interface
+- Dashboard structured-log and metric chart improvements over retained events
+- Dev-cluster deployment examples that keep Dogtap bounded and reversible
+
+Gate:
+
+- G2 Runtime Contract persistent storage subset
+- G4 Product Usability dashboard observability subset
+- G8 Release Candidate dev-cluster subset
 
 ## Configuration Model
 

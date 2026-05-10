@@ -36,6 +36,19 @@ func TestLoadStorageFileFromEnv(t *testing.T) {
 	}
 }
 
+func TestLoadStorageSQLiteFromEnv(t *testing.T) {
+	t.Setenv("DOGTAP_STORAGE_KIND", "sqlite")
+	t.Setenv("DOGTAP_STORAGE_PATH", "/tmp/dogtap-events.db")
+
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Storage.Kind != "sqlite" || cfg.Storage.Path != "/tmp/dogtap-events.db" {
+		t.Fatalf("unexpected storage config: %#v", cfg.Storage)
+	}
+}
+
 func TestLoadSafetyControlsFromEnv(t *testing.T) {
 	t.Setenv("DOGTAP_SAMPLING_RATE", "0.25")
 	t.Setenv("DOGTAP_QUEUE_MAX_IN_FLIGHT", "7")
@@ -79,12 +92,23 @@ func TestFileStorageRequiresPath(t *testing.T) {
 	}
 }
 
+func TestSQLiteStorageRequiresPath(t *testing.T) {
+	tmp := t.TempDir()
+	path := tmp + "/dogtap.yaml"
+	if err := os.WriteFile(path, []byte("storage:\n  kind: sqlite\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(path); err == nil {
+		t.Fatalf("expected sqlite storage without path to fail")
+	}
+}
+
 func TestExampleConfigLoads(t *testing.T) {
 	cfg, err := Load("../../dogtap.example.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Storage.Kind != "file" || cfg.Storage.Path == "" {
+	if cfg.Storage.Kind != "sqlite" || cfg.Storage.Path == "" {
 		t.Fatalf("unexpected example storage config: %#v", cfg.Storage)
 	}
 }

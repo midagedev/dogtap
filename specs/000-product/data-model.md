@@ -353,6 +353,13 @@ pagination, or Datadog mutating APIs.
 
 ## Storage Rules
 
+Supported store kinds:
+
+- `memory`: bounded in-process retention, default for the fastest local loop.
+- `file`: bounded JSON snapshot persistence for simple local restarts.
+- `sqlite`: bounded single-file persistence with indexed metadata columns and
+  full redacted `EventEnvelope` JSON for API/dashboard compatibility.
+
 Local mode:
 
 - Raw decoded payload may be stored temporarily.
@@ -369,3 +376,5 @@ Production modes:
 - Headers must be redacted before storage.
 - Query strings must be redacted or removed before storage.
 - Secret-like values must never be persisted unmasked.
+- Persistent stores must continue to enforce TTL and max event count; selecting
+  SQLite must not change the retention boundary.

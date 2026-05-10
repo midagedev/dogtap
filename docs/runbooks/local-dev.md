@@ -17,7 +17,7 @@ Or with a config file:
 go run ./cmd/dogtap serve -config configs/generic-local.yaml
 ```
 
-The generic local config stores recent events in `.dogtap/generic-events.json`,
+The generic local config stores recent events in `.dogtap/generic-local.db`,
 so local sessions survive process restarts until TTL/count retention removes
 them.
 
@@ -27,7 +27,7 @@ With Docker Compose:
 docker compose up --build
 ```
 
-The compose setup mounts a named `dogtap-data` volume at `/data` and writes `/data/events.json`.
+The compose setup mounts a named `dogtap-data` volume at `/data` and writes `/data/dogtap.db`.
 
 Equivalent Docker shape:
 
@@ -37,8 +37,8 @@ docker run --rm \
   -p 8126:8126 \
   -p 4317:4317 \
   -p 4318:4318 \
-  -e DOGTAP_STORAGE_KIND=file \
-  -e DOGTAP_STORAGE_PATH=/data/events.json \
+  -e DOGTAP_STORAGE_KIND=sqlite \
+  -e DOGTAP_STORAGE_PATH=/data/dogtap.db \
   -v dogtap-data:/data \
   ghcr.io/midagedev/dogtap:latest
 ```

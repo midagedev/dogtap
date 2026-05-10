@@ -17,7 +17,9 @@ Use:
 - Go backend with one process and static dashboard embedding.
 - React, TypeScript, and Vite for the dashboard build.
 - In-memory bounded storage for local and CI MVP behavior.
-- SQLite only after forwarding or production metadata retention needs require it.
+- SQLite only after concrete restart-safe local, CI, isolated E2E, or
+  dev-cluster retention needs require it. That trigger is now addressed by
+  [Decision 0015](0015-sqlite-storage.md).
 
 ## Rationale
 

@@ -14,6 +14,8 @@ Dogtap.
   received RUM, replay, logs, traces, metrics, and correlation evidence
 - [Datadog API Compatibility](DATADOG_API_COMPATIBILITY.md): read-only
   Datadog-shaped search/query endpoints for retained Dogtap telemetry
+- [SQLite Storage Decision](decisions/0015-sqlite-storage.md): bounded
+  persistent storage for local, CI, isolated E2E, and dev-cluster inspection
 - [GitHub Actions Workflow Contract Example](../examples/github-actions/):
   run Dogtap beside an app E2E suite and assert telemetry afterward
 - [Deployment Examples](../examples/deployment/): Helm and ECS trial shapes
@@ -64,6 +66,8 @@ under `fixtures/`.
 
 Current release-candidate state:
 
+- [G2 SQLite Storage](gates/G2_SQLITE_STORAGE.md): persistent queryable store
+  subset passed
 - [G8 Generic Adoption Smoke](gates/G8_GENERIC_ADOPTION_SMOKE.md): generic
   quickstart subset passed
 - [G8 External Injection Adoption](gates/G8_EXTERNAL_INJECTION_ADOPTION.md):
@@ -82,9 +86,10 @@ Architecture and product decisions live under `docs/decisions/`.
 Current notable decisions:
 
 - Go backend plus embedded React dashboard
-- bounded memory/file storage
+- bounded memory/file/SQLite storage
 - practical Datadog compatibility instead of full private endpoint parity
 - generic adoption kit instead of a Dogtap-specific SDK
 - Datadog-preserving external injection before broader Agent parity
 - workflow observability contracts as an additive diagnostics artifact
 - read-only Datadog API compatibility for local retained telemetry search
+- opt-in SQLite storage for restart-safe bounded retained telemetry

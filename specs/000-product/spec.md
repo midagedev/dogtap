@@ -212,6 +212,10 @@ Acceptance criteria:
   existing Datadog-oriented tools can query retained Dogtap telemetry through
   familiar logs, RUM, spans, and metric query paths without learning a
   Dogtap-specific search API.
+- FR-071: Provide an opt-in SQLite event store for local, CI, isolated E2E,
+  and dev-cluster runs that need restart-safe and queryable retained telemetry
+  while preserving Dogtap's bounded TTL/count retention and redaction-before-
+  persistence rules.
 
 ## Non-Functional Requirements
 
@@ -227,6 +231,9 @@ Acceptance criteria:
 - NFR-008: Workflow contracts must be event-backed, deterministic, and small
   enough for agents to inspect from `summary.md` and `workflow-contracts.json`
   without requiring Datadog credentials.
+- NFR-009: Persistent storage must remain single-node and bounded by default;
+  Dogtap must not require a network database for the local, CI, or dev-cluster
+  inspection lane.
 
 ## Non-Goals
 
@@ -237,6 +244,8 @@ Acceptance criteria:
 - Full private Datadog endpoint compatibility in MVP
 - Full Datadog API query language or mutating API compatibility
 - Production-grade native Grafana Faro collector parity
+- Unbounded production telemetry warehouse or multi-tenant observability
+  database
 
 ## Success Metrics
 
@@ -258,8 +267,9 @@ Acceptance criteria:
   dependency.
 - The React dashboard is embedded behind the Go API and rebuilt into
   `web/dist`.
-- Local storage uses bounded memory with optional JSON file persistence; SQLite
-  is deferred until a concrete metadata-retention need appears.
+- Local storage uses bounded memory by default, optional JSON file persistence
+  for simple snapshots, and optional SQLite persistence for restart-safe local,
+  CI, isolated E2E, and dev-cluster retained telemetry.
 - Datadog private payload structures are normalized only where fixture-backed
   and otherwise preserved for inspection as decoded/raw local evidence.
 - The repository is Apache-2.0 licensed for public OSS and team adoption.
