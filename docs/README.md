@@ -20,6 +20,8 @@ Dogtap.
   run Dogtap beside an app E2E suite and assert telemetry afterward
 - [Deployment Examples](../examples/deployment/): Helm and ECS trial shapes
   with retention, sampling, forwarding, and private-network warnings
+- [EKS Dev Cluster](runbooks/EKS_DEV_CLUSTER.md): Kustomize overlay and smoke
+  path for a private dev-cluster Dogtap service
 - [RUM Proxy Canary](runbooks/RUM_PROXY_CANARY.md): safely test Browser RUM and
   Session Replay proxying through Dogtap
 - [Support Matrix](SUPPORT_MATRIX.md): supported surfaces and explicit limits
@@ -55,6 +57,7 @@ Canonical spec artifacts live under `specs/000-product/`:
 - [RUM Proxy Canary](runbooks/RUM_PROXY_CANARY.md)
 - [Local Development](runbooks/local-dev.md)
 - [Production Deployment](runbooks/PRODUCTION_DEPLOYMENT.md)
+- [EKS Dev Cluster](runbooks/EKS_DEV_CLUSTER.md)
 - [Release Candidate](runbooks/RELEASE_CANDIDATE.md)
 
 ## Evidence And Gates
@@ -80,6 +83,8 @@ Current release-candidate state:
   public-safe frontend/backend adoption evidence
 - [G8 Public Deployment Packaging](gates/G8_PUBLIC_DEPLOYMENT_PACKAGING.md):
   Helm and ECS trial examples with checked safety markers
+- [G8 EKS Dev Cluster](gates/G8_EKS_DEV_CLUSTER.md): private Kustomize
+  overlay and smoke runbook readiness
 - [G8 Release Candidate](gates/G8_RELEASE_CANDIDATE.md): first public
   release-candidate evidence passed
 

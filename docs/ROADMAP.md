@@ -353,14 +353,14 @@ workflow emitted usable logs, traces, metrics, RUM, and replay evidence.
 Goal: make Dogtap credible as a bounded internal inspection target in a dev EKS
 cluster.
 
-Status: planned.
+Status: first static packaging slice complete.
 
 - Add a private-by-default EKS dev overlay with single replica, non-root
-  security context, bounded retention, and rollback instructions.
+  security context, bounded retention, and rollback instructions: complete.
 - Add a cluster smoke runbook that posts representative telemetry and verifies
-  diagnostics, metrics, config safety, and retained events.
+  diagnostics, config safety, and retained events: complete.
 - Keep production Datadog or OTel Collector as the primary telemetry path; use
-  Dogtap as a dev-cluster inspection lane.
+  Dogtap as a dev-cluster inspection lane: complete.
 
 Why it matters: team-level adoption needs a repeatable dev-cluster deployment
 path, but Dogtap should not become a production observability backend.

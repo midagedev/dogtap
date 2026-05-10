@@ -53,6 +53,8 @@ All notable changes to Dogtap will be documented in this file.
   faster log/metric inspection.
 - Datadog-compatible structured log aliases, metric point tag filtering,
   trace-ID alias matching, and Dogtap event IDs for agent debugging.
+- EKS dev-cluster Kustomize overlay and smoke runbook with private networking,
+  SQLite PVC retention, non-root security context, and rollback steps.
 
 ### Notes
 

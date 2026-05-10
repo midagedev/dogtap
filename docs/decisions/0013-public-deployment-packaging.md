@@ -23,6 +23,8 @@ managed production platform:
   `examples/deployment/`.
 - An ECS/Fargate task definition example shows Dogtap as a non-essential
   internal inspection sidecar.
+- An EKS dev-cluster Kustomize overlay shows Dogtap as a private companion
+  service with SQLite PVC retention, NetworkPolicy, and rollback steps.
 - Each recipe must include explicit retention, sampling, forwarding, raw
   payload, and private-network warnings.
 - CI validates example syntax and required safety markers through
@@ -43,6 +45,9 @@ The examples are intentionally conservative:
   deployment-managed secrets.
 - In ECS, the Dogtap container is non-essential so the app is not stopped by a
   Dogtap failure.
+- In EKS dev clusters, Dogtap is single-replica, private `ClusterIP`, bounded
+  by SQLite retention settings, and removable with its PVC when the diagnostic
+  window ends.
 
 Future production packaging can add real Helm charts or IaC modules only after
 the examples have user feedback and fixture-backed safety checks.

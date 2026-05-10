@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dogtap-data
+  namespace: dogtap-dev
+  labels:
+    app.kubernetes.io/name: dogtap
+    app.kubernetes.io/part-of: dogtap
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

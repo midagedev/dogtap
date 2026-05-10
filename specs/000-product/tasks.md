@@ -594,10 +594,10 @@ Gate:
   dashboard.
 - [x] T263 Add Datadog-compatible API refinements for structured log and metric
   query scenarios discovered by dashboard/agent usage.
-- [ ] T264 Add an EKS dev-cluster deployment overlay and smoke runbook with
+- [x] T264 Add an EKS dev-cluster deployment overlay and smoke runbook with
   private-by-default networking, bounded retention, and rollback steps.
 
 Gate:
 
 - [x] G4 Product Usability dashboard observability subset
-- [ ] G8 Release Candidate dev-cluster subset
+- [x] G8 Release Candidate dev-cluster subset

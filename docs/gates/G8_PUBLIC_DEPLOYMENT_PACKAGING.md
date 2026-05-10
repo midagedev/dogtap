@@ -21,6 +21,8 @@ Implemented:
   `examples/deployment/helm-values-companion.yaml`
 - ECS/Fargate task definition example:
   `examples/deployment/ecs-task-definition.json`
+- EKS dev-cluster Kustomize overlay:
+  `examples/deployment/eks-dev/`
 - Deployment syntax and safety-marker check:
   `scripts/deployment/check.sh`
 - Maintainer command:
@@ -37,6 +39,8 @@ Safety markers checked across the examples:
 - forwarding disabled by default
 - private-network guidance
 - ECS Dogtap sidecar is non-essential
+- EKS overlay uses private `ClusterIP`, NetworkPolicy, non-root security
+  context, read-only root filesystem, and SQLite PVC retention
 
 Verification:
 

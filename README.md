@@ -335,6 +335,7 @@ Deployment trial examples live under `examples/deployment/`:
 
 - `helm-values-sidecar.yaml`: Helm values fragment for same-pod Dogtap sidecar
 - `helm-values-companion.yaml`: Helm values model for a private Dogtap service
+- `eks-dev/`: EKS dev-cluster Kustomize overlay with SQLite PVC retention
 - `ecs-task-definition.json`: ECS/Fargate task definition with Dogtap as a
   non-essential internal inspection sidecar
 
