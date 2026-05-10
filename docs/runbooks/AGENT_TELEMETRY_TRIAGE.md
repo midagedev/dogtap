@@ -147,6 +147,12 @@ curl -sS -X POST http://127.0.0.1:18080/api/diagnostics \
   }"
 ```
 
+For GitHub Actions, start from
+`examples/github-actions/workflow-contract.yml`: it runs Dogtap as a service,
+lets the repository's normal E2E suite exercise the app, then runs
+`dogtap diagnose -workflow-contract -fail-on-workflow-contract` as the final
+observability assertion.
+
 ## Local Dev Server Pattern
 
 For a manually running frontend/backend:

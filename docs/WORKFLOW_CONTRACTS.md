@@ -40,7 +40,13 @@ checks:
     type: no-sensitive-values
 ```
 
-Example files live under `configs/contracts/`.
+Example files live under `configs/contracts/`:
+
+- `frontend-backend.yaml`: generic readiness for the dashboard and smoke runs
+- `login.yaml`: login/sign-in/auth
+- `case-open.yaml`: opening a case or record detail page
+- `checkout.yaml`: checkout/payment/purchase
+- `report-export.yaml`: report export or file generation
 
 ## Check Types
 
@@ -75,6 +81,24 @@ curl -sS -X POST http://127.0.0.1:8080/api/diagnostics \
 
 Responses include `workflowContracts` when contracts are supplied or requested.
 Archives include `workflow-contracts.json`.
+
+## CI Pattern
+
+In CI, run Dogtap beside the app, execute the normal E2E suite, then add one
+assertion step:
+
+```bash
+dogtap diagnose \
+  -base-url http://127.0.0.1:8080 \
+  -output .tmp/dogtap-diagnostics \
+  -workflow-contract .dogtap/contracts/login.yaml \
+  -fail-on-workflow-contract \
+  -expect-non-empty
+```
+
+The key design choice is that Dogtap verifies the E2E suite's telemetry output;
+it does not replace the suite. A complete GitHub Actions template is available
+at `examples/github-actions/workflow-contract.yml`.
 
 ## Dashboard
 

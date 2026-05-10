@@ -1,0 +1,51 @@
+name: case-open-workflow
+description: Verifies that opening a case produces browser context, backend evidence, metrics, and trace correlation.
+labels:
+  workflow: case-open
+  scope: local-dev
+checks:
+  - id: case-open-rum-context
+    type: event
+    source: rum
+    routeRegex: "^/cases/[^/]+"
+    fields:
+      - sessionId
+      - userId
+      - caseId
+    hint: Open a real case route, then check RUM route normalization and case context setters.
+  - id: case-open-replay
+    type: event
+    source: rum
+    payloadKind: replay
+    hint: Enable Session Replay and confirm replay intake is proxied to Dogtap.
+  - id: case-open-backend-log
+    type: log-message
+    source: logs
+    pattern: "(?i)case.*(open|load|view)|open.*case"
+    hint: Add a stable backend log marker when the case page loads its primary data.
+  - id: case-open-backend-trace
+    type: event
+    payloadKind: trace
+    service: api-service
+    routeRegex: "/api/.*/cases"
+    hint: Check backend tracer route naming for the case-read API.
+  - id: case-open-latency-metric
+    type: metric
+    pattern: "^(http\\.server\\.request\\.duration|case\\.open\\..*)$"
+    hint: Export HTTP duration or case-open specific latency metrics.
+  - id: case-open-browser-to-api-trace
+    type: trace-correlation
+    from:
+      source: rum
+      routeRegex: "^/cases/[^/]+"
+      fields:
+        - sessionId
+        - traceId
+    to:
+      payloadKind: trace
+      service: api-service
+      routeRegex: "/api/.*/cases"
+    hint: Propagate browser resource trace context into the case-read backend span.
+  - id: case-open-no-sensitive-values
+    type: no-sensitive-values
+    hint: Redact patient, email, authorization, cookie, and JWT values before telemetry leaves the app.

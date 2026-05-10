@@ -177,7 +177,8 @@ Status: first workflow contract slice complete.
 - diagnostics archive `workflow-contracts.json`
 - `dogtap diagnose -workflow-contract` CLI support
 - dashboard workflow contract panel
-- follow-up templates for checkout, case open, and report export remain pending
+- templates for login, checkout, case open, and report export
+- reusable GitHub Actions example for running a workflow contract after E2E
 
 Gate:
 

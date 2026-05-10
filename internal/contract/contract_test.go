@@ -1,6 +1,8 @@
 package contract
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -107,6 +109,39 @@ func TestNoSensitiveValuesFindsLowercaseEmailBearerAndJWT(t *testing.T) {
 	}
 	if got := result.Checks[0].Matched; got != 3 {
 		t.Fatalf("matched = %d, want 3", got)
+	}
+}
+
+func TestBundledContractTemplatesLoad(t *testing.T) {
+	dir := filepath.Join("..", "..", "configs", "contracts")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) == 0 {
+		t.Fatalf("expected bundled contract templates")
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		def, err := LoadFile(filepath.Join(dir, entry.Name()))
+		if err != nil {
+			t.Fatalf("load %s: %v", entry.Name(), err)
+		}
+		if def.Name == "" || len(def.Checks) == 0 {
+			t.Fatalf("template %s is missing name or checks: %#v", entry.Name(), def)
+		}
+		seen := map[string]bool{}
+		for _, check := range def.Checks {
+			if check.ID == "" || check.Type == "" {
+				t.Fatalf("template %s has incomplete check: %#v", entry.Name(), check)
+			}
+			if seen[check.ID] {
+				t.Fatalf("template %s has duplicate check id %q", entry.Name(), check.ID)
+			}
+			seen[check.ID] = true
+		}
 	}
 }
 

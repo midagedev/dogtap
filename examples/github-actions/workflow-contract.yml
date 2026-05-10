@@ -1,0 +1,67 @@
+name: Telemetry workflow contract
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  dogtap-workflow-contract:
+    runs-on: ubuntu-latest
+    services:
+      dogtap:
+        image: ghcr.io/midagedev/dogtap:latest
+        ports:
+          - 8080:8080
+          - 8126:8126
+          - 4318:4318
+          - 4317:4317
+        options: >-
+          --health-cmd "wget -qO- http://127.0.0.1:8080/healthz || exit 1"
+          --health-interval 5s
+          --health-timeout 2s
+          --health-retries 24
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set telemetry endpoints
+        run: |
+          {
+            echo "DOGTAP_BASE_URL=http://127.0.0.1:8080"
+            echo "DD_AGENT_HOST=127.0.0.1"
+            echo "DD_TRACE_AGENT_PORT=8126"
+            echo "OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318"
+            echo "OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf"
+          } >> "$GITHUB_ENV"
+
+      - name: Start application under test
+        run: |
+          echo "Replace this with your app startup command."
+          echo "Example: docker compose up -d frontend backend"
+
+      - name: Run E2E workflow
+        run: |
+          echo "Replace this with the E2E command that exercises the workflow."
+          echo "Example: npm run test:e2e -- --grep @login"
+
+      - name: Assert Dogtap workflow contract
+        if: always()
+        run: |
+          mkdir -p .tmp/dogtap-diagnostics
+          docker run --rm --network host \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            ghcr.io/midagedev/dogtap:latest \
+            diagnose \
+              -base-url http://127.0.0.1:8080 \
+              -output .tmp/dogtap-diagnostics \
+              -workflow-contract .dogtap/contracts/login.yaml \
+              -fail-on-workflow-contract \
+              -expect-non-empty
+
+      - name: Upload Dogtap diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dogtap-diagnostics
+          path: .tmp/dogtap-diagnostics
