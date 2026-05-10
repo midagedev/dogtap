@@ -1,0 +1,50 @@
+name: login-workflow
+description: Verifies that login produces browser context, backend evidence, metrics, and browser-to-backend trace correlation.
+labels:
+  workflow: login
+  scope: local-dev
+checks:
+  - id: login-rum-context
+    type: event
+    source: rum
+    routeRegex: "^/(login|signin|auth)"
+    fields:
+      - sessionId
+      - userId
+    hint: Run the browser login path, then check RUM proxy URL, sample rate, and user context setup.
+  - id: login-replay
+    type: event
+    source: rum
+    payloadKind: replay
+    hint: Enable Session Replay and confirm replay intake is proxied to Dogtap.
+  - id: login-backend-log
+    type: log-message
+    source: logs
+    pattern: "(?i)login|signin|auth"
+    hint: Route backend structured logs to Dogtap and include a stable login marker.
+  - id: login-backend-trace
+    type: event
+    payloadKind: trace
+    service: api-service
+    routeRegex: "/(login|signin|auth)"
+    hint: Check backend tracer endpoint and HTTP route instrumentation.
+  - id: login-latency-metric
+    type: metric
+    pattern: "^(http\\.server\\.request\\.duration|login\\..*)$"
+    hint: Export OTLP metrics for backend HTTP duration or a login-specific metric.
+  - id: login-browser-to-api-trace
+    type: trace-correlation
+    from:
+      source: rum
+      routeRegex: "^/(login|signin|auth)"
+      fields:
+        - sessionId
+        - traceId
+    to:
+      payloadKind: trace
+      service: api-service
+      routeRegex: "/(login|signin|auth)"
+    hint: Propagate trace context from browser resource requests into backend spans.
+  - id: login-no-sensitive-values
+    type: no-sensitive-values
+    hint: Redact emails, authorization headers, cookies, and JWTs before telemetry leaves the app.

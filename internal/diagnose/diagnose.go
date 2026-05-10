@@ -19,24 +19,30 @@ import (
 	"time"
 
 	"github.com/midagedev/dogtap/internal/bundle"
+	"github.com/midagedev/dogtap/internal/contract"
 	"github.com/midagedev/dogtap/internal/event"
 	"github.com/midagedev/dogtap/internal/report"
 )
 
 type Options struct {
-	BaseURL      string
-	OutputDir    string
-	Limit        int
-	Expectations Expectations
-	Filter       bundle.Request
-	Client       *http.Client
+	BaseURL                string
+	OutputDir              string
+	Limit                  int
+	Expectations           Expectations
+	WorkflowContracts      []contract.Definition
+	FailOnWorkflowContract bool
+	Filter                 bundle.Request
+	Client                 *http.Client
 }
 
 type Request struct {
-	Limit        int            `json:"limit,omitempty"`
-	Expect       Expectations   `json:"expect,omitempty"`
-	Expectations Expectations   `json:"expectations,omitempty"`
-	Filter       bundle.Request `json:"filter,omitempty"`
+	Limit                       int                   `json:"limit,omitempty"`
+	Expect                      Expectations          `json:"expect,omitempty"`
+	Expectations                Expectations          `json:"expectations,omitempty"`
+	WorkflowContract            contract.Definition   `json:"workflowContract,omitempty"`
+	WorkflowContracts           []contract.Definition `json:"workflowContracts,omitempty"`
+	UseDefaultWorkflowContracts bool                  `json:"useDefaultWorkflowContracts,omitempty"`
+	Filter                      bundle.Request        `json:"filter,omitempty"`
 }
 
 type Expectations struct {
@@ -53,30 +59,32 @@ type Expectations struct {
 }
 
 type Snapshot struct {
-	CreatedAt   time.Time             `json:"createdAt"`
-	BaseURL     string                `json:"baseUrl,omitempty"`
-	Limit       int                   `json:"limit"`
-	Filter      bundle.Request        `json:"filter"`
-	Health      map[string]string     `json:"healthz"`
-	Readiness   map[string]string     `json:"readyz"`
-	Events      []event.EventEnvelope `json:"events"`
-	Report      report.Report         `json:"report"`
-	DebugBundle bundle.DebugBundle    `json:"debugBundle"`
-	Metrics     string                `json:"metrics"`
-	Assertions  AssertionReport       `json:"assertions"`
+	CreatedAt         time.Time             `json:"createdAt"`
+	BaseURL           string                `json:"baseUrl,omitempty"`
+	Limit             int                   `json:"limit"`
+	Filter            bundle.Request        `json:"filter"`
+	Health            map[string]string     `json:"healthz"`
+	Readiness         map[string]string     `json:"readyz"`
+	Events            []event.EventEnvelope `json:"events"`
+	Report            report.Report         `json:"report"`
+	DebugBundle       bundle.DebugBundle    `json:"debugBundle"`
+	Metrics           string                `json:"metrics"`
+	Assertions        AssertionReport       `json:"assertions"`
+	WorkflowContracts []contract.Result     `json:"workflowContracts,omitempty"`
 }
 
 type SnapshotInput struct {
-	CreatedAt   time.Time
-	BaseURL     string
-	Request     Request
-	Health      map[string]string
-	Readiness   map[string]string
-	Events      []event.EventEnvelope
-	Report      report.Report
-	DebugBundle bundle.DebugBundle
-	Metrics     string
-	Probes      map[string]bool
+	CreatedAt         time.Time
+	BaseURL           string
+	Request           Request
+	Health            map[string]string
+	Readiness         map[string]string
+	Events            []event.EventEnvelope
+	Report            report.Report
+	DebugBundle       bundle.DebugBundle
+	Metrics           string
+	Probes            map[string]bool
+	WorkflowContracts []contract.Definition
 }
 
 type Artifact struct {
@@ -88,12 +96,13 @@ type Artifact struct {
 }
 
 type Result struct {
-	CreatedAt    time.Time       `json:"createdAt"`
-	BaseURL      string          `json:"baseUrl"`
-	OutputDir    string          `json:"outputDir"`
-	Files        map[string]File `json:"files"`
-	Assertions   AssertionReport `json:"assertions"`
-	RequestError []RequestError  `json:"requestErrors,omitempty"`
+	CreatedAt         time.Time         `json:"createdAt"`
+	BaseURL           string            `json:"baseUrl"`
+	OutputDir         string            `json:"outputDir"`
+	Files             map[string]File   `json:"files"`
+	Assertions        AssertionReport   `json:"assertions"`
+	WorkflowContracts []contract.Result `json:"workflowContracts,omitempty"`
+	RequestError      []RequestError    `json:"requestErrors,omitempty"`
 }
 
 type File struct {
@@ -200,12 +209,19 @@ func Collect(ctx context.Context, opt Options) (Result, error) {
 		"metrics":      metricsOK,
 		"debug-bundle": debugOK,
 	})
+	result.WorkflowContracts = contract.EvaluateAll(opt.WorkflowContracts, events)
 
 	writeJSONFile(&result, "assertions", "assertions.json", result.Assertions, http.StatusOK)
+	if len(result.WorkflowContracts) > 0 {
+		writeJSONFile(&result, "workflow-contracts", "workflow-contracts.json", result.WorkflowContracts, http.StatusOK)
+	}
 	writeTextFile(&result, "summary", "summary.md", RenderSummary(result), http.StatusOK)
 	writeManifestFile(&result)
 
 	if result.Assertions.Status == "fail" {
+		return result, report.ErrValidationFailed
+	}
+	if opt.FailOnWorkflowContract && workflowContractsFailed(result.WorkflowContracts) {
 		return result, report.ErrValidationFailed
 	}
 	return result, nil
@@ -226,6 +242,7 @@ func normalizeOptions(opt Options) Options {
 		opt.Client = &http.Client{Timeout: 5 * time.Second}
 	}
 	opt.Expectations = normalizeExpectations(opt.Expectations)
+	opt.WorkflowContracts = normalizeWorkflowDefinitions(opt.WorkflowContracts)
 	return opt
 }
 
@@ -246,6 +263,14 @@ func NormalizeRequest(req Request, defaultLimit int) Request {
 	if req.Filter.Limit <= 0 {
 		req.Filter.Limit = req.Limit
 	}
+	req.WorkflowContracts = normalizeWorkflowDefinitions(req.WorkflowContracts)
+	if !workflowDefinitionIsEmpty(req.WorkflowContract) {
+		req.WorkflowContracts = append([]contract.Definition{contract.Normalize(req.WorkflowContract)}, req.WorkflowContracts...)
+	}
+	req.WorkflowContract = contract.Definition{}
+	if req.UseDefaultWorkflowContracts && len(req.WorkflowContracts) == 0 {
+		req.WorkflowContracts = contract.DefaultDashboardContracts()
+	}
 	req.Expectations = Expectations{}
 	return req
 }
@@ -261,17 +286,18 @@ func NewSnapshot(input SnapshotInput) Snapshot {
 		probes = map[string]bool{}
 	}
 	return Snapshot{
-		CreatedAt:   createdAt,
-		BaseURL:     strings.TrimRight(input.BaseURL, "/"),
-		Limit:       req.Limit,
-		Filter:      req.Filter,
-		Health:      input.Health,
-		Readiness:   input.Readiness,
-		Events:      input.Events,
-		Report:      input.Report,
-		DebugBundle: input.DebugBundle,
-		Metrics:     input.Metrics,
-		Assertions:  BuildAssertions(input.Events, req.Expect, probes),
+		CreatedAt:         createdAt,
+		BaseURL:           strings.TrimRight(input.BaseURL, "/"),
+		Limit:             req.Limit,
+		Filter:            req.Filter,
+		Health:            input.Health,
+		Readiness:         input.Readiness,
+		Events:            input.Events,
+		Report:            input.Report,
+		DebugBundle:       input.DebugBundle,
+		Metrics:           input.Metrics,
+		Assertions:        BuildAssertions(input.Events, req.Expect, probes),
+		WorkflowContracts: contract.EvaluateAll(append(input.WorkflowContracts, req.WorkflowContracts...), input.Events),
 	}
 }
 
@@ -284,6 +310,9 @@ func SnapshotArtifacts(snapshot Snapshot, outputDir string) []Artifact {
 		jsonArtifact("debug-bundle", "debug-bundle.json", snapshot.DebugBundle),
 		textArtifact("metrics", "metrics.txt", snapshot.Metrics),
 		jsonArtifact("assertions", "assertions.json", snapshot.Assertions),
+	}
+	if len(snapshot.WorkflowContracts) > 0 {
+		artifacts = append(artifacts, jsonArtifact("workflow-contracts", "workflow-contracts.json", snapshot.WorkflowContracts))
 	}
 
 	files := make(map[string]File, len(artifacts)+2)
@@ -298,11 +327,12 @@ func SnapshotArtifacts(snapshot Snapshot, outputDir string) []Artifact {
 	files["manifest"] = File{Path: artifactPath(outputDir, "manifest.json"), Content: "application/json", StatusCode: http.StatusOK}
 
 	result := Result{
-		CreatedAt:  snapshot.CreatedAt,
-		BaseURL:    snapshot.BaseURL,
-		OutputDir:  outputDir,
-		Files:      files,
-		Assertions: snapshot.Assertions,
+		CreatedAt:         snapshot.CreatedAt,
+		BaseURL:           snapshot.BaseURL,
+		OutputDir:         outputDir,
+		Files:             files,
+		Assertions:        snapshot.Assertions,
+		WorkflowContracts: snapshot.WorkflowContracts,
 	}
 
 	return append(artifacts,
@@ -366,6 +396,30 @@ func normalizeExpectations(exp Expectations) Expectations {
 	exp.Metrics = normalizeList(exp.Metrics)
 	exp.Endpoints = normalizeList(exp.Endpoints)
 	return exp
+}
+
+func normalizeWorkflowDefinitions(defs []contract.Definition) []contract.Definition {
+	out := make([]contract.Definition, 0, len(defs))
+	for _, def := range defs {
+		if workflowDefinitionIsEmpty(def) {
+			continue
+		}
+		out = append(out, contract.Normalize(def))
+	}
+	return out
+}
+
+func workflowDefinitionIsEmpty(def contract.Definition) bool {
+	return strings.TrimSpace(def.Name) == "" && len(def.Checks) == 0
+}
+
+func workflowContractsFailed(results []contract.Result) bool {
+	for _, result := range results {
+		if result.Status == "fail" {
+			return true
+		}
+	}
+	return false
 }
 
 func normalizeList(values []string) []string {
@@ -772,6 +826,13 @@ func RenderSummary(result Result) string {
 	fmt.Fprintf(&b, "- Created: %s\n", result.CreatedAt.Format(time.RFC3339))
 	fmt.Fprintf(&b, "- Base URL: `%s`\n", result.BaseURL)
 	fmt.Fprintf(&b, "- Status: `%s`\n", result.Assertions.Status)
+	if len(result.WorkflowContracts) > 0 {
+		workflowStatus := "pass"
+		if workflowContractsFailed(result.WorkflowContracts) {
+			workflowStatus = "fail"
+		}
+		fmt.Fprintf(&b, "- Workflow contracts: `%s`\n", workflowStatus)
+	}
 	fmt.Fprintf(&b, "- Events: `%d`\n", result.Assertions.Observed.Total)
 	fmt.Fprintln(&b)
 
@@ -810,6 +871,38 @@ func RenderSummary(result Result) string {
 			markdownCell(check.Message),
 			markdownCell(check.Hint),
 		)
+	}
+	if len(result.WorkflowContracts) > 0 {
+		fmt.Fprintln(&b)
+		fmt.Fprintln(&b, "## Workflow Contracts")
+		fmt.Fprintln(&b)
+		for _, workflow := range result.WorkflowContracts {
+			fmt.Fprintf(
+				&b,
+				"- `%s`: `%s` (%d passed, %d failed)\n",
+				markdownCell(workflow.Name),
+				workflow.Status,
+				workflow.Summary.Passed,
+				workflow.Summary.Failed,
+			)
+		}
+		fmt.Fprintln(&b)
+		fmt.Fprintln(&b, "| Status | Contract | Check | Matched | Message | Hint |")
+		fmt.Fprintln(&b, "| --- | --- | --- | ---: | --- | --- |")
+		for _, workflow := range result.WorkflowContracts {
+			for _, check := range workflow.Checks {
+				fmt.Fprintf(
+					&b,
+					"| %s | `%s` | `%s` | %d | %s | %s |\n",
+					check.Status,
+					markdownCell(workflow.Name),
+					markdownCell(check.ID),
+					check.Matched,
+					markdownCell(check.Message),
+					markdownCell(check.Hint),
+				)
+			}
+		}
 	}
 	return b.String()
 }

@@ -82,6 +82,7 @@ real app.
 | --- | --- |
 | `summary.md` | Human-readable status, observed dimensions, and failing hints. |
 | `assertions.json` | Machine-readable pass/fail checks for agents and CI. |
+| `workflow-contracts.json` | Optional machine-readable workflow contract results for paths such as login, checkout, or case open. |
 | `events.json` | Raw retained event envelopes from `/api/events`. |
 | `report.json` | Latest validation report from `/api/reports/latest`. |
 | `debug-bundle.json` | Filtered debug bundle with Datadog query hints. |
@@ -108,7 +109,15 @@ curl -sS -X POST http://127.0.0.1:18080/api/diagnostics/archive \
       "sources": ["rum", "logs", "otlp"],
       "payloadKinds": ["replay", "metric"],
       "services": ["frontend-app", "backend-api", "gateway-api"]
-    }
+    },
+    "workflowContracts": [{
+      "name": "login-workflow",
+      "checks": [
+        {"id": "login-rum", "type": "event", "source": "rum", "fields": ["sessionId", "userId"]},
+        {"id": "login-log", "type": "log-message", "source": "logs", "pattern": "(?i)login"},
+        {"id": "login-metric", "type": "metric", "pattern": "http\\.server\\.request\\.duration"}
+      ]
+    }]
   }' \
   -o "$PWD/.tmp/dogtap-diagnostics.zip"
 ```
@@ -119,6 +128,7 @@ CLI directory shape:
 DOGTAP_ARTIFACT_DIR="$PWD/.tmp/dogtap-diagnostics" \
   go run /path/to/dogtap/cmd/dogtap diagnose \
     -base-url http://127.0.0.1:18080 \
+    -workflow-contract /path/to/dogtap/configs/contracts/login.yaml \
     -expect-non-empty \
     -expect-source rum,logs,otlp \
     -expect-payload-kind replay,metric \
@@ -145,11 +155,12 @@ For a manually running frontend/backend:
 2. Point frontend RUM or Faro collector config at Dogtap.
 3. Point backend traces/logs/metrics at Dogtap or an OTLP bridge.
 4. Exercise one workflow in the browser or API client.
-5. Query `POST /api/diagnostics` with expectations for that workflow.
+5. Query `POST /api/diagnostics` with expectations or a workflow contract for
+   that path.
 6. If a file artifact is needed, download `POST /api/diagnostics/archive` or run
    `dogtap diagnose`.
-7. Open `summary.md` first, then inspect `events.json` and
-   `debug-bundle.json`.
+7. Open `summary.md` first, then inspect `workflow-contracts.json`,
+   `events.json`, and `debug-bundle.json`.
 
 ## Reading Failures
 

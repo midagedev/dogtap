@@ -188,6 +188,12 @@ Acceptance criteria:
   diagnostics or a downloadable archive without shelling into the Dogtap
   container. The API must reuse the same assertion and missing-signal hint
   semantics as `dogtap diagnose`.
+- FR-069: Provide workflow observability contracts that assert whether a named
+  frontend/backend workflow produced useful RUM, Session Replay, backend logs,
+  traces, metrics, trace correlation, and privacy-safe context. Contract
+  results must be available through diagnostics JSON, diagnostics archive files,
+  the CLI, and the dashboard without changing existing diagnostics assertion
+  semantics by default.
 
 ## Non-Functional Requirements
 
@@ -200,6 +206,9 @@ Acceptance criteria:
 - NFR-007: Local adoption instructions should fit a common frontend/backend
   app in under five deliberate configuration changes: start Dogtap, point
   browser RUM, point backend traces, point backend logs or OTLP logs, and verify.
+- NFR-008: Workflow contracts must be event-backed, deterministic, and small
+  enough for agents to inspect from `summary.md` and `workflow-contracts.json`
+  without requiring Datadog credentials.
 
 ## Non-Goals
 

@@ -15,6 +15,7 @@ import (
 
 	"github.com/midagedev/dogtap/internal/bundle"
 	"github.com/midagedev/dogtap/internal/config"
+	"github.com/midagedev/dogtap/internal/contract"
 	"github.com/midagedev/dogtap/internal/diagnose"
 	"github.com/midagedev/dogtap/internal/event"
 	"github.com/midagedev/dogtap/internal/report"
@@ -106,14 +107,23 @@ func diagnoseLive(args []string) error {
 	filterViewID := fs.String("filter-view-id", "", "debug bundle view ID filter")
 	filterRoute := fs.String("filter-route", "", "debug bundle route filter")
 	filterStatus := fs.String("filter-status", "", "debug bundle validation status filter")
+	workflowContractPaths := stringListFlag{}
+	fs.Var(&workflowContractPaths, "workflow-contract", "path to a workflow contract YAML/JSON file; repeatable")
+	failOnWorkflowContract := fs.Bool("fail-on-workflow-contract", false, "return a validation failure when any workflow contract fails")
 	if err := fs.Parse(args); err != nil {
 		return config.ErrInvalid
 	}
+	workflowContracts, err := loadWorkflowContracts(workflowContractPaths)
+	if err != nil {
+		return err
+	}
 
 	result, err := diagnose.Collect(context.Background(), diagnose.Options{
-		BaseURL:   *baseURL,
-		OutputDir: *outputDir,
-		Limit:     *limit,
+		BaseURL:                *baseURL,
+		OutputDir:              *outputDir,
+		Limit:                  *limit,
+		WorkflowContracts:      workflowContracts,
+		FailOnWorkflowContract: *failOnWorkflowContract,
 		Expectations: diagnose.Expectations{
 			NonEmpty:     *expectNonEmpty,
 			Sources:      splitCSV(*expectSource),
@@ -143,6 +153,9 @@ func diagnoseLive(args []string) error {
 		},
 	})
 	fmt.Printf("Dogtap diagnostics: %s\n", result.Assertions.Status)
+	if len(result.WorkflowContracts) > 0 {
+		fmt.Printf("Workflow contracts: %s\n", workflowContractStatus(result.WorkflowContracts))
+	}
 	fmt.Printf("Output: %s\n", result.OutputDir)
 	fmt.Printf("Summary: %s\n", filepath.Join(result.OutputDir, "summary.md"))
 	return err
@@ -211,6 +224,45 @@ func splitCSV(value string) []string {
 		}
 	}
 	return out
+}
+
+type stringListFlag []string
+
+func (f *stringListFlag) String() string {
+	if f == nil {
+		return ""
+	}
+	return strings.Join(*f, ",")
+}
+
+func (f *stringListFlag) Set(value string) error {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil
+	}
+	*f = append(*f, value)
+	return nil
+}
+
+func loadWorkflowContracts(paths []string) ([]contract.Definition, error) {
+	contracts := make([]contract.Definition, 0, len(paths))
+	for _, path := range paths {
+		def, err := contract.LoadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", config.ErrInvalid, err)
+		}
+		contracts = append(contracts, def)
+	}
+	return contracts, nil
+}
+
+func workflowContractStatus(results []contract.Result) string {
+	for _, result := range results {
+		if result.Status == "fail" {
+			return "fail"
+		}
+	}
+	return "pass"
 }
 
 func exitCode(err error) int {

@@ -1,0 +1,33 @@
+name: frontend-backend-readiness
+description: Checks that a frontend/backend app produces inspectable browser, backend, and metric telemetry.
+labels:
+  audience: dashboard
+  scope: local-dev
+checks:
+  - id: browser-session-context
+    type: event
+    source: rum
+    fields:
+      - sessionId
+      - userId
+    hint: Check Browser RUM initialization, session sampling, and user context setters.
+  - id: session-replay-payload
+    type: event
+    source: rum
+    payloadKind: replay
+    hint: Check session replay enablement, replay sample rate, and proxy routing to /api/v2/replay.
+  - id: backend-log
+    type: log-message
+    pattern: ".+"
+    hint: Send logs through Datadog logs HTTP, OTLP logs, or a log-forwarder bridge.
+  - id: backend-trace
+    type: event
+    payloadKind: trace
+    hint: Check DD_TRACE_AGENT_URL, DD_AGENT_HOST/DD_TRACE_AGENT_PORT, or OTLP trace exporter settings.
+  - id: workflow-metric
+    type: metric
+    pattern: ".+"
+    hint: Check OTLP metrics exporter enablement, endpoint, and export interval.
+  - id: no-obvious-sensitive-values
+    type: no-sensitive-values
+    hint: Review RUM context, log messages, tags, headers, and query strings before forwarding telemetry.

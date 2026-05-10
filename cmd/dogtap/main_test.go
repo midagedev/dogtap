@@ -131,12 +131,23 @@ func TestDiagnoseCommandWritesBundle(t *testing.T) {
 		}
 	}))
 	t.Cleanup(server.Close)
-	output := filepath.Join(t.TempDir(), "diagnostics")
+	dir := t.TempDir()
+	output := filepath.Join(dir, "diagnostics")
+	contractPath := filepath.Join(dir, "workflow.yaml")
+	if err := os.WriteFile(contractPath, []byte(`name: smoke-workflow
+checks:
+  - id: rum-event
+    type: event
+    source: rum
+`), 0o644); err != nil {
+		t.Fatalf("write workflow contract: %v", err)
+	}
 
 	err := run([]string{
 		"diagnose",
 		"-base-url", server.URL,
 		"-output", output,
+		"-workflow-contract", contractPath,
 		"-expect-non-empty",
 		"-expect-source", "rum",
 		"-expect-session", "session-1",
@@ -151,6 +162,10 @@ func TestDiagnoseCommandWritesBundle(t *testing.T) {
 	}
 	if !strings.Contains(readFile(t, filepath.Join(output, "summary.md")), "session:session-1") {
 		t.Fatalf("expected session assertion in summary")
+	}
+	workflowContracts := readFile(t, filepath.Join(output, "workflow-contracts.json"))
+	if !strings.Contains(workflowContracts, `"name": "smoke-workflow"`) || !strings.Contains(workflowContracts, `"status": "pass"`) {
+		t.Fatalf("expected passing workflow contract, got:\n%s", workflowContracts)
 	}
 }
 

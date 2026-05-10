@@ -399,3 +399,32 @@ Evidence note 2026-05-10:
 - The archive endpoint returns `summary.md`, `assertions.json`, `events.json`,
   `report.json`, `debug-bundle.json`, `metrics.txt`, `healthz.json`,
   `readyz.json`, and `manifest.json`.
+
+## Phase 16: Workflow Observability Contracts
+
+- [x] T160 Add an event-backed workflow contract evaluator for event presence,
+  log message presence, metric presence, trace correlation, and obvious
+  sensitive value checks.
+- [x] T161 Add frontend/backend and login workflow contract templates under
+  `configs/contracts/`.
+- [x] T162 Add diagnostics API and archive support for `workflowContracts`
+  without changing existing `assertions.status` behavior.
+- [x] T163 Add `dogtap diagnose -workflow-contract` and optional
+  `-fail-on-workflow-contract` support for CI adoption.
+- [x] T164 Surface built-in workflow contract results in the dashboard.
+- [ ] T165 Add more workflow templates for checkout/case-open/report-export
+  once public fixture evidence exists.
+- [ ] T166 Add a reusable GitHub Actions example that runs a project E2E suite,
+  then asserts a workflow contract through Dogtap diagnostics.
+
+Gate:
+
+- [x] G5 CI Contract workflow contract subset
+
+Evidence note 2026-05-10:
+
+- Contract unit tests cover pass/fail, trace ID alias correlation, and
+  sensitive value detection.
+- Diagnostics tests cover CLI artifacts, diagnostics API JSON, and archive file
+  inclusion for `workflow-contracts.json`.
+- Dashboard build succeeds with the built-in frontend/backend readiness panel.
