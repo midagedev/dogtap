@@ -45,6 +45,8 @@ All notable changes to Dogtap will be documented in this file.
 - Public deployment examples for Helm sidecar, Helm companion-service, and
   ECS/Fargate trial shapes, plus `make deployment-check` safety-marker
   validation.
+- Read-only Datadog API compatibility for retained logs, RUM, spans, and metric
+  query debugging through Datadog-shaped paths.
 
 ### Notes
 

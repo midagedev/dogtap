@@ -322,6 +322,35 @@ DebugBundle
   redactionReport
 ```
 
+## Datadog Compatibility Response
+
+```text
+DatadogSearchResponse
+  data
+  meta
+  links
+```
+
+`data[]` contains Datadog-style records for retained Dogtap telemetry:
+
+- `type=log` for `POST /api/v2/logs/events/search`
+- `type=rum` for `POST /api/v2/rum/events/search`
+- `type=span` for `POST /api/v2/spans/events/search`
+
+```text
+DatadogMetricQueryResponse
+  status
+  res_type
+  query
+  from_date
+  to_date
+  series
+```
+
+The compatibility responses are projections of retained `EventEnvelope` data.
+They do not add long-term retention, permissions, facets, indexes, cursor
+pagination, or Datadog mutating APIs.
+
 ## Storage Rules
 
 Local mode:

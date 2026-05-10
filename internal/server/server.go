@@ -219,6 +219,10 @@ func (a *App) registerCommon(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/debug-bundles", a.handleCreateDebugBundle)
 	mux.HandleFunc("POST /api/diagnostics", a.handleCreateDiagnostics)
 	mux.HandleFunc("POST /api/diagnostics/archive", a.handleCreateDiagnosticsArchive)
+	mux.HandleFunc("POST /api/v2/logs/events/search", a.handleDatadogLogsSearch)
+	mux.HandleFunc("POST /api/v2/rum/events/search", a.handleDatadogRUMSearch)
+	mux.HandleFunc("POST /api/v2/spans/events/search", a.handleDatadogSpansSearch)
+	mux.HandleFunc("GET /api/v1/query", a.handleDatadogMetricQuery)
 	mux.HandleFunc("POST /api/replay", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusNotImplemented, map[string]string{"error": "use dogtap replay for fixture replay"})
 	})

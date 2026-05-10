@@ -12,6 +12,7 @@ public release.
 | `ci` | Supported | Fixture replay and validation reports | Use `dogtap replay`; the dashboard is not required. |
 | live diagnostics | Supported | Local dev, isolated E2E, Docker Compose, and external app triage | Use `POST /api/diagnostics` for JSON, `POST /api/diagnostics/archive` for a zip bundle, or `dogtap diagnose` for a host-side directory. |
 | workflow contracts | Supported | Assert that a named app workflow emitted useful RUM, replay, logs, traces, metrics, and correlation evidence | Use YAML/JSON contracts through diagnostics API or `dogtap diagnose -workflow-contract`. |
+| Datadog API compatibility | Partial | Agent and tool debugging against local retained Dogtap telemetry | Read-only subset for logs/RUM/spans search and metric query; see `docs/DATADOG_API_COMPATIBILITY.md`. |
 | `forward` | Partial | Bounded RUM/log forwarding experiments | APM forwarding is deferred. |
 | `tee` | Experimental | Limited production diagnostic tap | Requires explicit sampling, retention, and fail-open review. |
 | `redact-only` | Experimental | Policy enforcement before forwarding | Treat as a controlled rollout mode, not a default path. |
@@ -68,6 +69,20 @@ public release.
 | Session Replay viewer | Partial | Renders decoded rrweb records in an iframe and falls back to payload timeline/metadata when DOM snapshots are unavailable. |
 | Diagnostics API | Supported | `POST /api/diagnostics` and `/api/diagnostics/archive` expose health, retained events, validation report, debug bundle, metrics, assertions, missing-signal hints, and root-cause classifications. |
 | Datadog search hints | Best effort | Query field names should be checked against the team's Datadog conventions. |
+
+## Datadog API Compatibility
+
+| Datadog-compatible endpoint | Current level | Notes |
+| --- | --- | --- |
+| `POST /api/v2/logs/events/search` | Partial | Searches retained Dogtap log events with a small query-field subset. |
+| `POST /api/v2/rum/events/search` | Partial | Searches retained RUM and replay metadata by service, session, user, route, and context. |
+| `POST /api/v2/spans/events/search` | Partial | Expands retained APM/OTLP trace details into Datadog-style span rows. |
+| `GET /api/v1/query` | Partial | Returns retained metric samples as a Datadog-style timeseries response for simple `avg:metric{tag:value}` queries. |
+
+These endpoints are read-only and do not implement Datadog API key validation,
+full query language semantics, facets, cursor pagination, indexes, storage
+tiers, formulas, rollups, monitors, dashboards, notebooks, or long-term
+retention.
 
 ## Release Evidence Commands
 

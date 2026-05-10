@@ -12,6 +12,8 @@ Dogtap.
   preserve existing Datadog usage with sidecars and endpoint overrides
 - [Workflow Contracts](WORKFLOW_CONTRACTS.md): assert real user paths through
   received RUM, replay, logs, traces, metrics, and correlation evidence
+- [Datadog API Compatibility](DATADOG_API_COMPATIBILITY.md): read-only
+  Datadog-shaped search/query endpoints for retained Dogtap telemetry
 - [GitHub Actions Workflow Contract Example](../examples/github-actions/):
   run Dogtap beside an app E2E suite and assert telemetry afterward
 - [Deployment Examples](../examples/deployment/): Helm and ECS trial shapes
@@ -85,3 +87,4 @@ Current notable decisions:
 - generic adoption kit instead of a Dogtap-specific SDK
 - Datadog-preserving external injection before broader Agent parity
 - workflow observability contracts as an additive diagnostics artifact
+- read-only Datadog API compatibility for local retained telemetry search

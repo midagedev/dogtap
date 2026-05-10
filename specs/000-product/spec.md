@@ -208,6 +208,10 @@ Acceptance criteria:
   results must be available through diagnostics JSON, diagnostics archive files,
   the CLI, and the dashboard without changing existing diagnostics assertion
   semantics by default.
+- FR-070: Provide a read-only Datadog API compatibility subset so agents and
+  existing Datadog-oriented tools can query retained Dogtap telemetry through
+  familiar logs, RUM, spans, and metric query paths without learning a
+  Dogtap-specific search API.
 
 ## Non-Functional Requirements
 
@@ -231,6 +235,7 @@ Acceptance criteria:
 - Monitor evaluation engine
 - Datadog billing estimator beyond heuristic hints
 - Full private Datadog endpoint compatibility in MVP
+- Full Datadog API query language or mutating API compatibility
 - Production-grade native Grafana Faro collector parity
 
 ## Success Metrics

@@ -93,6 +93,8 @@ Dogtap is most useful when you want to verify:
 - diagnostics root-cause hints for missing browser, log, trace, metric,
   endpoint, context, and Dogtap API evidence
 - copyable Datadog search hints for the payloads Dogtap received
+- Datadog API-compatible logs, RUM, spans, and metric query responses for
+  local retained telemetry
 
 ## Dogtap vs Datadog / OTel Collector
 
@@ -117,6 +119,8 @@ Recommended strategy:
 - standard Datadog Browser RUM proxy configuration
 - standard Datadog tracer environment variables
 - standard OTLP HTTP and gRPC exporters
+- read-only Datadog API-compatible search/query paths for retained local
+  telemetry
 - copyable Docker Compose and environment snippets
 - deterministic fixture replay and JSON/Markdown reports
 - explicit compatibility and production-safety boundaries
@@ -358,6 +362,16 @@ Runbook:
 | Datadog APM traces | `:8126`, `/v0.3/traces`, `/v0.4/traces`, `/v0.5/traces` | Intake and span inspection; forwarding deferred |
 | OTLP HTTP | `:4318`, `/v1/traces`, `/v1/logs`, `/v1/metrics` | Trace/log/metric intake |
 | OTLP gRPC | `:4317` | Trace/log/metric intake |
+
+Read-only Datadog API compatibility is available for local retained telemetry:
+
+- `POST /api/v2/logs/events/search`
+- `POST /api/v2/rum/events/search`
+- `POST /api/v2/spans/events/search`
+- `GET /api/v1/query`
+
+See [docs/DATADOG_API_COMPATIBILITY.md](docs/DATADOG_API_COMPATIBILITY.md) for
+the supported query subset and limits.
 
 See [docs/SUPPORT_MATRIX.md](docs/SUPPORT_MATRIX.md) for the full support
 matrix, verification evidence, and explicit limitations.
