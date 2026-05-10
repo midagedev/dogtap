@@ -503,6 +503,57 @@ async function mockDashboardApi(page: Page, nextEvents = events) {
       }),
     });
   });
+  await page.route("**/api/diagnostics", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        workflowContracts: [
+          {
+            name: "frontend-backend-readiness",
+            description: "Checks browser and backend telemetry.",
+            status: "fail",
+            summary: { total: 4, passed: 3, failed: 1 },
+            checks: [
+              {
+                id: "browser-session-context",
+                type: "event",
+                status: "pass",
+                message: "Observed 1 matching event(s).",
+                matched: 1,
+                eventIds: ["evt-rum-login"],
+              },
+              {
+                id: "browser-to-api-trace",
+                type: "trace-correlation",
+                status: "pass",
+                message: "Observed 1 correlated trace event(s).",
+                matched: 1,
+                eventIds: ["evt-apm-export"],
+                traceIds: ["000000000000000000000000075bcd15"],
+              },
+              {
+                id: "workflow-metric",
+                type: "metric",
+                status: "pass",
+                message: "Observed 1 matching metric event(s).",
+                matched: 1,
+                eventIds: ["evt-otlp-metric"],
+              },
+              {
+                id: "no-sensitive-values",
+                type: "no-sensitive-values",
+                status: "fail",
+                message: "Found 1 event(s) with obvious sensitive values.",
+                matched: 1,
+                eventIds: ["evt-rum-missing"],
+                hint: "Review RUM context before forwarding telemetry.",
+              },
+            ],
+          },
+        ],
+      }),
+    });
+  });
 }
 
 test("dashboard renders stream detail, failure inbox, correlation, and query builder", async ({
@@ -556,6 +607,23 @@ test("dashboard renders stream detail, failure inbox, correlation, and query bui
   ).toBeVisible();
   await expect(
     page.getByLabel("Metric samples").getByText("http.server.request.duration"),
+  ).toBeVisible();
+  const workflowContracts = page.getByLabel("Workflow contract diagnostics");
+  await expect(
+    workflowContracts.getByText("browser-session-context", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    workflowContracts.getByText("browser-to-api-trace", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    workflowContracts.getByText("no-sensitive-values", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    workflowContracts.getByRole("button", { name: "evt-rum-login" }),
+  ).toBeVisible();
+  await workflowContracts.getByRole("button", { name: "evt-apm-export" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Trace Spans" }),
   ).toBeVisible();
   await expect(
     page.getByRole("button").filter({ hasText: "/cases/missing-context" }),

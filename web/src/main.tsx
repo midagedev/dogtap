@@ -471,6 +471,7 @@ function App() {
 
       <WorkflowContractsPanel
         contracts={workflowContracts}
+        events={events}
         onSelectEvent={setSelectedId}
       />
 
@@ -967,15 +968,18 @@ function DashboardDiagnosticsPanel({
 
 function WorkflowContractsPanel({
   contracts,
+  events,
   onSelectEvent,
 }: {
   contracts: WorkflowContractResult[];
+  events: EventEnvelope[];
   onSelectEvent: (id: string) => void;
 }) {
-  const failedChecks = contracts.flatMap((contract) =>
-    contract.checks
-      .filter((check) => check.status === "fail")
-      .map((check) => ({ contract, check })),
+  const checkRows = contracts.flatMap((contract) =>
+    contract.checks.map((check) => ({ contract, check })),
+  );
+  const sortedCheckRows = [...checkRows].sort((a, b) =>
+    a.check.status === b.check.status ? 0 : a.check.status === "fail" ? -1 : 1,
   );
   const total = contracts.reduce(
     (sum, contract) => sum + contract.summary.total,
@@ -988,6 +992,13 @@ function WorkflowContractsPanel({
   const failed = contracts.reduce(
     (sum, contract) => sum + contract.summary.failed,
     0,
+  );
+  const traceEventId = React.useCallback(
+    (traceId: string) => {
+      const match = events.find((event) => eventHasTraceId(event, traceId));
+      return match?.id;
+    },
+    [events],
   );
 
   return (
@@ -1027,22 +1038,26 @@ function WorkflowContractsPanel({
               <p className="viewer-empty">No workflow contracts evaluated.</p>
             )}
           </div>
-          <div className="workflow-check-list" aria-label="Contract findings">
-            {failedChecks.length ? (
-              failedChecks.slice(0, 6).map(({ contract, check }) => (
+          <div className="workflow-check-list" aria-label="Contract check evidence">
+            {sortedCheckRows.length ? (
+              sortedCheckRows.slice(0, 8).map(({ contract, check }) => (
                 <div
-                  className="workflow-check-row"
+                  className={`workflow-check-row workflow-${check.status}`}
                   key={`${contract.name}-${check.id}`}
                 >
                   <div>
                     <strong>{check.id}</strong>
-                    <span>{contract.name}</span>
+                    <span>
+                      {contract.name} · {check.type} · {check.matched ?? 0}{" "}
+                      {(check.matched ?? 0) === 1 ? "match" : "matches"}
+                    </span>
                   </div>
+                  <code>{check.status}</code>
                   <small>{check.message}</small>
                   {check.hint ? <em>{check.hint}</em> : null}
-                  {check.eventIds?.length ? (
+                  {check.eventIds?.length || check.traceIds?.length ? (
                     <div className="workflow-evidence-list">
-                      {check.eventIds.slice(0, 3).map((eventId) => (
+                      {check.eventIds?.slice(0, 3).map((eventId) => (
                         <button
                           type="button"
                           key={eventId}
@@ -1051,13 +1066,27 @@ function WorkflowContractsPanel({
                           {eventId}
                         </button>
                       ))}
+                      {check.traceIds?.slice(0, 2).map((traceId) => {
+                        const eventId = traceEventId(traceId);
+                        return eventId ? (
+                          <button
+                            type="button"
+                            key={traceId}
+                            onClick={() => onSelectEvent(eventId)}
+                          >
+                            trace:{shortToken(traceId)}
+                          </button>
+                        ) : (
+                          <code key={traceId}>trace:{shortToken(traceId)}</code>
+                        );
+                      })}
                     </div>
                   ) : null}
                 </div>
               ))
             ) : (
               <p className="viewer-empty">
-                Failing workflow checks will appear here.
+                Workflow check evidence will appear here.
               </p>
             )}
           </div>
@@ -1065,6 +1094,28 @@ function WorkflowContractsPanel({
       </section>
     </section>
   );
+}
+
+function eventHasTraceId(event: EventEnvelope, traceId: string) {
+  const target = traceIdentity(traceId);
+  if (traceIdentity(event.normalized.traceId) === target) {
+    return true;
+  }
+  if (traceIdentity(event.details?.trace?.traceId) === target) {
+    return true;
+  }
+  return Boolean(
+    event.details?.trace?.spans?.some(
+      (span) => traceIdentity(span.traceId) === target,
+    ),
+  );
+}
+
+function shortToken(value: string) {
+  if (value.length <= 12) {
+    return value;
+  }
+  return value.slice(0, 6) + "..." + value.slice(-4);
 }
 
 function EventDetail({

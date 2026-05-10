@@ -125,4 +125,6 @@ at `examples/github-actions/workflow-contract.yml`.
 
 The dashboard requests the built-in frontend/backend readiness contract. It
 checks for browser context, Session Replay payloads, backend logs, backend
-traces, at least one metric, and obvious sensitive value leaks.
+traces, at least one metric, and obvious sensitive value leaks. The dashboard
+shows pass and fail checks, matched event IDs, and trace IDs that can be opened
+in the event detail pane when matching retained telemetry is available.
