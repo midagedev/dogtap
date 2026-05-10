@@ -99,6 +99,12 @@ marked as the current release-candidate/active implementation baseline and that
 the data model and docs include implemented surfaces such as Faro, metrics,
 diagnostics snapshots, workflow contracts, and workflow contract CI examples.
 
+Workflow contract templates are validated separately:
+
+```bash
+make contract-check
+```
+
 ### Integration tests
 
 Run sample apps against Dogtap:

@@ -456,3 +456,26 @@ Evidence note 2026-05-10:
   markers.
 - `docs/ROADMAP.md` now includes a prioritized Next Implementation Roadmap so
   alignment findings become implementation candidates instead of cleanup notes.
+
+## Phase 18: Contract Authoring Guardrails
+
+- [x] T180 Add a JSON Schema for workflow contract YAML/JSON authoring.
+- [x] T181 Add `dogtap contract validate <path>` with text and JSON output.
+- [x] T182 Validate missing names, empty check lists, duplicate check IDs,
+  unsupported check types, unsupported sources, unsupported selector fields,
+  unknown fields, and invalid regular expressions.
+- [x] T183 Add `make contract-check` and CI coverage for bundled contract
+  templates.
+- [x] T184 Document schema and validation usage for local development and CI.
+
+Gate:
+
+- [x] G5 CI Contract authoring guardrails subset
+
+Evidence note 2026-05-10:
+
+- `schemas/workflow-contract.schema.json` documents the authoring shape for
+  YAML/JSON workflow contracts.
+- `dogtap contract validate` supports text and JSON output and keeps
+  `dogtap diagnose -workflow-contract` behavior unchanged.
+- `make contract-check` validates bundled templates in CI before smoke runs.

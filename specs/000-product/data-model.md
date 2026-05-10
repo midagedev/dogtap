@@ -224,11 +224,15 @@ agent-readable files such as `summary.md`, `assertions.json`, optional
 
 ```text
 Definition
+  schema
   name
   description
   labels
   checks
 ```
+
+`schema` maps to optional `$schema` in YAML/JSON contract files and is used only
+as an editor hint.
 
 ```text
 CheckDefinition

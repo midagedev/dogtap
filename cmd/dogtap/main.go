@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -47,6 +48,8 @@ func run(args []string) error {
 		return replay(args[1:])
 	case "diagnose":
 		return diagnoseLive(args[1:])
+	case "contract":
+		return contractCommand(args[1:])
 	case "version":
 		fmt.Printf("dogtap %s\ncommit: %s\nbuilt: %s\n", version, commit, date)
 		return nil
@@ -161,6 +164,53 @@ func diagnoseLive(args []string) error {
 	return err
 }
 
+func contractCommand(args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("%w: contract requires a subcommand", config.ErrInvalid)
+	}
+	switch args[0] {
+	case "validate":
+		return validateContractFiles(args[1:])
+	default:
+		return fmt.Errorf("%w: unknown contract subcommand %q", config.ErrInvalid, args[0])
+	}
+}
+
+func validateContractFiles(args []string) error {
+	fs := flag.NewFlagSet("contract validate", flag.ContinueOnError)
+	outputFormat := fs.String("format", "text", "output format: text, json")
+	if err := fs.Parse(args); err != nil {
+		return config.ErrInvalid
+	}
+	paths := fs.Args()
+	if len(paths) == 0 {
+		return fmt.Errorf("%w: contract validate requires at least one path", config.ErrInvalid)
+	}
+
+	reports := make([]contract.ValidationReport, 0, len(paths))
+	for _, path := range paths {
+		reports = append(reports, contract.ValidateFile(path))
+	}
+
+	switch strings.TrimSpace(*outputFormat) {
+	case "", "text":
+		fmt.Print(renderContractValidationReports(reports))
+	case "json":
+		body, err := json.MarshalIndent(reports, "", "  ")
+		if err != nil {
+			return fmt.Errorf("%w: render contract validation report: %v", report.ErrTool, err)
+		}
+		fmt.Println(string(body))
+	default:
+		return fmt.Errorf("%w: unsupported contract validate format %q", config.ErrInvalid, *outputFormat)
+	}
+
+	if hasContractValidationFailures(reports) {
+		return fmt.Errorf("%w: workflow contract validation failed", report.ErrValidationFailed)
+	}
+	return nil
+}
+
 func replay(args []string) error {
 	fs := flag.NewFlagSet("replay", flag.ContinueOnError)
 	configPath := fs.String("config", "", "path to dogtap YAML config")
@@ -263,6 +313,34 @@ func workflowContractStatus(results []contract.Result) string {
 		}
 	}
 	return "pass"
+}
+
+func hasContractValidationFailures(reports []contract.ValidationReport) bool {
+	for _, validationReport := range reports {
+		if validationReport.Status == "fail" {
+			return true
+		}
+	}
+	return false
+}
+
+func renderContractValidationReports(reports []contract.ValidationReport) string {
+	var b strings.Builder
+	for _, validationReport := range reports {
+		fmt.Fprintf(&b, "%s: %s\n", validationReport.Path, validationReport.Status)
+		for _, validationIssue := range validationReport.Issues {
+			field := validationIssue.Field
+			if field == "" {
+				field = "file"
+			}
+			if validationIssue.CheckID != "" {
+				fmt.Fprintf(&b, "  - %s (%s): %s\n", field, validationIssue.CheckID, validationIssue.Message)
+			} else {
+				fmt.Fprintf(&b, "  - %s: %s\n", field, validationIssue.Message)
+			}
+		}
+	}
+	return b.String()
 }
 
 func exitCode(err error) int {

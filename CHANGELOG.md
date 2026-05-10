@@ -27,6 +27,9 @@ All notable changes to Dogtap will be documented in this file.
   plus a GitHub Actions recipe under `examples/github-actions/`.
 - Spec/docs/code alignment updates for diagnostics, Faro smoke, metrics, and
   workflow contracts, plus `make doc-check` to prevent the most important drift.
+- Workflow contract authoring guardrails with
+  `dogtap contract validate <path>`, `make contract-check`, and a JSON Schema
+  at `schemas/workflow-contract.schema.json`.
 
 ### Notes
 

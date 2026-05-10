@@ -193,12 +193,14 @@ user value and implementation leverage, not by protocol breadth.
 
 Goal: make workflow contracts easy to write correctly.
 
-Status: proposed.
+Status: first slice complete.
 
-- Add a JSON Schema for workflow contract YAML/JSON.
+- Add a JSON Schema for workflow contract YAML/JSON: complete.
 - Add `dogtap contract validate <path>` to validate names, duplicate check IDs,
-  supported check types, selector fields, and regex syntax before CI runs.
-- Add editor-friendly examples for service names and route regexes.
+  supported check types, selector fields, and regex syntax before CI runs:
+  complete.
+- Add editor-friendly examples for service names and route regexes: covered by
+  bundled templates and `schemas/workflow-contract.schema.json`.
 
 Why it matters: workflow contracts are now Dogtap's strongest differentiator,
 but users need fast feedback before they run a full app workflow.

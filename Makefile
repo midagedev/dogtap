@@ -1,4 +1,4 @@
-.PHONY: build test web-build run replay diagnose smoke-adoption smoke-external-injection smoke-faro demo-seed demo-visual-check shell-check doc-check
+.PHONY: build test web-build run replay diagnose contract-check smoke-adoption smoke-external-injection smoke-faro demo-seed demo-visual-check shell-check doc-check
 
 build:
 	npm --prefix web run build
@@ -18,6 +18,9 @@ replay:
 
 diagnose:
 	go run ./cmd/dogtap diagnose
+
+contract-check:
+	go run ./cmd/dogtap contract validate configs/contracts/*.yaml
 
 smoke-adoption:
 	bash scripts/generic/smoke.sh

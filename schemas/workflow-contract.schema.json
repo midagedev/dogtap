@@ -1,0 +1,294 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/midagedev/dogtap/schemas/workflow-contract.schema.json",
+  "title": "Dogtap Workflow Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "checks"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "labels": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/check"
+      }
+    }
+  },
+  "$defs": {
+    "source": {
+      "type": "string",
+      "enum": ["rum", "apm", "logs", "otlp", "faro", "unknown"]
+    },
+    "payloadKind": {
+      "type": "string",
+      "enum": ["rum", "event", "replay", "log", "trace", "metric", "faro"]
+    },
+    "selectorField": {
+      "type": "string",
+      "enum": [
+        "service",
+        "env",
+        "version",
+        "host",
+        "traceId",
+        "spanId",
+        "parentSpanId",
+        "sessionId",
+        "viewId",
+        "userId",
+        "accountId",
+        "workspaceId",
+        "caseId",
+        "route",
+        "method",
+        "statusCode"
+      ]
+    },
+    "selector": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/source"
+        },
+        "payloadKind": {
+          "$ref": "#/$defs/payloadKind"
+        },
+        "service": {
+          "type": "string"
+        },
+        "route": {
+          "type": "string"
+        },
+        "routeRegex": {
+          "type": "string",
+          "format": "regex"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/selectorField"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type"],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "trace-correlation"
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["from", "to"],
+            "not": {
+              "anyOf": [
+                {
+                  "required": ["source"]
+                },
+                {
+                  "required": ["payloadKind"]
+                },
+                {
+                  "required": ["service"]
+                },
+                {
+                  "required": ["route"]
+                },
+                {
+                  "required": ["routeRegex"]
+                },
+                {
+                  "required": ["fields"]
+                },
+                {
+                  "required": ["metric"]
+                },
+                {
+                  "required": ["pattern"]
+                }
+              ]
+            }
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": ["from"]
+                },
+                {
+                  "required": ["to"]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "event"
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": ["metric"]
+                },
+                {
+                  "required": ["pattern"]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "log-message"
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "not": {
+              "required": ["metric"]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "no-sensitive-values"
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": ["source"]
+                },
+                {
+                  "required": ["payloadKind"]
+                },
+                {
+                  "required": ["service"]
+                },
+                {
+                  "required": ["route"]
+                },
+                {
+                  "required": ["routeRegex"]
+                },
+                {
+                  "required": ["fields"]
+                },
+                {
+                  "required": ["metric"]
+                },
+                {
+                  "required": ["pattern"]
+                },
+                {
+                  "required": ["from"]
+                },
+                {
+                  "required": ["to"]
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "event",
+            "log-message",
+            "metric",
+            "trace-correlation",
+            "no-sensitive-values"
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        },
+        "payloadKind": {
+          "$ref": "#/$defs/payloadKind"
+        },
+        "service": {
+          "type": "string"
+        },
+        "route": {
+          "type": "string"
+        },
+        "routeRegex": {
+          "type": "string",
+          "format": "regex"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "pattern": {
+          "type": "string",
+          "format": "regex"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/selectorField"
+          },
+          "uniqueItems": true
+        },
+        "from": {
+          "$ref": "#/$defs/selector"
+        },
+        "to": {
+          "$ref": "#/$defs/selector"
+        },
+        "hint": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

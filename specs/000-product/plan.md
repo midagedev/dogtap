@@ -286,8 +286,9 @@ Support direct OTLP and OpenTelemetry Collector pipelines.
 
 Run workflow observability contracts after retained telemetry exists. Contracts
 are YAML or JSON files evaluated by `dogtap diagnose`, the diagnostics API, and
-the dashboard. They should stay event-backed and avoid becoming monitor/query
-logic.
+the dashboard. Validate authored contract files first with
+`dogtap contract validate <path>` or `make contract-check`. They should stay
+event-backed and avoid becoming monitor/query logic.
 
 ## Risks
 
