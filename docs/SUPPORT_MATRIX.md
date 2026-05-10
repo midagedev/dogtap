@@ -66,7 +66,7 @@ public release.
 | Trace/span viewer | Supported | Shows decoded spans where available. |
 | Metric viewer | Supported | Shows OTLP metric samples decoded from received payloads. |
 | Session Replay viewer | Partial | Renders decoded rrweb records in an iframe and falls back to payload timeline/metadata when DOM snapshots are unavailable. |
-| Diagnostics API | Supported | `POST /api/diagnostics` and `/api/diagnostics/archive` expose health, retained events, validation report, debug bundle, metrics, assertions, and missing-signal hints. |
+| Diagnostics API | Supported | `POST /api/diagnostics` and `/api/diagnostics/archive` expose health, retained events, validation report, debug bundle, metrics, assertions, missing-signal hints, and root-cause classifications. |
 | Datadog search hints | Best effort | Query field names should be checked against the team's Datadog conventions. |
 
 ## Release Evidence Commands
