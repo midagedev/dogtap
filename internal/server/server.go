@@ -85,6 +85,8 @@ func newStore(cfg config.Config) (store.Store, error) {
 		return store.NewMemory(cfg.Storage.MaxEvents, cfg.Storage.TTL), nil
 	case "file":
 		return store.NewFile(cfg.Storage.Path, cfg.Storage.MaxEvents, cfg.Storage.TTL)
+	case "sqlite":
+		return store.NewSQLite(cfg.Storage.Path, cfg.Storage.MaxEvents, cfg.Storage.TTL)
 	default:
 		return nil, fmt.Errorf("unsupported storage kind %q", cfg.Storage.Kind)
 	}
@@ -120,6 +122,11 @@ func newForwarder(cfg config.Config) (*forwarding.Forwarder, error) {
 }
 
 func (a *App) Run(ctx context.Context) error {
+	defer func() {
+		if err := a.Close(); err != nil {
+			slog.Warn("close event store", "error", err)
+		}
+	}()
 	servers := a.httpServers()
 	errCh := make(chan error, len(servers)+1)
 
@@ -155,6 +162,14 @@ func (a *App) Run(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func (a *App) Close() error {
+	closer, ok := a.store.(interface{ Close() error })
+	if !ok {
+		return nil
+	}
+	return closer.Close()
 }
 
 func (a *App) Handler() http.Handler {

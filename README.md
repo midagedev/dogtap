@@ -103,7 +103,7 @@ Dogtap is most useful when you want to verify:
 | Primary fit | Local inspection and CI contract validation | Production telemetry routing and observability |
 | Startup shape | Single local process/container | Agent, collector, or hosted intake |
 | Dashboard | Payload/debug oriented | Full observability UI or routing pipeline |
-| Storage | Bounded local memory/file retention | Production retention and query systems |
+| Storage | Bounded local memory/file/SQLite retention | Production retention and query systems |
 | Safety model | Redaction, sampling, bounded queue, no raw prod by default | Depends on deployment and vendor config |
 | Best use | Prove that instrumentation is useful and safe before release | Operate production systems |
 
@@ -121,6 +121,8 @@ Recommended strategy:
 - standard OTLP HTTP and gRPC exporters
 - read-only Datadog API-compatible search/query paths for retained local
   telemetry
+- optional SQLite persistence for restart-safe local, CI, and dev-cluster
+  inspection without running a database service
 - copyable Docker Compose and environment snippets
 - deterministic fixture replay and JSON/Markdown reports
 - explicit compatibility and production-safety boundaries
@@ -160,6 +162,10 @@ Source mode:
 ```bash
 go run ./cmd/dogtap serve -config configs/generic-local.yaml
 ```
+
+The default Compose and generic local profiles use bounded SQLite storage at
+`/data/dogtap.db` or `.dogtap/generic-local.db`, so recent telemetry survives
+restarts without becoming long-term retention.
 
 ### 2. Point Browser RUM At Dogtap
 

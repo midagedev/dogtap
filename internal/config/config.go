@@ -155,9 +155,9 @@ func (c Config) Validate() error {
 		return fmt.Errorf("%w: unsupported mode %q", ErrInvalid, c.Mode)
 	}
 	if c.Storage.Kind != "memory" {
-		if c.Storage.Kind == "file" {
+		if c.Storage.Kind == "file" || c.Storage.Kind == "sqlite" {
 			if strings.TrimSpace(c.Storage.Path) == "" {
-				return fmt.Errorf("%w: storage.path is required when storage.kind is file", ErrInvalid)
+				return fmt.Errorf("%w: storage.path is required when storage.kind is %s", ErrInvalid, c.Storage.Kind)
 			}
 		} else {
 			return fmt.Errorf("%w: unsupported storage kind %q", ErrInvalid, c.Storage.Kind)

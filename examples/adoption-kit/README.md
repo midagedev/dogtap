@@ -23,9 +23,9 @@ change that restores the original Datadog or OTLP endpoints.
 
 | File | Use |
 | --- | --- |
-| `compose.dogtap.yaml` | Dogtap sidecar for Docker Compose projects |
+| `compose.dogtap.yaml` | SQLite-backed Dogtap sidecar for Docker Compose projects |
 | `compose.override.template.yaml` | Compose override template that injects Dogtap env into existing services |
-| `dogtap.local.yaml` | Local persistent Dogtap config |
+| `dogtap.local.yaml` | Local SQLite-backed persistent Dogtap config |
 | `datadog-preserve.env` | Datadog-preserving env overlay for existing tracers and optional OTLP exporters |
 | `backend-otel-http.env` | Backend OTLP HTTP defaults |
 | `backend-otel-grpc.env` | Backend OTLP gRPC defaults |

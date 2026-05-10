@@ -306,3 +306,57 @@ Status: first slice complete.
 
 Why it matters: agent-driven debugging improves when the same Datadog API paths
 used in production snippets can be pointed at Dogtap during local and CI runs.
+
+### Chunk H: Persistent Queryable Storage
+
+Goal: make retained telemetry survive restarts without adding an external
+database service.
+
+Status: first slice complete.
+
+- Add `storage.kind=sqlite` with indexed metadata columns and full redacted
+  event envelope JSON: complete.
+- Keep storage bounded by TTL and max event count in SQLite, not only memory:
+  complete.
+- Preserve production safety by relying on the existing redaction-before-
+  persistence path and fail-open storage-error behavior: complete with server
+  tests for SQLite.
+- Switch local examples to a SQLite-backed `/data/dogtap.db` volume where
+  restart-safe retained telemetry is useful: complete.
+
+Why it matters: the Datadog-compatible API and dashboard become more useful
+when local, CI, isolated E2E, and dev-cluster evidence can survive process
+restarts while staying bounded.
+
+### Chunk I: Dashboard Observability UX
+
+Goal: make logs and metrics easier to inspect without hiding payload truth.
+
+Status: planned.
+
+- Add structured log drilldown for service, env, route, status, trace/span IDs,
+  severity, and safe attributes.
+- Add retained metric charts and metric detail summaries using existing metric
+  samples.
+- Verify desktop and mobile dashboard states visually with Playwright.
+- Keep raw/decoded payload access visible in local and CI modes.
+
+Why it matters: Dogtap's strongest user-facing value is answering whether a
+workflow emitted usable logs, traces, metrics, RUM, and replay evidence.
+
+### Chunk J: EKS Dev-Cluster Readiness
+
+Goal: make Dogtap credible as a bounded internal inspection target in a dev EKS
+cluster.
+
+Status: planned.
+
+- Add a private-by-default EKS dev overlay with single replica, non-root
+  security context, bounded retention, and rollback instructions.
+- Add a cluster smoke runbook that posts representative telemetry and verifies
+  diagnostics, metrics, config safety, and retained events.
+- Keep production Datadog or OTel Collector as the primary telemetry path; use
+  Dogtap as a dev-cluster inspection lane.
+
+Why it matters: team-level adoption needs a repeatable dev-cluster deployment
+path, but Dogtap should not become a production observability backend.

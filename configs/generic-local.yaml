@@ -5,8 +5,8 @@ server:
   otlpHttpAddr: ":4318"
   grpcAddr: ":4317"
 storage:
-  kind: file
-  path: .dogtap/generic-events.json
+  kind: sqlite
+  path: .dogtap/generic-local.db
   maxEvents: 2000
   ttl: 2h
 safety:

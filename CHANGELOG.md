@@ -47,6 +47,8 @@ All notable changes to Dogtap will be documented in this file.
   validation.
 - Read-only Datadog API compatibility for retained logs, RUM, spans, and metric
   query debugging through Datadog-shaped paths.
+- Opt-in bounded SQLite storage for restart-safe local, CI, isolated E2E, and
+  dev-cluster retained telemetry.
 
 ### Notes
 

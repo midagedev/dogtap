@@ -569,3 +569,35 @@ Gate:
 Gate:
 
 - [x] G5 CI Contract Datadog API compatibility subset
+
+## Phase 25: Persistent Queryable Storage
+
+- [x] T250 Record SQLite storage scope and non-goals before implementation.
+- [x] T251 Add `storage.kind=sqlite` with config/env validation.
+- [x] T252 Add bounded SQLite event store persistence with indexed metadata
+  columns and redacted `EventEnvelope` JSON.
+- [x] T253 Add SQLite retention, reopen, filter, redaction, and fail-open tests.
+- [x] T254 Switch local examples to SQLite-backed volumes where restart-safe
+  retained telemetry is useful.
+
+Gate:
+
+- [x] G2 Runtime Contract persistent storage subset
+
+## Phase 26: API, Dashboard, And Dev-Cluster Readiness
+
+- [ ] T260 Add structured log fields to the redacted event detail model when raw
+  payloads are unavailable.
+- [ ] T261 Add structured log dashboard drilldown with trace, route, status,
+  service, env, and preserved payload access.
+- [ ] T262 Add retained metric charts and metric detail summaries in the
+  dashboard.
+- [ ] T263 Add Datadog-compatible API refinements for structured log and metric
+  query scenarios discovered by dashboard/agent usage.
+- [ ] T264 Add an EKS dev-cluster deployment overlay and smoke runbook with
+  private-by-default networking, bounded retention, and rollback steps.
+
+Gate:
+
+- [ ] G4 Product Usability dashboard observability subset
+- [ ] G8 Release Candidate dev-cluster subset

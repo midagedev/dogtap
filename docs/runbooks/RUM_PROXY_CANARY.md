@@ -159,8 +159,8 @@ Rollback must be configuration-only:
 - stop the Dogtap sidecar/service
 - keep the normal Datadog Browser SDK init and Datadog production lane intact
 
-If Dogtap used file storage during the canary, remove the local Dogtap volume or
-file after preserving any approved sanitized evidence.
+If Dogtap used file or SQLite storage during the canary, remove the local
+Dogtap volume or file after preserving any approved sanitized evidence.
 
 ## Exit Criteria
 

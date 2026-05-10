@@ -126,7 +126,7 @@ curl -sS 'http://127.0.0.1:8080/api/v1/query?from=0&to=9999999999&query=avg:http
 The compatibility layer is read-only. It does not create monitors, dashboards,
 notebooks, incidents, users, API keys, service definitions, or long-term data
 storage. It returns only telemetry already retained by Dogtap's configured
-bounded memory/file store.
+bounded memory/file/SQLite store.
 
 This keeps Dogtap useful for agent-driven debugging while preserving the product
 boundary: Dogtap is an inspector and validation gateway, not a Datadog clone.

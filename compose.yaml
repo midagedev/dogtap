@@ -8,8 +8,8 @@ services:
       - "4318:4318"
     environment:
       DOGTAP_MODE: local
-      DOGTAP_STORAGE_KIND: file
-      DOGTAP_STORAGE_PATH: /data/events.json
+      DOGTAP_STORAGE_KIND: sqlite
+      DOGTAP_STORAGE_PATH: /data/dogtap.db
     volumes:
       - dogtap-data:/data
 
