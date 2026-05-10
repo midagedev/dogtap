@@ -377,6 +377,43 @@ func TestNormalizeTags(t *testing.T) {
 	}
 }
 
+func TestNormalizeOTLPLogAttributePairsForTraceContext(t *testing.T) {
+	n := Normalize(event.SourceOTLP, map[string]any{
+		"resourceLogs": []any{
+			map[string]any{
+				"scopeLogs": []any{
+					map[string]any{
+						"logRecords": []any{
+							map[string]any{
+								"body": map[string]any{"stringValue": "request completed"},
+								"attributes": []any{
+									attribute("service", "api"),
+									attribute("env", "local"),
+									attribute("trace_id", "trace-1"),
+									attribute("span_id", "span-1"),
+									attribute("parent_id", "parent-1"),
+									attribute("http.route", "/orders"),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+	if n.Service != "api" || n.Env != "local" || n.Route != "/orders" {
+		t.Fatalf("unexpected OTLP attribute normalization: %#v", n)
+	}
+	if n.TraceID != "trace-1" || n.SpanID != "span-1" || n.ParentSpanID != "parent-1" {
+		t.Fatalf("unexpected OTLP trace context normalization: %#v", n)
+	}
+	for _, key := range []string{"trace_id", "span_id", "parent_id"} {
+		if _, ok := n.Tags[key]; ok {
+			t.Fatalf("expected %s to move out of tags after normalization: %#v", key, n.Tags)
+		}
+	}
+}
+
 func attribute(key string, value any) map[string]any {
 	encoded := map[string]any{}
 	switch typed := value.(type) {

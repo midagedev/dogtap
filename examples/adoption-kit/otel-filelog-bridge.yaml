@@ -1,0 +1,61 @@
+# OpenTelemetry Collector filelog bridge for Dogtap.
+#
+# Intent:
+# - Preserve applications that currently write JSON logs to stdout or files.
+# - Let a collector tail those logs and send an inspection copy to Dogtap.
+# - Keep Dogtap out of the Datadog Agent replacement business.
+#
+# Requires the OpenTelemetry Collector Contrib distribution because this uses
+# the filelog receiver.
+
+receivers:
+  filelog/app:
+    include:
+      - ${env:DOGTAP_FILELOG_INCLUDE}
+    start_at: beginning
+    include_file_path: true
+    operators:
+      - id: parse_json_log
+        type: json_parser
+        parse_from: body
+        on_error: send
+      - id: parse_timestamp
+        type: time_parser
+        if: 'attributes["timestamp"] != nil'
+        parse_from: attributes.timestamp
+        layout_type: gotime
+        layout: '2006-01-02T15:04:05.000Z'
+        on_error: send
+      - id: parse_severity
+        type: severity_parser
+        if: 'attributes["level"] != nil'
+        parse_from: attributes.level
+        on_error: send
+      - id: promote_message
+        type: move
+        if: 'attributes["message"] != nil'
+        from: attributes.message
+        to: body
+
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 256
+  batch:
+    timeout: 1s
+    send_batch_size: 128
+
+exporters:
+  otlphttp/dogtap:
+    endpoint: ${env:DOGTAP_OTLP_HTTP_ENDPOINT}
+    encoding: json
+
+service:
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    logs/dogtap:
+      receivers: [filelog/app]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/dogtap]

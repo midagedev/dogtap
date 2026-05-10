@@ -244,10 +244,11 @@ not only state that it is missing.
 
 Goal: preserve existing Datadog usage while covering common Agent-only gaps.
 
-Status: proposed.
+Status: first slice complete.
 
 - Add practical bridge recipes for stdout/container logs into Dogtap logs HTTP
-  or OTLP logs.
+  or OTLP logs: complete for OpenTelemetry Collector `filelog` to OTLP HTTP
+  JSON, with `make smoke-log-bridge`.
 - Add DogStatsD-to-OTLP guidance or a fixture-backed bridge example.
 - Keep Dogtap itself from becoming a full Datadog Agent replacement.
 

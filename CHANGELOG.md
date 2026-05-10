@@ -36,6 +36,8 @@ All notable changes to Dogtap will be documented in this file.
 - Diagnostics assertions now include root-cause classifications with evidence
   and next checks for missing telemetry, including OTLP exporter and endpoint
   routing failures.
+- OpenTelemetry Collector filelog bridge recipe, Compose smoke stack, and
+  `make smoke-log-bridge` for Agent-style stdout/file log adoption gaps.
 
 ### Notes
 

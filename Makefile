@@ -1,4 +1,4 @@
-.PHONY: build test web-build run replay diagnose contract-check smoke-adoption smoke-external-injection smoke-faro demo-seed demo-visual-check shell-check doc-check
+.PHONY: build test web-build run replay diagnose contract-check smoke-adoption smoke-external-injection smoke-faro smoke-log-bridge demo-seed demo-visual-check shell-check doc-check
 
 build:
 	npm --prefix web run build
@@ -30,6 +30,9 @@ smoke-external-injection:
 
 smoke-faro:
 	bash scripts/faro/smoke.sh
+
+smoke-log-bridge:
+	bash scripts/log-bridge/smoke.sh
 
 demo-seed:
 	bash scripts/demo/seed.sh

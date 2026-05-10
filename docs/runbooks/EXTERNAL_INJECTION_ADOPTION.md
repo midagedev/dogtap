@@ -169,6 +169,17 @@ container stdout, Kubernetes log files, or application log files, Dogtap does
 not yet replace that Agent behavior. Use a collector bridge that tails the logs
 and exports OTLP logs or Datadog logs HTTP payloads to Dogtap.
 
+The adoption kit includes an executable OpenTelemetry Collector filelog bridge:
+
+```bash
+make smoke-log-bridge
+```
+
+Use `examples/adoption-kit/otel-filelog-bridge.md` as the copyable starting
+point. It tails JSON log files, exports OTLP HTTP JSON logs to
+`http://dogtap:4318/v1/logs`, and keeps the app's production Datadog Agent or
+collector path removable by configuration.
+
 ### Metrics
 
 Dogtap currently supports OTLP metrics. Prefer this for local inspection:

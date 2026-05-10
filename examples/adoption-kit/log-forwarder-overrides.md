@@ -35,6 +35,19 @@ For local and CI adoption, the collector can send only to Dogtap. For staging
 experiments, use a tee only if the collector supports bounded retry, sampling,
 and fail-open behavior.
 
+An executable OpenTelemetry Collector filelog version of this pattern is
+available in:
+
+- `examples/adoption-kit/otel-filelog-bridge.yaml`
+- `examples/adoption-kit/compose.otel-filelog-bridge.yaml`
+- `examples/adoption-kit/otel-filelog-bridge.md`
+
+Verify it with:
+
+```bash
+make smoke-log-bridge
+```
+
 ## Docker Notes
 
 Datadog's Docker log collection commonly relies on Agent environment variables
