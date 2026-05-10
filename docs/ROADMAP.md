@@ -183,3 +183,81 @@ Status: first workflow contract slice complete.
 Gate:
 
 - G5 CI Contract: passed for workflow contract diagnostics subset
+
+## Next Implementation Roadmap
+
+This section tracks valuable implementation work discovered while aligning the
+Spec Kit artifacts, public docs, and code. These are intentionally ordered by
+user value and implementation leverage, not by protocol breadth.
+
+### Chunk A: Contract Authoring Guardrails
+
+Goal: make workflow contracts easy to write correctly.
+
+Status: proposed.
+
+- Add a JSON Schema for workflow contract YAML/JSON.
+- Add `dogtap contract validate <path>` to validate names, duplicate check IDs,
+  supported check types, selector fields, and regex syntax before CI runs.
+- Add editor-friendly examples for service names and route regexes.
+
+Why it matters: workflow contracts are now Dogtap's strongest differentiator,
+but users need fast feedback before they run a full app workflow.
+
+### Chunk B: Dashboard Contract Evidence Drilldown
+
+Goal: make the dashboard explain why each contract passed or failed.
+
+Status: proposed.
+
+- Show pass and fail checks, not only failing checks.
+- Link matched event IDs and trace IDs directly into the stream/detail pane.
+- Show the selector that was evaluated and the closest observed alternatives
+  when a check fails.
+
+Why it matters: this turns contract failures into immediate debugging guidance
+for humans and coding agents.
+
+### Chunk C: Diagnostics Root-Cause Classifier
+
+Goal: make missing telemetry diagnosis more mechanical.
+
+Status: proposed.
+
+- Add a diagnostics section that classifies likely causes: SDK not initialized,
+  endpoint not reachable, wrong route/service selector, sampling disabled,
+  replay consent/sample mismatch, log forwarder missing, OTLP exporter disabled,
+  trace propagation missing.
+- Include source-specific next commands and expected network targets.
+- Keep it evidence-backed by observed endpoints, sources, sessions, traces, and
+  recent validation failures.
+
+Why it matters: Dogtap should help agents explain why telemetry did not arrive,
+not only state that it is missing.
+
+### Chunk D: Agent Gap Bridge Recipes
+
+Goal: preserve existing Datadog usage while covering common Agent-only gaps.
+
+Status: proposed.
+
+- Add practical bridge recipes for stdout/container logs into Dogtap logs HTTP
+  or OTLP logs.
+- Add DogStatsD-to-OTLP guidance or a fixture-backed bridge example.
+- Keep Dogtap itself from becoming a full Datadog Agent replacement.
+
+Why it matters: teams often rely on Datadog Agent behavior. Bridge recipes keep
+Dogtap adoption reversible without pretending full Agent parity exists.
+
+### Chunk E: Spec/Doc Drift Enforcement
+
+Goal: prevent docs and Spec Kit artifacts from drifting after feature work.
+
+Status: first slice implemented by `make doc-check`.
+
+- Check that release-candidate spec artifacts no longer claim draft status.
+- Check that the data model includes implemented sources, telemetry details,
+  diagnostics snapshots, and workflow contract results.
+- Run the check in CI alongside shell syntax checks.
+
+Why it matters: Dogtap is spec-driven, so stale specs are a product quality bug.

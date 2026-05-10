@@ -82,6 +82,20 @@ When workflow contracts are requested they also write
 `workflow-contracts.json`, which is the easiest file for an agent to inspect
 when a real path such as login emitted incomplete telemetry.
 
+### Spec and docs alignment
+
+Dogtap is spec-driven, so CI also checks that high-signal documentation markers
+stay aligned with implemented features:
+
+```bash
+make doc-check
+```
+
+This check is intentionally narrow. It verifies that the Spec Kit baseline is
+marked as the current release-candidate/active implementation baseline and that
+the data model and docs include implemented surfaces such as Faro, metrics,
+diagnostics snapshots, workflow contracts, and workflow contract CI examples.
+
 ### Integration tests
 
 Run sample apps against Dogtap:

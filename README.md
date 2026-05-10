@@ -386,6 +386,7 @@ Common checks:
 
 ```bash
 make shell-check
+make doc-check
 make smoke-adoption
 make demo-visual-check
 ```

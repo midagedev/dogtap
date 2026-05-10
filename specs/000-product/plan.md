@@ -2,11 +2,15 @@
 
 ## Status
 
-Draft
+Active implementation baseline. This plan records the current architecture and
+remaining boundaries, not a pre-implementation proposal.
 
 ## Technical Direction
 
-Dogtap should start as a single Docker image with one backend process and an embedded dashboard. The first implementation should optimize for clear local setup, deterministic CI behavior, and production-safe extension points.
+Dogtap is implemented as a single Docker image with one Go backend process and
+an embedded React dashboard. The implementation optimizes for clear local
+setup, deterministic CI behavior, agent-readable diagnostics, workflow
+observability contracts, and production-safe extension points.
 
 Implementation should be orchestrated through parallel agent lanes. Each lane owns a bounded surface, produces fixture-backed evidence, and passes the relevant gate before integration. The canonical orchestration plan lives in `docs/AGENT_ORCHESTRATION.md`; the canonical gates live in `specs/000-product/gates.md`.
 
@@ -33,14 +37,16 @@ Decision:
 
 ### Storage
 
-MVP storage should use an in-memory ring buffer with optional SQLite persistence.
+Storage currently uses bounded in-memory retention with optional JSON file
+persistence. SQLite remains deferred until forwarding or production metadata
+retention needs require a relational store.
 
 Modes:
 
-- `local`: ring buffer plus optional snapshot files
-- `ci`: ring buffer plus JSON report
-- `forward`: ring buffer plus bounded SQLite metadata
-- `prod`: redacted metadata only, bounded by TTL and count
+- `local`: bounded memory plus optional file snapshot path
+- `ci`: bounded memory plus replay reports or diagnostics artifacts
+- `forward`: bounded memory/file metadata plus forwarding results
+- production-facing modes: redacted metadata only, bounded by TTL and count
 
 ### Dashboard
 
@@ -50,18 +56,20 @@ React with a compact operational UI:
 - Validation failure inbox
 - Payload detail
 - Correlation view
-- Config view
+- Service map, traffic, metric samples, and browser session timeline
 - Debug bundle export
+- Workflow contract status
 
 ### Protocols
 
-Initial protocol support:
+Current protocol support:
 
 - RUM HTTP proxy endpoint
 - APM trace HTTP endpoint on `8126`
 - Logs HTTP intake endpoint
 - OTLP HTTP on `4318`
 - OTLP gRPC on `4317`
+- Faro SDK smoke intake on `/faro`, `/collect`, and `/collect/`
 
 DogStatsD and profiles should be future work.
 
@@ -76,6 +84,7 @@ Intake adapters
   - apm
   - logs
   - otlp
+  - faro, smoke only
       |
       v
 Decoder and normalizer
@@ -95,7 +104,8 @@ Validator pipeline
                      - tee
                      - redact-only
 
-Dashboard and CI reporter read from the same event store.
+Dashboard, diagnostics, workflow contracts, and CI reporter read from the same
+retained event envelopes.
 ```
 
 ## Milestones
@@ -178,6 +188,40 @@ Gate:
 - G7 Production Safety
 - G8 Release Candidate
 
+### M6: Generic adoption and diagnostics
+
+- Generic frontend/backend adoption kit
+- Datadog-preserving external injection strategy
+- API-first diagnostics and downloadable diagnostics archive
+- Agent telemetry triage runbook
+
+Gate:
+
+- G5 CI Contract diagnostics subset
+- G8 Release Candidate generic adoption subset
+
+### M7: Compatibility smokes
+
+- RUM Session Replay direct and proxied intake
+- Faro SDK smoke intake on `/faro`, `/collect`, and `/collect/`
+- Production guidance to route Faro through Grafana Alloy and OTLP
+
+Gate:
+
+- G8 Release Candidate compatibility subset
+
+### M8: Workflow observability contracts
+
+- Event-backed workflow contract evaluator
+- Built-in frontend/backend readiness contract
+- Login, case-open, checkout, and report-export templates
+- Dashboard workflow contract panel
+- GitHub Actions recipe for E2E telemetry assertion
+
+Gate:
+
+- G5 CI Contract workflow contract subset
+
 ## Configuration Model
 
 Dogtap should support both environment variables and YAML.
@@ -238,6 +282,13 @@ For local and CI, send HTTP logs directly or route log forwarders to Dogtap. For
 
 Support direct OTLP and OpenTelemetry Collector pipelines.
 
+### Workflow Contracts
+
+Run workflow observability contracts after retained telemetry exists. Contracts
+are YAML or JSON files evaluated by `dogtap diagnose`, the diagnostics API, and
+the dashboard. They should stay event-backed and avoid becoming monitor/query
+logic.
+
 ## Risks
 
 | Risk | Mitigation |
@@ -248,11 +299,16 @@ Support direct OTLP and OpenTelemetry Collector pipelines.
 | Raw payload storage creates compliance risk | Redact before persistence, disable raw prod storage |
 | APM payload decoding is complex | Evaluate reuse or reference behavior from `dd-apm-test-agent` |
 
-## Definition of Done for MVP
+## Release-Candidate Done Baseline
 
 - One Docker command starts Dogtap locally.
-- RUM and logs payloads appear in the dashboard.
-- APM traces from a sample app appear in the dashboard.
-- Missing service tags and missing user/account/workspace context are flagged.
-- CI mode can replay fixtures and fail on validation errors.
-- Documentation explains safe production boundaries.
+- RUM, logs, Datadog APM, OTLP, and smoke-level Faro payloads appear in the
+  dashboard where supported.
+- Session Replay, logs, trace spans, metrics, service map, traffic, browser
+  session timeline, and workflow contract status are inspectable.
+- Missing service tags and missing user/account/workspace/case context are
+  flagged.
+- CI mode can replay fixtures, capture live diagnostics, and fail on validation
+  errors or explicit workflow contract failures.
+- Documentation explains supported endpoints, limitations, production safety,
+  and reversible adoption.

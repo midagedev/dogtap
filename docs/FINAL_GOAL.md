@@ -24,6 +24,8 @@ Dogtap is a Datadog-compatible telemetry intake inspector and validation gateway
 - Validate required service tags and workflow context.
 - Detect PII, tokens, query strings, stale user/account context, and high-cardinality risks.
 - Replay fixtures and produce JSON/Markdown validation reports.
+- Capture live diagnostics and workflow contract artifacts from running local,
+  Docker Compose, or isolated E2E environments.
 - Generate Datadog search queries and debug bundles.
 
 ### Staging
@@ -48,6 +50,8 @@ An engineer should be able to answer these questions in minutes:
 - Did a user action create the expected RUM event?
 - Did logout clear user and account context?
 - Can a frontend error be correlated with backend traces and logs?
+- Did a named workflow produce RUM, replay, logs, traces, metrics, and
+  correlation evidence?
 - Are `env`, `service`, and `version` present everywhere?
 - Are workspace, account, route, case, and trace identifiers present where needed?
 - Did any payload leak a query string, token, cookie, email, or unsafe header?
@@ -67,8 +71,9 @@ Dogtap reaches the final goal when all of these are true:
 
 - RUM, logs, APM, and OTLP intake adapters have fixture-backed compatibility tests.
 - CI mode can validate a realistic multi-step product workflow.
+- Workflow contracts can be authored, validated, and enforced in CI without
+  Datadog credentials.
 - Dashboard supports stream, detail, validation, correlation, and debug bundle views.
 - Forward or tee mode has documented and tested failure behavior.
 - Production safety gates pass under load, malformed payloads, upstream Datadog failure, and storage pressure.
 - A real service can adopt Dogtap locally and in CI without application code changes beyond standard Datadog or OTLP endpoint configuration.
-

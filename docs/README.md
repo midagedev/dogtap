@@ -19,6 +19,8 @@ Dogtap.
 - [Support Matrix](SUPPORT_MATRIX.md): supported surfaces and explicit limits
 - [Production Safety](PRODUCTION_SAFETY.md): safety model for forwarding and tee modes
 - [Roadmap](ROADMAP.md): current phase and release blockers
+- [Next Implementation Roadmap](ROADMAP.md#next-implementation-roadmap):
+  implementation candidates discovered from spec/docs/code alignment work
 
 ## Product And Planning
 
@@ -27,6 +29,7 @@ Dogtap.
 - [Testing Strategy](TESTING.md)
 - [Workflow Contracts](WORKFLOW_CONTRACTS.md)
 - [Support Matrix](SUPPORT_MATRIX.md)
+- [Next Implementation Roadmap](ROADMAP.md#next-implementation-roadmap)
 - [Agent Orchestration](AGENT_ORCHESTRATION.md)
 
 Canonical spec artifacts live under `specs/000-product/`:

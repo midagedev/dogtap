@@ -68,18 +68,22 @@ See `specs/000-product/spec.md` for the canonical requirements.
 
 - RUM and logs local intake
 - APM trace intake
-- Basic OTLP support
-- Dashboard list/detail
+- OTLP traces/logs/metrics
+- Smoke-level native Faro intake
+- Dashboard stream/detail, source inspectors, service map, traffic, browser
+  session timeline, and workflow contract status
 - Required context validation
 - PII and query-string risk detection
-- CI report mode
+- CI replay, live diagnostics, and workflow contract assertion mode
 - Docker image
 
 ## Out of Scope for MVP
 
 - Full Datadog monitor/query language
-- Full-fidelity Datadog Session Replay rendering
+- Full-fidelity Datadog Session Replay rendering beyond decoded rrweb records
 - Profiling
+- DogStatsD and Datadog Agent integrations
+- Production-grade native Faro collector parity
 - Long-term production storage
 - Billing-grade cost calculation
 
@@ -87,7 +91,8 @@ See `specs/000-product/spec.md` for the canonical requirements.
 
 - Dogtap can be started with one Docker command.
 - A sample frontend sends RUM to Dogtap.
-- A sample Spring service sends traces to Dogtap.
+- A sample backend sends traces/logs/metrics to Dogtap.
 - Missing required context is flagged in dashboard and CI mode.
+- A named workflow can be asserted through a workflow contract.
 - PII redaction tests pass.
 - Documentation explains production limitations clearly.
