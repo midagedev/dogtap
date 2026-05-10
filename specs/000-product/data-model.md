@@ -279,6 +279,31 @@ ContractResult
   checks
 ```
 
+```text
+ContractCheckResult
+  id
+  type
+  status
+  message
+  matched
+  eventIds
+  traceIds
+  selectors
+  description
+  hint
+```
+
+```text
+ContractSelectorResult
+  label
+  criteria
+  pattern
+  metric
+  matched
+  eventIds
+  alternatives
+```
+
 Workflow contract failures are separate from diagnostics assertion failures
 unless a caller explicitly opts into failing the CLI with
 `-fail-on-workflow-contract`.

@@ -193,7 +193,7 @@ user value and implementation leverage, not by protocol breadth.
 
 Goal: make workflow contracts easy to write correctly.
 
-Status: first slice complete.
+Status: complete.
 
 - Add a JSON Schema for workflow contract YAML/JSON: complete.
 - Add `dogtap contract validate <path>` to validate names, duplicate check IDs,
@@ -209,13 +209,13 @@ but users need fast feedback before they run a full app workflow.
 
 Goal: make the dashboard explain why each contract passed or failed.
 
-Status: first slice complete.
+Status: complete.
 
 - Show pass and fail checks, not only failing checks: complete.
 - Link matched event IDs and trace IDs directly into the stream/detail pane:
-  first slice complete.
+  complete.
 - Show the selector that was evaluated and the closest observed alternatives
-  when a check fails.
+  when a check fails: complete.
 
 Why it matters: this turns contract failures into immediate debugging guidance
 for humans and coding agents.

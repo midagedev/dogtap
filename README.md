@@ -5,6 +5,15 @@
 Datadog-compatible telemetry intake inspector for local development, CI
 validation, and production-safe forwarding experiments.
 
+Dogtap answers a practical question: before telemetry disappears into Datadog,
+did this app emit enough context to debug the workflow?
+
+![Dogtap dashboard showing service map, traffic, intake health, session timeline, workflow contracts, and telemetry detail panes](docs/assets/dashboard-overview.png)
+
+_Seeded demo dashboard with Browser RUM, Session Replay, backend logs, APM
+spans, OTLP metrics, service map, workflow contracts, validation failures, and
+Datadog search hints._
+
 `dogtap` is designed for the fast path in local development and routine CI:
 
 - use `dogtap` as the local intake target for RUM, logs, traces, and OTLP
@@ -13,6 +22,26 @@ validation, and production-safe forwarding experiments.
 
 It makes telemetry payloads visible before they reach Datadog. It is not a
 Datadog clone, monitor engine, query engine, or long-term observability store.
+
+## What You See
+
+| Surface | What Dogtap helps verify |
+| --- | --- |
+| Service map and traffic | Which frontend/backend services, routes, and edges actually emitted telemetry |
+| Browser sessions | RUM session IDs, user/workspace/case context, and Session Replay payloads |
+| Logs and traces | Backend log messages, trace/span trees, and cross-source trace correlation |
+| Metrics | OTLP metric names, services, routes, units, and sample values |
+| Workflow contracts | Whether real paths such as login or checkout produced enough observable evidence |
+| Diagnostics bundle | Machine-readable assertions, likely root causes, artifacts, and next checks for agents or CI |
+
+```mermaid
+flowchart LR
+  app["Frontend and backend apps"] -->|RUM, replay, logs, APM, OTLP| dogtap["Dogtap intake"]
+  dogtap --> dashboard["Local dashboard"]
+  dogtap --> contracts["Workflow contract checks"]
+  dogtap --> diagnostics["Diagnostics archive"]
+  dogtap -. optional forward or tee .-> datadog["Datadog"]
+```
 
 ## Why This Project Exists
 
@@ -59,6 +88,10 @@ Dogtap is most useful when you want to verify:
 - service map, route traffic, metric samples, and cross-source correlation
 - workflow contract results that summarize whether a real user path is
   observable enough to debug
+- failed contract drilldowns with evaluated selector criteria and closest
+  retained telemetry alternatives
+- diagnostics root-cause hints for missing browser, log, trace, metric,
+  endpoint, context, and Dogtap API evidence
 - copyable Datadog search hints for the payloads Dogtap received
 
 ## Dogtap vs Datadog / OTel Collector

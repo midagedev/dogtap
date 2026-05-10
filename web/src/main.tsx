@@ -275,8 +275,41 @@ type WorkflowContractCheck = {
   matched?: number;
   eventIds?: string[];
   traceIds?: string[];
+  selectors?: WorkflowContractSelectorResult[];
   description?: string;
   hint?: string;
+};
+
+type WorkflowContractSelector = {
+  source?: string;
+  payloadKind?: string;
+  service?: string;
+  route?: string;
+  routeRegex?: string;
+  fields?: string[];
+};
+
+type WorkflowContractSelectorResult = {
+  label?: string;
+  criteria: WorkflowContractSelector;
+  pattern?: string;
+  metric?: string;
+  matched: number;
+  eventIds?: string[];
+  alternatives?: WorkflowContractAlternative[];
+};
+
+type WorkflowContractAlternative = {
+  eventId: string;
+  source?: string;
+  payloadKind?: string;
+  service?: string;
+  route?: string;
+  traceId?: string;
+  sessionId?: string;
+  presentFields?: string[];
+  differences?: string[];
+  missingFields?: string[];
 };
 
 type DiagnosticsSnapshot = {
@@ -1055,6 +1088,12 @@ function WorkflowContractsPanel({
                   <code>{check.status}</code>
                   <small>{check.message}</small>
                   {check.hint ? <em>{check.hint}</em> : null}
+                  {check.status === "fail" && check.selectors?.length ? (
+                    <WorkflowSelectorDrilldown
+                      selectors={check.selectors}
+                      onSelectEvent={onSelectEvent}
+                    />
+                  ) : null}
                   {check.eventIds?.length || check.traceIds?.length ? (
                     <div className="workflow-evidence-list">
                       {check.eventIds?.slice(0, 3).map((eventId) => (
@@ -1094,6 +1133,97 @@ function WorkflowContractsPanel({
       </section>
     </section>
   );
+}
+
+function WorkflowSelectorDrilldown({
+  selectors,
+  onSelectEvent,
+}: {
+  selectors: WorkflowContractSelectorResult[];
+  onSelectEvent: (id: string) => void;
+}) {
+  return (
+    <div className="workflow-selector-detail">
+      {selectors.slice(0, 3).map((selector, index) => (
+        <div
+          className="workflow-selector-block"
+          key={`${selector.label || "selector"}-${index}`}
+        >
+          <div className="workflow-selector-heading">
+            <strong>
+              {selector.label ? `${selector.label} selector` : "Evaluated selector"}
+            </strong>
+            <code>{selector.matched} match</code>
+          </div>
+          <div className="workflow-selector-chip-list">
+            {selectorChips(selector).map((chip) => (
+              <span className="workflow-selector-chip" key={chip}>
+                {chip}
+              </span>
+            ))}
+          </div>
+          {selector.eventIds?.length ? (
+            <div className="workflow-evidence-list workflow-selector-events">
+              {selector.eventIds.slice(0, 3).map((eventId) => (
+                <button
+                  type="button"
+                  key={eventId}
+                  onClick={() => onSelectEvent(eventId)}
+                >
+                  {eventId}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {selector.alternatives?.length ? (
+            <div className="workflow-alternative-list">
+              <span>Closest alternatives</span>
+              {selector.alternatives.slice(0, 3).map((alternative) => (
+                <button
+                  type="button"
+                  key={alternative.eventId}
+                  onClick={() => onSelectEvent(alternative.eventId)}
+                >
+                  <strong>{alternative.eventId}</strong>
+                  <small>{alternativeSummary(alternative)}</small>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function selectorChips(selector: WorkflowContractSelectorResult) {
+  const criteria = selector.criteria ?? {};
+  const chips: string[] = [];
+  if (criteria.source) chips.push(`source: ${criteria.source}`);
+  if (criteria.payloadKind) chips.push(`payloadKind: ${criteria.payloadKind}`);
+  if (criteria.service) chips.push(`service: ${criteria.service}`);
+  if (criteria.route) chips.push(`route: ${criteria.route}`);
+  if (criteria.routeRegex) chips.push(`routeRegex: ${criteria.routeRegex}`);
+  if (criteria.fields?.length) chips.push(`fields: ${criteria.fields.join(", ")}`);
+  if (selector.metric) chips.push(`metric: ${selector.metric}`);
+  if (selector.pattern) chips.push(`pattern: ${selector.pattern}`);
+  return chips.length ? chips : ["any retained event"];
+}
+
+function alternativeSummary(alternative: WorkflowContractAlternative) {
+  const parts = [
+    alternative.source,
+    alternative.payloadKind,
+    alternative.service,
+    alternative.route,
+  ].filter(Boolean);
+  if (alternative.missingFields?.length) {
+    parts.push(`missing ${alternative.missingFields.join(", ")}`);
+  }
+  if (alternative.differences?.length) {
+    parts.push(alternative.differences.join("; "));
+  }
+  return parts.join(" · ") || "nearby event";
 }
 
 function eventHasTraceId(event: EventEnvelope, traceId: string) {

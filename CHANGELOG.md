@@ -31,7 +31,8 @@ All notable changes to Dogtap will be documented in this file.
   `dogtap contract validate <path>`, `make contract-check`, and a JSON Schema
   at `schemas/workflow-contract.schema.json`.
 - Dashboard workflow contract evidence now shows pass and fail checks with
-  event and trace evidence links.
+  event and trace evidence links, plus failed-check selector criteria and
+  closest retained alternatives.
 - Diagnostics assertions now include root-cause classifications with evidence
   and next checks for missing telemetry, including OTLP exporter and endpoint
   routing failures.
