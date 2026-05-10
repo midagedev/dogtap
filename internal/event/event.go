@@ -56,10 +56,23 @@ type ReplayDetail struct {
 }
 
 type LogEntry struct {
-	Timestamp string `json:"timestamp,omitempty"`
-	Level     string `json:"level,omitempty"`
-	Message   string `json:"message,omitempty"`
-	TraceID   string `json:"traceId,omitempty"`
+	Timestamp     string `json:"timestamp,omitempty"`
+	Level         string `json:"level,omitempty"`
+	Message       string `json:"message,omitempty"`
+	TraceID       string `json:"traceId,omitempty"`
+	SpanID        string `json:"spanId,omitempty"`
+	Route         string `json:"route,omitempty"`
+	Method        string `json:"method,omitempty"`
+	StatusCode    int    `json:"statusCode,omitempty"`
+	Service       string `json:"service,omitempty"`
+	Env           string `json:"env,omitempty"`
+	Version       string `json:"version,omitempty"`
+	UserID        string `json:"userId,omitempty"`
+	AccountID     string `json:"accountId,omitempty"`
+	WorkspaceID   string `json:"workspaceId,omitempty"`
+	CaseID        string `json:"caseId,omitempty"`
+	RequestID     string `json:"requestId,omitempty"`
+	CorrelationID string `json:"correlationId,omitempty"`
 }
 
 type TraceDetail struct {
@@ -68,13 +81,14 @@ type TraceDetail struct {
 }
 
 type MetricEntry struct {
-	Name        string  `json:"name,omitempty"`
-	Service     string  `json:"service,omitempty"`
-	Unit        string  `json:"unit,omitempty"`
-	Value       float64 `json:"value,omitempty"`
-	Aggregation string  `json:"aggregation,omitempty"`
-	Route       string  `json:"route,omitempty"`
-	Timestamp   string  `json:"timestamp,omitempty"`
+	Name        string            `json:"name,omitempty"`
+	Service     string            `json:"service,omitempty"`
+	Unit        string            `json:"unit,omitempty"`
+	Value       float64           `json:"value,omitempty"`
+	Aggregation string            `json:"aggregation,omitempty"`
+	Route       string            `json:"route,omitempty"`
+	Timestamp   string            `json:"timestamp,omitempty"`
+	Tags        map[string]string `json:"tags,omitempty"`
 }
 
 type SpanDetail struct {

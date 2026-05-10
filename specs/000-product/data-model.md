@@ -98,6 +98,19 @@ LogEntry
   level
   message
   traceId
+  spanId
+  route
+  method
+  statusCode
+  service
+  env
+  version
+  userId
+  accountId
+  workspaceId
+  caseId
+  requestId
+  correlationId
 ```
 
 ```text
@@ -129,7 +142,14 @@ MetricEntry
   aggregation
   route
   timestamp
+  tags
 ```
+
+`LogEntry` exposes only a small allowlisted set of structured fields so
+diagnostics and Datadog-compatible log search can still work when raw payloads
+are disabled. `MetricEntry.tags` carries redacted, allowlisted metric point
+attributes such as service, env, version, route, method, and status code for
+local query scope matching.
 
 `payloadKind` is used to distinguish source subtypes such as `rum`, `replay`,
 `log`, `trace`, and `metric`. RUM Session Replay payloads may omit normal RUM
@@ -346,6 +366,11 @@ DatadogMetricQueryResponse
   to_date
   series
 ```
+
+Metric series may include Dogtap extension field `dogtap_event_ids` so agents
+can jump from a Datadog-compatible query response back to retained Dogtap
+events. The field is additive and not part of Datadog's public response
+contract.
 
 The compatibility responses are projections of retained `EventEnvelope` data.
 They do not add long-term retention, permissions, facets, indexes, cursor

@@ -224,7 +224,7 @@ for humans and coding agents.
 
 Goal: make missing telemetry diagnosis more mechanical.
 
-Status: first slice complete.
+Status: first slice plus structured debugging maintenance complete.
 
 - Add a diagnostics section that classifies likely causes: SDK not initialized,
   endpoint not reachable, wrong route/service selector, sampling disabled,
@@ -303,6 +303,9 @@ Status: first slice complete.
 - Keep the layer explicit about limits:
   complete in `docs/DATADOG_API_COMPATIBILITY.md` and
   `docs/decisions/0014-datadog-api-compatibility.md`.
+- Add structured log aliases, metric point tag scope matching, Dogtap event ID
+  links, and conservative trace ID alias matching for agent debugging:
+  complete.
 
 Why it matters: agent-driven debugging improves when the same Datadog API paths
 used in production snippets can be pointed at Dogtap during local and CI runs.

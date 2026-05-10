@@ -120,7 +120,8 @@ Recommended strategy:
 - standard Datadog tracer environment variables
 - standard OTLP HTTP and gRPC exporters
 - read-only Datadog API-compatible search/query paths for retained local
-  telemetry
+  telemetry, including structured log aliases and metric route/method/status
+  scope tags for agent debugging
 - optional SQLite persistence for restart-safe local, CI, and dev-cluster
   inspection without running a database service
 - copyable Docker Compose and environment snippets

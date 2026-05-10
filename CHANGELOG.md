@@ -51,6 +51,8 @@ All notable changes to Dogtap will be documented in this file.
   dev-cluster retained telemetry.
 - Dashboard structured log drilldown and retained metric snapshot charts for
   faster log/metric inspection.
+- Datadog-compatible structured log aliases, metric point tag filtering,
+  trace-ID alias matching, and Dogtap event IDs for agent debugging.
 
 ### Notes
 

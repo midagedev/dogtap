@@ -78,12 +78,17 @@ public release.
 | `POST /api/v2/logs/events/search` | Partial | Searches retained Dogtap log events with a small query-field subset. |
 | `POST /api/v2/rum/events/search` | Partial | Searches retained RUM and replay metadata by service, session, user, route, and context. |
 | `POST /api/v2/spans/events/search` | Partial | Expands retained APM/OTLP trace details into Datadog-style span rows. |
-| `GET /api/v1/query` | Partial | Returns retained metric samples as a Datadog-style timeseries response for simple `avg:metric{tag:value}` queries. |
+| `GET /api/v1/query` | Partial | Returns retained metric samples as a Datadog-style timeseries response for simple `avg:metric{tag:value}` queries with retained service/route/method/status tags. |
 
 These endpoints are read-only and do not implement Datadog API key validation,
 full query language semantics, facets, cursor pagination, indexes, storage
 tiers, formulas, rollups, monitors, dashboards, notebooks, or long-term
 retention.
+
+Logs search includes common debugging aliases such as `@http.status_code`,
+`@http.method`, `@endpoint`, `@payload_kind`, `@validation.status`,
+`@dogtap.id`, `@request_id`, and `@correlation_id`. Trace search also matches
+leading-zero hex and low-64-bit decimal trace ID forms where unambiguous.
 
 ## Release Evidence Commands
 
