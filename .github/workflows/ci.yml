@@ -102,6 +102,9 @@ jobs:
       - name: Check docs/spec alignment
         run: make doc-check
 
+      - name: Check workflow contracts
+        run: make contract-check
+
       - name: Run generic adoption smoke
         env:
           DOGTAP_ARTIFACT_DIR: .dogtap/diagnostics/generic

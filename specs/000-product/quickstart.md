@@ -134,6 +134,10 @@ go run ./cmd/dogtap diagnose \
 Workflow contracts assert named user paths:
 
 ```bash
+go run ./cmd/dogtap contract validate configs/contracts/login.yaml
+```
+
+```bash
 go run ./cmd/dogtap diagnose \
   -base-url http://127.0.0.1:8080 \
   -output .dogtap/diagnostics/login \

@@ -169,6 +169,62 @@ checks:
 	}
 }
 
+func TestContractValidateCommandPassesBundledTemplate(t *testing.T) {
+	path := filepath.Join("..", "..", "configs", "contracts", "login.yaml")
+	var err error
+	output := captureStdout(t, func() {
+		err = run([]string{"contract", "validate", path})
+	})
+	if err != nil {
+		t.Fatalf("run contract validate: %v", err)
+	}
+	if !strings.Contains(output, path+": pass") {
+		t.Fatalf("expected passing validation output, got:\n%s", output)
+	}
+}
+
+func TestContractValidateCommandFailsWithAuthoringHints(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "broken.yaml")
+	if err := os.WriteFile(path, []byte(`name: broken
+checks:
+  - id: duplicate
+    type: event
+    routeRegex: "["
+  - id: duplicate
+    type: unsupported
+`), 0o644); err != nil {
+		t.Fatalf("write contract: %v", err)
+	}
+
+	var err error
+	output := captureStdout(t, func() {
+		err = run([]string{"contract", "validate", path})
+	})
+
+	if !errors.Is(err, report.ErrValidationFailed) {
+		t.Fatalf("run contract validate error = %v, want validation failure", err)
+	}
+	for _, expected := range []string{"invalid regex", `duplicate check id "duplicate"`, `unsupported check type "unsupported"`} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("expected %q in validation output:\n%s", expected, output)
+		}
+	}
+}
+
+func TestContractValidateCommandSupportsJSONOutput(t *testing.T) {
+	path := filepath.Join("..", "..", "configs", "contracts", "login.yaml")
+	var err error
+	output := captureStdout(t, func() {
+		err = run([]string{"contract", "validate", "-format", "json", path})
+	})
+	if err != nil {
+		t.Fatalf("run contract validate: %v", err)
+	}
+	if !json.Valid([]byte(output)) || !strings.Contains(output, `"status": "pass"`) {
+		t.Fatalf("expected JSON validation output, got:\n%s", output)
+	}
+}
+
 func writePassingRUMFixture(t *testing.T) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "rum-pass.json")

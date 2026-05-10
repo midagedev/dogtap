@@ -60,6 +60,27 @@ Example files live under `configs/contracts/`:
 
 ## CLI
 
+Validate a contract before running a workflow:
+
+```bash
+dogtap contract validate configs/contracts/login.yaml
+```
+
+For agent-readable output:
+
+```bash
+dogtap contract validate -format json configs/contracts/login.yaml
+```
+
+The validator catches missing names, empty check lists, duplicate check IDs,
+unsupported check types, unsupported sources, unsupported selector fields,
+unknown YAML/JSON fields, and invalid regular expressions.
+
+Editor integrations can use the JSON Schema at
+`schemas/workflow-contract.schema.json`.
+
+Run a contract against retained Dogtap telemetry:
+
 ```bash
 dogtap diagnose \
   -base-url http://127.0.0.1:8080 \

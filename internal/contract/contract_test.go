@@ -3,6 +3,7 @@ package contract
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -132,6 +133,10 @@ func TestBundledContractTemplatesLoad(t *testing.T) {
 		if def.Name == "" || len(def.Checks) == 0 {
 			t.Fatalf("template %s is missing name or checks: %#v", entry.Name(), def)
 		}
+		report := ValidateFile(filepath.Join(dir, entry.Name()))
+		if report.Status != "pass" {
+			t.Fatalf("template %s should validate: %#v", entry.Name(), report.Issues)
+		}
 		seen := map[string]bool{}
 		for _, check := range def.Checks {
 			if check.ID == "" || check.Type == "" {
@@ -143,6 +148,176 @@ func TestBundledContractTemplatesLoad(t *testing.T) {
 			seen[check.ID] = true
 		}
 	}
+}
+
+func TestValidateFileRejectsAuthoringErrors(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "workflow.yaml")
+	if err := os.WriteFile(path, []byte(`name: broken-workflow
+checks:
+  - id: duplicate
+    type: event
+    source: browser
+    payloadKind: span
+    routeRegex: "["
+    fields:
+      - session
+      - sessionId
+      - sessionId
+    from:
+      source: rum
+  - id: duplicate
+    type: unknown-check
+  - id: trace-top-level-selector
+    type: trace-correlation
+    source: rum
+    from:
+      source: rum
+    to:
+      payloadKind: trace
+  - id: sensitive-selector
+    type: no-sensitive-values
+    source: logs
+    pattern: password
+    metric: auth.failures
+`), 0o644); err != nil {
+		t.Fatalf("write contract: %v", err)
+	}
+
+	report := ValidateFile(path)
+
+	if report.Status != "fail" {
+		t.Fatalf("status = %s, want fail", report.Status)
+	}
+	messages := validationMessages(report)
+	for _, expected := range []string{
+		`unsupported source "browser"`,
+		`unsupported payload kind "span"`,
+		"invalid regex",
+		`unsupported selector field "session"`,
+		`duplicate selector field "sessionId"`,
+		"from selectors are only supported on trace-correlation checks",
+		`duplicate check id "duplicate"`,
+		`unsupported check type "unknown-check"`,
+		"trace-correlation checks use from/to selectors and do not support top-level selectors",
+		"no-sensitive-values checks inspect all visible values and do not support selectors",
+		"no-sensitive-values checks inspect all visible values and do not support pattern",
+		"metric is only supported on metric checks",
+	} {
+		if !strings.Contains(messages, expected) {
+			t.Fatalf("expected %q in validation issues:\n%s", expected, messages)
+		}
+	}
+}
+
+func TestValidateFileRejectsMissingNameAndChecks(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "workflow.yaml")
+	if err := os.WriteFile(path, []byte(`description: incomplete workflow
+checks: []
+`), 0o644); err != nil {
+		t.Fatalf("write contract: %v", err)
+	}
+
+	report := ValidateFile(path)
+
+	if report.Status != "fail" {
+		t.Fatalf("status = %s, want fail", report.Status)
+	}
+	messages := validationMessages(report)
+	for _, expected := range []string{"contract name is required", "at least one check is required"} {
+		if !strings.Contains(messages, expected) {
+			t.Fatalf("expected %q in validation issues:\n%s", expected, messages)
+		}
+	}
+}
+
+func TestValidateFileRejectsTrailingJSONValue(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "workflow.json")
+	if err := os.WriteFile(path, []byte(`{"name":"one","checks":[{"id":"rum","type":"event"}]}
+{"name":"two","checks":[{"id":"rum","type":"event"}]}`), 0o644); err != nil {
+		t.Fatalf("write contract: %v", err)
+	}
+
+	report := ValidateFile(path)
+
+	if report.Status != "fail" {
+		t.Fatalf("status = %s, want fail", report.Status)
+	}
+	if !strings.Contains(validationMessages(report), "multiple JSON values are not supported") {
+		t.Fatalf("expected trailing JSON issue, got: %#v", report.Issues)
+	}
+}
+
+func TestValidateFileRejectsMultipleYAMLDocuments(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "workflow.yaml")
+	if err := os.WriteFile(path, []byte(`name: one
+checks:
+  - id: rum
+    type: event
+---
+name: two
+checks:
+  - id: rum
+    type: event
+`), 0o644); err != nil {
+		t.Fatalf("write contract: %v", err)
+	}
+
+	report := ValidateFile(path)
+
+	if report.Status != "fail" {
+		t.Fatalf("status = %s, want fail", report.Status)
+	}
+	if !strings.Contains(validationMessages(report), "multiple YAML documents are not supported") {
+		t.Fatalf("expected multiple YAML document issue, got: %#v", report.Issues)
+	}
+}
+
+func TestValidateFileRejectsUnknownFields(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "workflow.yaml")
+	if err := os.WriteFile(path, []byte(`name: broken-workflow
+checks:
+  - id: rum-event
+    type: event
+    routeRegexp: "/login"
+`), 0o644); err != nil {
+		t.Fatalf("write contract: %v", err)
+	}
+
+	report := ValidateFile(path)
+
+	if report.Status != "fail" {
+		t.Fatalf("status = %s, want fail", report.Status)
+	}
+	if !strings.Contains(validationMessages(report), "field routeRegexp not found") {
+		t.Fatalf("expected unknown field issue, got: %#v", report.Issues)
+	}
+}
+
+func TestValidateFileAllowsSchemaHint(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "workflow.yaml")
+	if err := os.WriteFile(path, []byte(`$schema: ../../schemas/workflow-contract.schema.json
+name: schema-hint-workflow
+checks:
+  - id: rum-event
+    type: event
+    source: rum
+`), 0o644); err != nil {
+		t.Fatalf("write contract: %v", err)
+	}
+
+	report := ValidateFile(path)
+
+	if report.Status != "pass" {
+		t.Fatalf("status = %s, want pass: %#v", report.Status, report.Issues)
+	}
+}
+
+func validationMessages(report ValidationReport) string {
+	messages := []string{}
+	for _, issue := range report.Issues {
+		messages = append(messages, issue.Message)
+	}
+	return strings.Join(messages, "\n")
 }
 
 func representativeEvents() []event.EventEnvelope {
