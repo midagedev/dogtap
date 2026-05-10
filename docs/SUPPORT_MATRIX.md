@@ -40,7 +40,7 @@ public release.
 | Datadog trace/log correlation | Supported when logs reach Dogtap | Keep `DD_LOGS_INJECTION=true`; Dogtap still needs a log input path. |
 | Grafana Faro Web SDK | Experimental smoke only | Point the SDK collector URL at Dogtap `/faro`, `/collect`, or `/collect/` for integration smoke. For production-grade Faro, route through Grafana Alloy `faro.receiver` and export OTLP to Dogtap. |
 | DD Agent stdout/file log tailing | Not Dogtap-native | Use a collector/log-forwarder bridge to Dogtap logs or OTLP logs; `make smoke-log-bridge` verifies the OTel filelog recipe. |
-| DogStatsD metrics | Not supported | Keep Datadog Agent for DogStatsD; use OTLP metrics for Dogtap inspection. |
+| DogStatsD metrics | Not Dogtap-native | Keep Datadog Agent for production DogStatsD; `make smoke-statsd-bridge` verifies a Collector StatsD-to-OTLP metrics bridge for local/CI inspection. |
 | OTel Collector sidecar/gateway | Supported as a bridge pattern | Send OTLP traces/logs/metrics to Dogtap in local/CI or sampled tee modes. |
 
 ## Forwarding Surfaces
@@ -80,6 +80,7 @@ make shell-check
 make contract-check
 make smoke-adoption
 make smoke-log-bridge
+make smoke-statsd-bridge
 make smoke-faro
 make demo-visual-check
 go run ./cmd/dogtap replay \

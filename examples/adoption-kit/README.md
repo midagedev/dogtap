@@ -41,6 +41,9 @@ change that restores the original Datadog or OTLP endpoints.
 | `otel-filelog-bridge.yaml` | OpenTelemetry Collector filelog receiver config for stdout/file log bridge inspection |
 | `compose.otel-filelog-bridge.yaml` | Runnable Dogtap plus Collector filelog bridge smoke stack |
 | `otel-filelog-bridge.md` | Filelog bridge usage, field expectations, and rollback notes |
+| `otel-statsd-bridge.yaml` | OpenTelemetry Collector StatsD receiver config for DogStatsD-style metric bridge inspection |
+| `compose.otel-statsd-bridge.yaml` | Runnable Dogtap plus Collector StatsD bridge smoke stack |
+| `otel-statsd-bridge.md` | StatsD bridge usage, metric tag expectations, and rollback notes |
 
 ## Compose Use
 
@@ -84,6 +87,13 @@ tails stdout/files, use `otel-filelog-bridge.md` or run:
 
 ```bash
 make smoke-log-bridge
+```
+
+For applications that emit DogStatsD or StatsD-style metrics to the Datadog
+Agent, use `otel-statsd-bridge.md` or run:
+
+```bash
+make smoke-statsd-bridge
 ```
 
 Before routing Browser RUM or Session Replay through Dogtap outside a local-only

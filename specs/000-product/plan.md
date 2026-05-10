@@ -71,7 +71,8 @@ Current protocol support:
 - OTLP gRPC on `4317`
 - Faro SDK smoke intake on `/faro`, `/collect`, and `/collect/`
 
-DogStatsD and profiles should be future work.
+Native DogStatsD intake and profiles should be future work. DogStatsD-style
+metrics can be inspected through the Collector StatsD-to-OTLP bridge recipe.
 
 ## Architecture
 

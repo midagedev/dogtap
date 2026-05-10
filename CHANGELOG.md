@@ -38,6 +38,8 @@ All notable changes to Dogtap will be documented in this file.
   routing failures.
 - OpenTelemetry Collector filelog bridge recipe, Compose smoke stack, and
   `make smoke-log-bridge` for Agent-style stdout/file log adoption gaps.
+- OpenTelemetry Collector StatsD bridge recipe, Compose smoke stack, and
+  `make smoke-statsd-bridge` for DogStatsD-style metric adoption gaps.
 
 ### Notes
 
