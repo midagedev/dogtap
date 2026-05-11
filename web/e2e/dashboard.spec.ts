@@ -622,6 +622,33 @@ test("dashboard renders stream detail, failure inbox, correlation, and query bui
   await expect(
     page.getByRole("heading", { name: "Metrics Snapshot" }),
   ).toBeVisible();
+  const serviceMap = page.getByLabel("Interactive service map");
+  await expect(
+    serviceMap
+      .locator(".service-graph-node")
+      .filter({ hasText: "web-frontend" }),
+  ).toBeVisible();
+  await serviceMap
+    .locator(".service-graph-node")
+    .filter({ hasText: "api-service" })
+    .click();
+  const selectedService = page.getByLabel("Selected service details");
+  await expect(selectedService.getByText("api-service").first()).toBeVisible();
+  await expect(
+    page
+      .getByLabel("Selected service evidence")
+      .getByRole("button", { name: /evt-log-export/ }),
+  ).toBeVisible();
+  await serviceMap
+    .locator(".service-graph-node")
+    .filter({ hasText: "edge-gateway" })
+    .click();
+  await expect(selectedService.getByText("edge-gateway").first()).toBeVisible();
+  await expect(
+    page
+      .getByLabel("Selected service evidence")
+      .getByRole("button", { name: /evt-apm-export/ }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Intake Health" }),
   ).toBeVisible();

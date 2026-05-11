@@ -32,8 +32,18 @@ test("seeded demo dashboard shows the public telemetry workflow", async ({
       .getByRole("button", { name: /session-123/ }),
   ).toBeVisible();
 
+  const serviceMap = page.getByLabel("Interactive service map");
   await expect(
-    page.getByLabel("Service nodes").getByText("web-frontend"),
+    serviceMap
+      .locator(".service-graph-node")
+      .filter({ hasText: "web-frontend" }),
+  ).toBeVisible();
+  await serviceMap
+    .locator(".service-graph-node")
+    .filter({ hasText: "api-service" })
+    .click();
+  await expect(
+    page.getByLabel("Selected service details").getByText("api-service").first(),
   ).toBeVisible();
   await expect(
     page.getByLabel("Service edges").getByText("edge-gateway"),

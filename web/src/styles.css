@@ -269,8 +269,7 @@ select {
   gap: 12px;
 }
 
-.service-nodes,
-.service-edges,
+.service-graph,
 .route-list,
 .metric-list,
 .metric-detail-list {
@@ -279,12 +278,97 @@ select {
   gap: 8px;
 }
 
-.service-nodes {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.service-graph-stage {
+  position: relative;
+  min-height: 262px;
+  border: 1px solid #edf1f3;
+  border-radius: 7px;
+  background:
+    linear-gradient(90deg, rgba(148, 163, 184, 0.12) 1px, transparent 1px),
+    linear-gradient(rgba(148, 163, 184, 0.12) 1px, transparent 1px),
+    #fbfcfd;
+  background-size: 32px 32px;
+  overflow: hidden;
 }
 
-.service-node,
-.service-edge,
+.service-graph-edges {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.service-graph-edge line {
+  stroke: #94a3b8;
+  stroke-width: 1.1;
+  vector-effect: non-scaling-stroke;
+}
+
+.service-graph-edge.active line {
+  stroke: #2563eb;
+  stroke-width: 1.8;
+}
+
+.service-graph-edge path {
+  fill: #94a3b8;
+}
+
+.service-graph-edge.active path {
+  fill: #2563eb;
+}
+
+.service-graph-node {
+  --service-node-x: 50%;
+  --service-node-y: 50%;
+  position: absolute;
+  left: var(--service-node-x);
+  top: var(--service-node-y);
+  width: min(132px, 38%);
+  min-height: 74px;
+  padding: 9px 10px;
+  border: 1px solid #ccd5da;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #182026;
+  transform: translate(-50%, -50%);
+  display: grid;
+  gap: 3px;
+  text-align: left;
+  box-shadow: 0 7px 16px rgba(15, 23, 42, 0.08);
+  cursor: pointer;
+}
+
+.service-graph-node:hover,
+.service-graph-node.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.service-graph-node.has-errors {
+  border-color: #f1a9a0;
+}
+
+.service-graph-node.has-errors.active {
+  border-color: #b42318;
+  background: #fff5f3;
+}
+
+.service-graph-node strong,
+.service-graph-node span,
+.service-graph-node small,
+.service-edge-strip code,
+.service-edge-strip small,
+.service-route-row strong,
+.service-route-row small,
+.service-evidence-list strong,
+.service-evidence-list small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .route-row,
 .metric-row,
 .metric-detail-row {
@@ -294,15 +378,6 @@ select {
   background: #fbfcfd;
 }
 
-.service-node {
-  padding: 10px;
-  display: grid;
-  gap: 4px;
-}
-
-.service-node strong,
-.service-node span,
-.service-node small,
 .route-row strong,
 .route-row span,
 .route-row small,
@@ -317,8 +392,10 @@ select {
   white-space: nowrap;
 }
 
-.service-node span,
-.service-node small,
+.service-graph-node span,
+.service-graph-node small,
+.service-route-row small,
+.service-evidence-list small,
 .route-row span,
 .route-row small,
 .metric-row span,
@@ -328,16 +405,32 @@ select {
   font-size: 12px;
 }
 
-.service-edge {
+.service-edge-strip {
+  display: grid;
+  gap: 6px;
+}
+
+.service-edge-strip button {
   min-height: 34px;
   padding: 6px 8px;
+  border: 1px solid #edf1f3;
+  border-radius: 7px;
+  background: #fbfcfd;
+  color: #263238;
   display: grid;
   grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr) max-content;
   gap: 6px;
   align-items: center;
+  cursor: pointer;
 }
 
-.service-edge code,
+.service-edge-strip button.active,
+.service-edge-strip button:hover {
+  border-color: #bfd7ff;
+  background: #eff6ff;
+}
+
+.service-edge-strip code,
 .metric-row code,
 .metric-detail-row code {
   min-width: 0;
@@ -350,19 +443,147 @@ select {
   white-space: nowrap;
 }
 
-.service-edge span {
+.service-edge-strip span {
   color: #667680;
 }
 
-.service-edge small {
+.service-edge-strip small {
   color: #667680;
   font-size: 11px;
   white-space: nowrap;
 }
 
-.service-edge code {
+.service-edge-strip code {
   white-space: normal;
   overflow-wrap: anywhere;
+}
+
+.service-map-detail {
+  min-width: 0;
+  border-top: 1px solid #edf1f3;
+  padding-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.service-detail-title {
+  min-width: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.service-detail-title strong,
+.service-detail-title span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-detail-title span {
+  color: #667680;
+  font-size: 12px;
+}
+
+.service-detail-grid,
+.service-connection-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.service-connection-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.service-detail-grid div,
+.service-connection-list,
+.service-route-row,
+.service-evidence-list button {
+  min-width: 0;
+  border: 1px solid #edf1f3;
+  border-radius: 7px;
+  background: #fbfcfd;
+}
+
+.service-detail-grid div {
+  min-height: 54px;
+  padding: 8px;
+  display: grid;
+  gap: 2px;
+}
+
+.service-detail-grid span,
+.service-connection-list span {
+  color: #667680;
+  font-size: 11px;
+}
+
+.service-detail-grid strong {
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.service-connection-list {
+  padding: 8px;
+  display: grid;
+  gap: 5px;
+}
+
+.service-connection-list code,
+.service-connection-list small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-connection-list code {
+  border-radius: 5px;
+  padding: 3px 6px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 11px;
+}
+
+.service-connection-list small {
+  color: #8a99a3;
+  font-size: 12px;
+}
+
+.service-route-list,
+.service-evidence-list {
+  display: grid;
+  gap: 6px;
+}
+
+.service-route-row {
+  padding: 7px 8px;
+  display: grid;
+  gap: 2px;
+}
+
+.service-evidence-list button {
+  min-height: 42px;
+  padding: 7px 8px;
+  color: #263238;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 2px 8px;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+}
+
+.service-evidence-list button:hover {
+  border-color: #bfd7ff;
+  background: #eff6ff;
+}
+
+.service-evidence-list small {
+  grid-column: 2;
 }
 
 .source-strip {
@@ -1880,17 +2101,27 @@ pre {
   }
 
   .service-map,
-  .service-nodes,
   .source-strip,
+  .service-detail-grid,
+  .service-connection-grid,
   .intake-health-grid,
   .session-context,
   .route-row,
+  .service-evidence-list button,
   .metric-chart-row,
   .metric-summary-grid,
   .metric-detail-row,
   .log-field-grid,
   .session-timeline {
     grid-template-columns: 1fr;
+  }
+
+  .service-graph-stage {
+    min-height: 310px;
+  }
+
+  .service-evidence-list small {
+    grid-column: 1;
   }
 
   .stream-pane {

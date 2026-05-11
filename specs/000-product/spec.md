@@ -152,6 +152,9 @@ Acceptance criteria:
 - FR-037: Group browser telemetry by session so developers can inspect the
   frontend timeline across RUM, Faro, replay, logs, metrics, and correlated
   traces.
+- FR-038: Show an interactive service map graph for retained telemetry, with
+  selectable service nodes, trace-derived edges, upstream/downstream context,
+  routes, and evidence links back to the matching retained events.
 
 ### Forwarding
 

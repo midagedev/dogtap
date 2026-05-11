@@ -64,7 +64,7 @@ public release.
 | Stream and detail views | Supported | Shows endpoint, normalized context, validation, and payload. |
 | Validation failure inbox | Supported | Filterable by failing rule ID. |
 | Correlation hints | Supported | Uses trace, user, workspace, and case identifiers from recent events. |
-| Service map | Partial | Uses span parent/child edges and bounded trace-correlation fallback. |
+| Service map | Supported for retained telemetry | Interactive graph uses span parent/child edges and bounded trace-correlation fallback, with selected-service details and evidence links back to retained events. |
 | Log viewer | Supported | Shows decoded log entries, structured context fields, trace/span IDs, and payload access. |
 | Trace/span viewer | Supported | Shows decoded spans where available. |
 | Metric viewer | Supported | Shows OTLP metric samples, retained chart snapshots, latest/min/max summaries, and metric detail rows. |

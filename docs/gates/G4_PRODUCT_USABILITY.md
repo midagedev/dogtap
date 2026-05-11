@@ -20,6 +20,9 @@ Implemented usability surface:
   service map, route traffic, and validation failures through the real HTTP API.
 - Dashboard Session Replay renders decoded rrweb full snapshot records as an
   iframe DOM replay and keeps payload timeline fallback for partial payloads.
+- Service map is interactive for retained telemetry: service nodes are
+  selectable, trace-derived edges are highlighted, and selected-service details
+  link back to retained event evidence.
 
 ## Verification
 

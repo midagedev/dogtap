@@ -61,6 +61,9 @@ All notable changes to Dogtap will be documented in this file.
   company-specific adoption terms out of the public repository.
 - Subscription workflow contract starter and documented workflow contract
   starter pack for common frontend/backend flows.
+- Interactive retained-telemetry service map with selectable nodes,
+  trace-derived edges, upstream/downstream context, route summaries, and
+  event evidence links.
 
 ### Notes
 
