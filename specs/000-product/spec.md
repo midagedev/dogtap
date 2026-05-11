@@ -216,6 +216,13 @@ Acceptance criteria:
   and dev-cluster runs that need restart-safe and queryable retained telemetry
   while preserving Dogtap's bounded TTL/count retention and redaction-before-
   persistence rules.
+- FR-072: Keep the read-only Datadog API compatibility layer practical for
+  agent debugging by supporting simple quoted phrases, quoted path-like
+  attribute values, and quoted metric scope tag values while still rejecting
+  full Datadog query-language parity as a non-goal.
+- FR-073: Provide an automated public hygiene check that keeps company- or
+  project-specific service names out of the public repository while allowing
+  private adoption evidence to remain under ignored local paths.
 
 ## Non-Functional Requirements
 
@@ -243,6 +250,8 @@ Acceptance criteria:
 - Datadog billing estimator beyond heuristic hints
 - Full private Datadog endpoint compatibility in MVP
 - Full Datadog API query language or mutating API compatibility
+- Full boolean Datadog search semantics, facets, formulas, rollups, or cursor
+  pagination
 - Production-grade native Grafana Faro collector parity
 - Unbounded production telemetry warehouse or multi-tenant observability
   database

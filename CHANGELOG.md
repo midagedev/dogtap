@@ -55,6 +55,12 @@ All notable changes to Dogtap will be documented in this file.
   trace-ID alias matching, and Dogtap event IDs for agent debugging.
 - EKS dev-cluster Kustomize overlay and smoke runbook with private networking,
   SQLite PVC retention, non-root security context, and rollback steps.
+- Datadog-compatible query hardening for quoted log phrases, quoted path-like
+  attribute values, and quoted metric scope tags.
+- Public hygiene check through `make public-hygiene-check` to keep
+  company-specific adoption terms out of the public repository.
+- Subscription workflow contract starter and documented workflow contract
+  starter pack for common frontend/backend flows.
 
 ### Notes
 

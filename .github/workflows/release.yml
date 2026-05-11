@@ -46,6 +46,7 @@ jobs:
           go test ./...
           make shell-check
           make doc-check
+          make public-hygiene-check
           make contract-check
           make deployment-check
           DOGTAP_ARTIFACT_DIR=.dogtap/diagnostics/generic make smoke-adoption

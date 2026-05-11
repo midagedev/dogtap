@@ -55,6 +55,14 @@ for local retained telemetry search.
 - RUM Events Search: https://docs.datadoghq.com/api/latest/rum/#search-rum-events
 - Spans Events Search: https://docs.datadoghq.com/api/latest/spans/#search-spans
 - Metrics Query: https://docs.datadoghq.com/api/latest/metrics/#query-timeseries-points
+- Logs search syntax: https://docs.datadoghq.com/logs/explorer/search_syntax/
+
+Useful details:
+
+- Logs search syntax treats a quoted sequence such as `"hello world"` as a
+  phrase.
+- Attribute values with special characters can be queried with quotes, for
+  example `@http.url_details.path:"/api/v1/test"`.
 
 ## Datadog Agent Log Collection
 

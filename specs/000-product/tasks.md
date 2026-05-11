@@ -601,3 +601,21 @@ Gate:
 
 - [x] G4 Product Usability dashboard observability subset
 - [x] G8 Release Candidate dev-cluster subset
+
+## Phase 27: Public Compatibility Hardening
+
+- [x] T270 Harden Datadog-compatible search tokenization for simple quoted
+  phrases and quoted path-like attribute values.
+- [x] T271 Harden Datadog-compatible metric scope parsing for quoted tag
+  values.
+- [x] T272 Add a public hygiene check and wire it into CI, release validation,
+  and maintainer documentation.
+- [x] T273 Add a subscription workflow contract starter and document the
+  starter pack for common frontend/backend flows.
+- [x] T274 Update compatibility docs, gates, and decision records for the new
+  hardening slice.
+
+Gate:
+
+- [x] G5 CI Contract Datadog API compatibility hardening subset
+- [x] G8 Release Candidate public hygiene subset

@@ -364,3 +364,22 @@ Status: first static packaging slice complete.
 
 Why it matters: team-level adoption needs a repeatable dev-cluster deployment
 path, but Dogtap should not become a production observability backend.
+
+### Chunk K: Public Compatibility Hardening
+
+Goal: make Dogtap safer to publish and easier for agents to query with familiar
+Datadog-shaped snippets.
+
+Status: complete.
+
+- Support simple quoted phrases and quoted path-like route values in
+  Datadog-compatible logs/RUM/spans search: complete.
+- Support quoted metric scope tag values in `GET /api/v1/query`: complete.
+- Add a public hygiene check that fails if company- or project-specific service
+  names enter the public tree: complete.
+- Add a subscription workflow contract starter and document the starter pack
+  for common frontend/backend flows: complete.
+
+Why it matters: the public project should stay generic, and coding agents
+should be able to reuse realistic Datadog queries such as
+`@route:"/api/v1/orders"` without switching to Dogtap-specific APIs.

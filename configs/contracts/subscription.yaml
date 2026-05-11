@@ -1,0 +1,51 @@
+name: subscription-workflow
+description: Verifies that a subscription or plan-change workflow is observable across browser, backend, and metrics.
+labels:
+  workflow: subscription
+  scope: local-dev
+checks:
+  - id: subscription-rum-context
+    type: event
+    source: rum
+    routeRegex: "^/(account|settings|billing|subscription|plans)"
+    fields:
+      - sessionId
+      - userId
+      - traceId
+    hint: Run the browser subscription path, then check RUM route naming, user/session context, and resource trace context.
+  - id: subscription-replay
+    type: event
+    source: rum
+    payloadKind: replay
+    hint: Enable Session Replay for the subscription sample path, respecting consent and replay sampling.
+  - id: subscription-backend-log
+    type: log-message
+    source: logs
+    pattern: "(?i)subscription|billing|plan.change|plan_change|upgrade|downgrade"
+    hint: Route backend structured logs to Dogtap and include a stable subscription workflow marker.
+  - id: subscription-backend-trace
+    type: event
+    payloadKind: trace
+    service: api-service
+    routeRegex: "/(account|billing|subscription|plans?)"
+    hint: Check backend tracer endpoint and route names for subscription or plan-change handlers.
+  - id: subscription-duration-metric
+    type: metric
+    pattern: "^(http\\.server\\.request\\.duration|subscription\\..*|billing\\..*|plan\\..*)$"
+    hint: Export HTTP duration or subscription-specific low-cardinality metrics.
+  - id: subscription-browser-to-api-trace
+    type: trace-correlation
+    from:
+      source: rum
+      routeRegex: "^/(account|settings|billing|subscription|plans)"
+      fields:
+        - sessionId
+        - traceId
+    to:
+      payloadKind: trace
+      service: api-service
+      routeRegex: "/(account|billing|subscription|plans?)"
+    hint: Propagate browser resource trace context into backend subscription spans.
+  - id: subscription-no-sensitive-values
+    type: no-sensitive-values
+    hint: Redact emails, payment identifiers, authorization headers, cookies, JWTs, and raw provider secrets before telemetry leaves the app.

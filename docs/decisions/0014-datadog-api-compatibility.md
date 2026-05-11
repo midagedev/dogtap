@@ -27,15 +27,15 @@ telemetry search:
 The compatibility layer maps Datadog-shaped requests and responses onto
 Dogtap's bounded event store. It supports the query fields needed for local and
 CI debugging: service, env, version, trace ID, span ID, session ID, user ID,
-workspace/account/case IDs, route/resource, source/type/status, and simple
-free-text matching.
+workspace/account/case IDs, route/resource, source/type/status, simple
+free-text matching, simple quoted phrases, and quoted path-like values.
 
 ## Non-Goals
 
 - Full Datadog query language parity
 - Cursor pagination, indexes, storage tiers, facets, formulas, rollups, or
   permissions
-- Quoted phrase matching and advanced boolean query parsing
+- Advanced boolean query parsing
 - Mutating Datadog APIs such as monitors, dashboards, users, service
   definitions, incidents, notebooks, or API key management
 - Long-term telemetry retention

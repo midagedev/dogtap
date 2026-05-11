@@ -73,7 +73,7 @@ Current protocol support:
 - OTLP gRPC on `4317`
 - Faro SDK smoke intake on `/faro`, `/collect`, and `/collect/`
 - Read-only Datadog API compatibility for retained logs/RUM/spans search and
-  metric query
+  metric query, including simple quoted phrases and quoted path-like values
 
 Native DogStatsD intake and profiles should be future work. DogStatsD-style
 metrics can be inspected through the Collector StatsD-to-OTLP bridge recipe.
@@ -235,11 +235,21 @@ Gate:
 - Dashboard structured-log and metric chart improvements over retained events
 - Dev-cluster deployment examples that keep Dogtap bounded and reversible
 
+### M10: Public compatibility hardening
+
+- Quoted Datadog-compatible query terms for path-like route values and exact
+  log phrases
+- Quoted metric scope values for retained timeseries samples
+- Public hygiene check wired into CI and release validation
+- Generic workflow contract starter pack for common application flows
+
 Gate:
 
 - G2 Runtime Contract persistent storage subset
 - G4 Product Usability dashboard observability subset
 - G8 Release Candidate dev-cluster subset
+- G5 CI Contract Datadog API compatibility hardening subset
+- G8 Release Candidate public hygiene subset
 
 ## Configuration Model
 
