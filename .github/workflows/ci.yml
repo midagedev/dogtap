@@ -103,6 +103,8 @@ jobs:
         run: make doc-check
 
       - name: Check public hygiene
+        env:
+          DOGTAP_PUBLIC_HYGIENE_REGEX: ${{ secrets.FORBIDDEN_KEYWORDS }}
         run: make public-hygiene-check
 
       - name: Check workflow contracts

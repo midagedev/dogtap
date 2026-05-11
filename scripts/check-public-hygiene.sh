@@ -4,8 +4,12 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "${script_dir}/.." && pwd)"
 
-default_regex='dentbird|imagoworks|ds6'
-private_regex="${DOGTAP_PUBLIC_HYGIENE_REGEX:-${default_regex}}"
+private_regex="${DOGTAP_PUBLIC_HYGIENE_REGEX:-}"
+
+if [ -z "${private_regex}" ]; then
+  printf 'Public hygiene check skipped: DOGTAP_PUBLIC_HYGIENE_REGEX is not set.\n' >&2
+  exit 0
+fi
 
 hits_file="$(mktemp)"
 trap 'rm -f "${hits_file}"' EXIT
