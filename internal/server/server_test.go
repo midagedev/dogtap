@@ -488,6 +488,60 @@ func TestDatadogLogsSearchMatchesStructuredLogFields(t *testing.T) {
 	}
 }
 
+func TestDatadogLogsSearchMatchesQuotedPhraseAndPathValues(t *testing.T) {
+	app := newTestApp(t, config.ModeLocal)
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/v2/logs",
+		bytes.NewBufferString(`{
+			"message":"billing subscription upgrade confirm",
+			"status":"info",
+			"service":"api",
+			"env":"local",
+			"version":"dev",
+			"trace_id":"trace-quoted-1",
+			"route":"/account/v2/workspace-plan-subscriptions/upgrade/confirm",
+			"http.method":"POST",
+			"http.status_code":200
+		}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	app.Handler().ServeHTTP(httptest.NewRecorder(), req)
+
+	searchReq := httptest.NewRequest(
+		http.MethodPost,
+		"/api/v2/logs/events/search",
+		bytes.NewBufferString(`{"filter":{"query":"service:api @route:\"/account/v2/workspace-plan-subscriptions/upgrade/confirm\" \"billing subscription upgrade confirm\""},"page":{"limit":5}}`),
+	)
+	searchReq.Header.Set("Content-Type", "application/json")
+	searchRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(searchRec, searchReq)
+
+	if searchRec.Code != http.StatusOK {
+		t.Fatalf("got status %d: %s", searchRec.Code, searchRec.Body.String())
+	}
+	var got struct {
+		Data []struct {
+			Attributes struct {
+				Message    string         `json:"message"`
+				Attributes map[string]any `json:"attributes"`
+			} `json:"attributes"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(searchRec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Data) != 1 {
+		t.Fatalf("expected quoted route and phrase query to match, got %#v", got)
+	}
+	if got.Data[0].Attributes.Message != "billing subscription upgrade confirm" {
+		t.Fatalf("unexpected message: %#v", got.Data[0].Attributes)
+	}
+	if got.Data[0].Attributes.Attributes["route"] != "/account/v2/workspace-plan-subscriptions/upgrade/confirm" {
+		t.Fatalf("missing quoted route match attributes: %#v", got.Data[0].Attributes.Attributes)
+	}
+}
+
 func TestDatadogRUMSearchCompatibilityReturnsRetainedRUM(t *testing.T) {
 	app := newTestApp(t, config.ModeLocal)
 	req := httptest.NewRequest(http.MethodPost, "/rum", bytes.NewBufferString(`{
@@ -681,6 +735,26 @@ func TestDatadogMetricQueryCompatibilityReturnsTimeseries(t *testing.T) {
 	}
 	if got.Series[0].Pointlist[0][1].(float64) != 42.5 {
 		t.Fatalf("unexpected metric value: %#v", got.Series[0].Pointlist)
+	}
+
+	quotedScopeReq := httptest.NewRequest(http.MethodGet, "/api/v1/query?from=0&to=9999999999&query=avg:http.server.request.duration%7Bhttp.route:%22%2Flogin%22,http.request.method:POST,http.response.status_code:200%7D", nil)
+	quotedScopeRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(quotedScopeRec, quotedScopeReq)
+	if quotedScopeRec.Code != http.StatusOK {
+		t.Fatalf("quoted scope status %d: %s", quotedScopeRec.Code, quotedScopeRec.Body.String())
+	}
+	var quotedScopeGot struct {
+		Status string `json:"status"`
+		Series []struct {
+			Metric    string  `json:"metric"`
+			Pointlist [][]any `json:"pointlist"`
+		} `json:"series"`
+	}
+	if err := json.Unmarshal(quotedScopeRec.Body.Bytes(), &quotedScopeGot); err != nil {
+		t.Fatal(err)
+	}
+	if quotedScopeGot.Status != "ok" || len(quotedScopeGot.Series) != 1 || len(quotedScopeGot.Series[0].Pointlist) != 1 {
+		t.Fatalf("expected quoted metric scope to match, got %#v", quotedScopeGot)
 	}
 }
 

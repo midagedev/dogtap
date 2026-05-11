@@ -450,6 +450,7 @@ Common checks:
 ```bash
 make shell-check
 make doc-check
+make public-hygiene-check
 make contract-check
 make deployment-check
 make smoke-adoption
@@ -497,7 +498,8 @@ Before tagging a release:
 1. Run `go test ./...`.
 2. Run `npm --prefix web run build`.
 3. Run `make shell-check`.
-4. Run `make doc-check`, `make contract-check`, and `make deployment-check`.
+4. Run `make doc-check`, `make public-hygiene-check`,
+   `make contract-check`, and `make deployment-check`.
 5. Run `make smoke-adoption`.
 6. Run `make smoke-log-bridge` and `make smoke-statsd-bridge`.
 7. Re-run the public-surface scan for company/private strings and secret

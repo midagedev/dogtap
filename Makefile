@@ -1,4 +1,4 @@
-.PHONY: build test web-build run replay diagnose contract-check deployment-check smoke-adoption smoke-external-injection smoke-faro smoke-log-bridge smoke-statsd-bridge demo-seed demo-visual-check shell-check doc-check
+.PHONY: build test web-build run replay diagnose contract-check deployment-check smoke-adoption smoke-external-injection smoke-faro smoke-log-bridge smoke-statsd-bridge demo-seed demo-visual-check shell-check doc-check public-hygiene-check
 
 build:
 	npm --prefix web run build
@@ -51,3 +51,6 @@ shell-check:
 
 doc-check:
 	bash scripts/check-doc-spec-alignment.sh
+
+public-hygiene-check:
+	bash scripts/check-public-hygiene.sh

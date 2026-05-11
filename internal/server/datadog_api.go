@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/midagedev/dogtap/internal/event"
 	"github.com/midagedev/dogtap/internal/store"
@@ -445,20 +446,20 @@ func matchesDatadogQuery(e event.EventEnvelope, query string, kind datadogEventK
 	if query == "" || query == "*" {
 		return true
 	}
-	for _, token := range strings.Fields(query) {
-		token = strings.Trim(token, "()")
+	for _, token := range datadogQueryTokens(query) {
+		token = trimDatadogQueryToken(token)
 		if token == "" || strings.EqualFold(token, "AND") {
 			continue
 		}
 		key, value, ok := strings.Cut(token, ":")
 		if !ok {
-			if !strings.Contains(strings.ToLower(datadogSearchText(e, kind)), strings.ToLower(strings.Trim(token, `"`))) {
+			if !strings.Contains(strings.ToLower(datadogSearchText(e, kind)), strings.ToLower(datadogUnquoteQueryValue(token))) {
 				return false
 			}
 			continue
 		}
 		key = strings.TrimPrefix(strings.ToLower(strings.TrimSpace(key)), "@")
-		value = strings.Trim(strings.TrimSpace(value), `"`)
+		value = datadogUnquoteQueryValue(value)
 		if value == "*" || value == "" {
 			continue
 		}
@@ -520,6 +521,8 @@ func datadogFieldMatches(e event.EventEnvelope, kind datadogEventKind, key strin
 		}
 	case "dogtap.id", "dogtap_id":
 		candidates = append(candidates, e.ID)
+	case "*":
+		candidates = append(candidates, datadogSearchText(e, kind))
 	case "request_id", "request.id":
 		if kind == datadogKindLog && e.Details != nil {
 			for _, log := range e.Details.Logs {
@@ -700,6 +703,108 @@ func datadogSearchText(e event.EventEnvelope, kind datadogEventKind) string {
 	return strings.Join(parts, " ")
 }
 
+func datadogQueryTokens(query string) []string {
+	tokens := []string{}
+	var current strings.Builder
+	inQuote := false
+	escaped := false
+	flush := func() {
+		token := strings.TrimSpace(current.String())
+		if token != "" {
+			tokens = append(tokens, token)
+		}
+		current.Reset()
+	}
+
+	for _, r := range query {
+		if escaped {
+			current.WriteRune('\\')
+			current.WriteRune(r)
+			escaped = false
+			continue
+		}
+		switch {
+		case r == '\\':
+			escaped = true
+		case r == '"':
+			inQuote = !inQuote
+			current.WriteRune(r)
+		case unicode.IsSpace(r) && !inQuote:
+			flush()
+		default:
+			current.WriteRune(r)
+		}
+	}
+	if escaped {
+		current.WriteRune('\\')
+	}
+	flush()
+	return tokens
+}
+
+func trimDatadogQueryToken(token string) string {
+	token = strings.TrimSpace(token)
+	for strings.HasPrefix(token, "(") && !strings.HasPrefix(token, `"`) {
+		token = strings.TrimSpace(strings.TrimPrefix(token, "("))
+	}
+	for strings.HasSuffix(token, ")") && datadogTrailingParenIsOutsideQuote(token) {
+		token = strings.TrimSpace(strings.TrimSuffix(token, ")"))
+	}
+	return token
+}
+
+func datadogTrailingParenIsOutsideQuote(token string) bool {
+	inQuote := false
+	escaped := false
+	runes := []rune(token)
+	for i, r := range runes {
+		if i == len(runes)-1 {
+			break
+		}
+		if escaped {
+			escaped = false
+			continue
+		}
+		if r == '\\' {
+			escaped = true
+			continue
+		}
+		if r == '"' {
+			inQuote = !inQuote
+		}
+	}
+	return !inQuote
+}
+
+func datadogUnquoteQueryValue(value string) string {
+	value = strings.TrimSpace(value)
+	if len(value) >= 2 && value[0] == '"' && value[len(value)-1] == '"' {
+		value = value[1 : len(value)-1]
+	}
+	return datadogUnescapeQueryValue(value)
+}
+
+func datadogUnescapeQueryValue(value string) string {
+	var out strings.Builder
+	escaped := false
+	for _, r := range value {
+		if escaped {
+			out.WriteRune(r)
+			escaped = false
+			continue
+		}
+		if r == '\\' {
+			escaped = true
+			continue
+		}
+		out.WriteRune(r)
+	}
+	if escaped {
+		out.WriteRune('\\')
+	}
+	return out.String()
+}
+
 func datadogTags(e event.EventEnvelope) []string {
 	n := e.Normalized
 	tags := []string{}
@@ -776,17 +881,52 @@ func parseMetricExpression(query string) (string, map[string]string) {
 		return strings.TrimSpace(query), nil
 	}
 	scope := map[string]string{}
-	for _, raw := range strings.Split(matches[2], ",") {
+	for _, raw := range splitDatadogCommaList(matches[2]) {
 		raw = strings.TrimSpace(raw)
 		if raw == "" || raw == "*" {
 			continue
 		}
 		key, value, ok := strings.Cut(raw, ":")
 		if ok {
-			scope[strings.TrimSpace(key)] = strings.Trim(strings.TrimSpace(value), `"`)
+			scope[strings.TrimSpace(key)] = datadogUnquoteQueryValue(value)
 		}
 	}
 	return strings.TrimSpace(matches[1]), scope
+}
+
+func splitDatadogCommaList(value string) []string {
+	parts := []string{}
+	var current strings.Builder
+	inQuote := false
+	escaped := false
+	flush := func() {
+		parts = append(parts, current.String())
+		current.Reset()
+	}
+	for _, r := range value {
+		if escaped {
+			current.WriteRune('\\')
+			current.WriteRune(r)
+			escaped = false
+			continue
+		}
+		switch {
+		case r == '\\':
+			escaped = true
+		case r == '"':
+			inQuote = !inQuote
+			current.WriteRune(r)
+		case r == ',' && !inQuote:
+			flush()
+		default:
+			current.WriteRune(r)
+		}
+	}
+	if escaped {
+		current.WriteRune('\\')
+	}
+	flush()
+	return parts
 }
 
 func metricTags(metric event.MetricEntry, e event.EventEnvelope) []string {

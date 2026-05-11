@@ -46,7 +46,26 @@ Example files live under `configs/contracts/`:
 - `login.yaml`: login/sign-in/auth
 - `case-open.yaml`: opening a case or record detail page
 - `checkout.yaml`: checkout/payment/purchase
+- `subscription.yaml`: account, billing, subscription, or plan-change flows
 - `report-export.yaml`: report export or file generation
+
+## Starter Pack
+
+For a typical frontend/backend app, start with these contracts and delete the
+ones that do not match your product:
+
+```text
+configs/contracts/frontend-backend.yaml
+configs/contracts/login.yaml
+configs/contracts/subscription.yaml
+configs/contracts/checkout.yaml
+configs/contracts/case-open.yaml
+configs/contracts/report-export.yaml
+```
+
+The fields most teams should edit first are `service`, `route`, `routeRegex`,
+`pattern`, and `metric`. Keep check IDs stable once CI starts consuming them so
+review comments and diagnostics archives remain comparable across runs.
 
 ## Check Types
 

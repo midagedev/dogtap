@@ -24,6 +24,7 @@ The sanitized adoption profile evidence is recorded in
    npm --prefix web run build
    make shell-check
    make doc-check
+   make public-hygiene-check
    make contract-check
    make deployment-check
    make smoke-adoption
@@ -41,9 +42,11 @@ The sanitized adoption profile evidence is recorded in
    ```
 
 4. Confirm GitHub Actions is green on `main`.
-5. Re-run a public-surface scan:
+5. Re-run public hygiene and secret-placeholder scans:
 
    ```bash
+   make public-hygiene-check
+
    private_scan_regex="${DOGTAP_PRIVATE_SCAN_REGEX:-company-name|internal-host|customer-id}"
    git grep -nE "${private_scan_regex}|api[_-]?key|secret|token|password" \
      -- ':!docs/references/datadog.md' ':!.private'

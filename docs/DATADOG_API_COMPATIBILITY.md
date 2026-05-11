@@ -90,9 +90,12 @@ often need while debugging missing telemetry:
 - free-text tokens for log messages and span names/resources
 
 Wildcard suffixes such as `service:api-*` are supported for simple prefix
-matching. Boolean expression parsing, facets, indexes, storage tiers, cursor
-pagination, quoted phrase matching, permissions, formulas, rollups, and
-Datadog's full query language are outside this first slice.
+matching. Simple quoted phrases and quoted attribute or tag values are also
+supported for common path and log-message queries, for example
+`@http.route:"/api/v1/orders"` and `"subscription upgrade complete"`.
+The query parser intentionally does not implement full boolean expression
+semantics, facets, indexes, storage tiers, cursor pagination, permissions,
+formulas, rollups, or Datadog's full query language.
 
 Trace ID matching is conservative but understands common local debugging
 forms: exact strings, hex strings with leading zero padding, and Datadog-style
@@ -111,6 +114,14 @@ Search logs that mention login for a trace:
 curl -sS -X POST http://127.0.0.1:8080/api/v2/logs/events/search \
   -H 'Content-Type: application/json' \
   -d '{"filter":{"query":"service:api @trace_id:trace-1 @http.status_code:500 @http.method:POST login"},"page":{"limit":5}}'
+```
+
+Search logs by a path-like route value and exact phrase:
+
+```bash
+curl -sS -X POST http://127.0.0.1:8080/api/v2/logs/events/search \
+  -H 'Content-Type: application/json' \
+  -d '{"filter":{"query":"service:api @route:\"/account/v2/subscriptions/confirm\" \"subscription upgrade complete\""},"page":{"limit":5}}'
 ```
 
 Search Browser RUM by session:
@@ -139,6 +150,12 @@ Query metric samples by retained HTTP tags:
 
 ```bash
 curl -sS 'http://127.0.0.1:8080/api/v1/query?from=0&to=9999999999&query=avg:http.server.request.duration{http.route:/login,http.request.method:POST,http.response.status_code:200}'
+```
+
+Path-like metric scope values may be quoted:
+
+```bash
+curl -sS 'http://127.0.0.1:8080/api/v1/query?from=0&to=9999999999&query=avg:http.server.request.duration{http.route:"/account/v2/subscriptions/confirm",http.request.method:POST,http.response.status_code:200}'
 ```
 
 ## Safety Boundary

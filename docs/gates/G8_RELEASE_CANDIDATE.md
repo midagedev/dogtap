@@ -16,8 +16,8 @@ the first public release candidate.
   templates exist.
 - CI runs Go tests, dashboard build/E2E, seeded demo visual verification,
   generic adoption smoke, filelog bridge smoke, StatsD bridge smoke, shell
-  syntax checks, docs/spec checks, workflow contract checks, deployment example
-  checks, and container build.
+  syntax checks, docs/spec checks, public hygiene checks, workflow contract
+  checks, deployment example checks, and container build.
 - Tag-based release automation exists for binary archives and GHCR images.
 - Generic adoption kit and seeded demo are public and reproducible.
 - Public deployment examples cover Helm sidecar, Helm companion service, and
@@ -60,6 +60,7 @@ go test ./...
 npm --prefix web run build
 make shell-check
 make doc-check
+make public-hygiene-check
 make contract-check
 make deployment-check
 make smoke-adoption
