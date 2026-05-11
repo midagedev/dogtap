@@ -514,7 +514,11 @@ function App() {
 
       {events.length === 0 ? <IntegrationTargets /> : null}
 
-      <ObservabilityOverview data={overview} />
+      <ObservabilityOverview
+        data={overview}
+        events={events}
+        onSelectEvent={setSelectedId}
+      />
 
       <DashboardDiagnosticsPanel
         data={diagnostics}
@@ -759,7 +763,15 @@ function CopyIconButton({ value, label }: { value: string; label: string }) {
   );
 }
 
-function ObservabilityOverview({ data }: { data: ObservabilityOverviewData }) {
+function ObservabilityOverview({
+  data,
+  events,
+  onSelectEvent,
+}: {
+  data: ObservabilityOverviewData;
+  events: EventEnvelope[];
+  onSelectEvent: (eventId: string) => void;
+}) {
   const series = metricSeries(data.metrics);
   return (
     <section className="overview-band" aria-label="Observability overview">
@@ -772,40 +784,11 @@ function ObservabilityOverview({ data }: { data: ObservabilityOverviewData }) {
             {data.services.length} services · {data.edges.length} edges
           </span>
         </div>
-        <div className="service-map">
-          <div className="service-nodes" aria-label="Service nodes">
-            {data.services.length ? (
-              data.services.slice(0, 6).map((service) => (
-                <div className="service-node" key={service.service}>
-                  <strong>{service.service}</strong>
-                  <span>{service.sources.join(", ")}</span>
-                  <small>
-                    {service.events} events · {service.traces} traces ·{" "}
-                    {service.metrics} metrics
-                  </small>
-                </div>
-              ))
-            ) : (
-              <p className="viewer-empty">No service tags received yet.</p>
-            )}
-          </div>
-          <div className="service-edges" aria-label="Service edges">
-            {data.edges.length ? (
-              data.edges.slice(0, 5).map((edge) => (
-                <div className="service-edge" key={`${edge.from}-${edge.to}`}>
-                  <code>{edge.from}</code>
-                  <span>-&gt;</span>
-                  <code>{edge.to}</code>
-                  <small>{edge.count} spans</small>
-                </div>
-              ))
-            ) : (
-              <p className="viewer-empty">
-                Cross-service trace spans will appear here.
-              </p>
-            )}
-          </div>
-        </div>
+        <ServiceMapGraph
+          data={data}
+          events={events}
+          onSelectEvent={onSelectEvent}
+        />
       </section>
 
       <section className="overview-panel traffic-panel">
@@ -878,6 +861,275 @@ function ObservabilityOverview({ data }: { data: ObservabilityOverviewData }) {
         </div>
       </section>
     </section>
+  );
+}
+
+function ServiceMapGraph({
+  data,
+  events,
+  onSelectEvent,
+}: {
+  data: ObservabilityOverviewData;
+  events: EventEnvelope[];
+  onSelectEvent: (eventId: string) => void;
+}) {
+  const graphServices = React.useMemo(() => serviceGraphServices(data), [data]);
+  const [activeServiceName, setActiveServiceName] = React.useState<
+    string | undefined
+  >(graphServices[0]?.service);
+
+  React.useEffect(() => {
+    if (
+      activeServiceName &&
+      graphServices.some((service) => service.service === activeServiceName)
+    ) {
+      return;
+    }
+    setActiveServiceName(graphServices[0]?.service);
+  }, [activeServiceName, graphServices]);
+
+  const activeService =
+    graphServices.find((service) => service.service === activeServiceName) ??
+    graphServices[0];
+  const visibleServiceNames = new Set(
+    graphServices.map((service) => service.service),
+  );
+  const graphEdges = data.edges
+    .filter(
+      (edge) =>
+        visibleServiceNames.has(edge.from) && visibleServiceNames.has(edge.to),
+    )
+    .slice(0, 12);
+  const positions = serviceGraphPositions(graphServices);
+  const selectedEvents = activeService
+    ? relatedEventsForService(events, activeService.service)
+    : [];
+  const selectedRoutes = activeService
+    ? data.routes
+        .filter((route) => route.service === activeService.service)
+        .slice(0, 4)
+    : [];
+  const inbound = activeService
+    ? data.edges.filter((edge) => edge.to === activeService.service)
+    : [];
+  const outbound = activeService
+    ? data.edges.filter((edge) => edge.from === activeService.service)
+    : [];
+  const traceIds = activeService
+    ? serviceTraceIds(activeService.service, events, data.edges)
+    : [];
+
+  if (!graphServices.length) {
+    return (
+      <div className="service-map">
+        <p className="viewer-empty">No service tags received yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="service-map">
+      <div className="service-graph" aria-label="Interactive service map">
+        <div className="service-graph-stage">
+          <svg
+            className="service-graph-edges"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <defs>
+              <marker
+                id="service-edge-arrow"
+                markerHeight="5"
+                markerWidth="5"
+                orient="auto"
+                refX="4"
+                refY="2.5"
+              >
+                <path d="M0,0 L5,2.5 L0,5 Z" />
+              </marker>
+            </defs>
+            {graphEdges.map((edge) => {
+              const from = positions.get(edge.from);
+              const to = positions.get(edge.to);
+              if (!from || !to) return null;
+              const active =
+                activeService?.service === edge.from ||
+                activeService?.service === edge.to;
+              return (
+                <g
+                  className={`service-graph-edge ${active ? "active" : ""}`}
+                  key={`${edge.from}-${edge.to}`}
+                >
+                  <title>
+                    {edge.from} to {edge.to}: {edge.count} spans
+                  </title>
+                  <line
+                    x1={from.x}
+                    y1={from.y}
+                    x2={to.x}
+                    y2={to.y}
+                    markerEnd="url(#service-edge-arrow)"
+                  />
+                </g>
+              );
+            })}
+          </svg>
+          {graphServices.map((service) => {
+            const position = positions.get(service.service);
+            if (!position) return null;
+            return (
+              <button
+                type="button"
+                className={`service-graph-node ${
+                  activeService?.service === service.service ? "active" : ""
+                } ${service.errors ? "has-errors" : ""}`}
+                style={
+                  {
+                    "--service-node-x": `${position.x}%`,
+                    "--service-node-y": `${position.y}%`,
+                  } as React.CSSProperties
+                }
+                aria-pressed={activeService?.service === service.service}
+                key={service.service}
+                onClick={() => setActiveServiceName(service.service)}
+              >
+                <strong>{service.service}</strong>
+                <span>{sourceMixLabel(service)}</span>
+                <small>
+                  {service.events} events · {service.traces} traces
+                </small>
+              </button>
+            );
+          })}
+        </div>
+        {data.edges.length ? (
+          <div className="service-edge-strip" aria-label="Service edges">
+            {data.edges.slice(0, 5).map((edge) => (
+              <button
+                type="button"
+                className={
+                  activeService?.service === edge.from ||
+                  activeService?.service === edge.to
+                    ? "active"
+                    : ""
+                }
+                key={`${edge.from}-${edge.to}`}
+                onClick={() => setActiveServiceName(edge.to)}
+              >
+                <code>{edge.from}</code>
+                <span>-&gt;</span>
+                <code>{edge.to}</code>
+                <small>{edge.count} spans</small>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="viewer-empty">
+            Cross-service trace spans will appear here.
+          </p>
+        )}
+      </div>
+
+      {activeService ? (
+        <div className="service-map-detail" aria-label="Selected service details">
+          <div className="service-detail-title">
+            <strong>{activeService.service}</strong>
+            <span>
+              {selectedEvents.length} matching signals ·{" "}
+              {formatLastSeen(selectedEvents[0]?.receivedAt)}
+            </span>
+          </div>
+          <div className="service-detail-grid">
+            <div>
+              <span>Errors</span>
+              <strong>{activeService.errors}</strong>
+            </div>
+            <div>
+              <span>Metrics</span>
+              <strong>{activeService.metrics}</strong>
+            </div>
+            <div>
+              <span>Latency</span>
+              <strong>{formatDuration(activeService.avgDurationMs)}</strong>
+            </div>
+            <div>
+              <span>Traces</span>
+              <strong>{traceIds.length}</strong>
+            </div>
+          </div>
+          <div className="service-connection-grid">
+            <ServiceConnectionList label="Upstream" edges={inbound} />
+            <ServiceConnectionList label="Downstream" edges={outbound} />
+          </div>
+          <div className="service-route-list" aria-label="Selected service routes">
+            {selectedRoutes.length ? (
+              selectedRoutes.map((route) => (
+                <div
+                  className="service-route-row"
+                  key={`${route.service}-${route.route}`}
+                >
+                  <strong>{route.route}</strong>
+                  <small>
+                    {route.count} hits · {route.errors} errors ·{" "}
+                    {formatDuration(route.avgDurationMs)}
+                  </small>
+                </div>
+              ))
+            ) : (
+              <p className="viewer-empty">No route tags for this service.</p>
+            )}
+          </div>
+          <div
+            className="service-evidence-list"
+            aria-label="Selected service evidence"
+          >
+            {selectedEvents.slice(0, 4).map((event) => (
+              <button
+                type="button"
+                key={event.id}
+                onClick={() => onSelectEvent(event.id)}
+              >
+                <span className={`source source-${event.source}`}>
+                  {eventLabel(event)}
+                </span>
+                <strong>{event.normalized.route || event.endpoint}</strong>
+                <small>
+                  {event.id} · {event.validation.status} ·{" "}
+                  {formatTime(event.receivedAt)}
+                </small>
+              </button>
+            ))}
+            {selectedEvents.length === 0 ? (
+              <p className="viewer-empty">No retained events for this service.</p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ServiceConnectionList({
+  label,
+  edges,
+}: {
+  label: string;
+  edges: ServiceEdge[];
+}) {
+  return (
+    <div className="service-connection-list">
+      <span>{label}</span>
+      {edges.length ? (
+        edges.slice(0, 3).map((edge) => (
+          <code key={`${label}-${edge.from}-${edge.to}`}>
+            {label === "Upstream" ? edge.from : edge.to} ({edge.count})
+          </code>
+        ))
+      ) : (
+        <small>none</small>
+      )}
+    </div>
   );
 }
 
@@ -2483,6 +2735,123 @@ function formatDuration(value: number | undefined) {
   return `${value.toFixed(value < 10 ? 2 : 1)}ms`;
 }
 
+function serviceGraphServices(data: ObservabilityOverviewData) {
+  const byName = new Map(data.services.map((service) => [service.service, service]));
+  for (const edge of data.edges) {
+    if (!byName.has(edge.from)) {
+      byName.set(edge.from, {
+        service: edge.from,
+        sources: [],
+        events: 0,
+        errors: 0,
+        rum: 0,
+        logs: 0,
+        traces: edge.count,
+        metrics: 0,
+      });
+    }
+    if (!byName.has(edge.to)) {
+      byName.set(edge.to, {
+        service: edge.to,
+        sources: [],
+        events: 0,
+        errors: 0,
+        rum: 0,
+        logs: 0,
+        traces: edge.count,
+        metrics: 0,
+      });
+    }
+  }
+  return Array.from(byName.values())
+    .sort((left, right) => {
+      const leftConnections = serviceConnectionCount(left.service, data.edges);
+      const rightConnections = serviceConnectionCount(right.service, data.edges);
+      return (
+        right.errors - left.errors ||
+        rightConnections - leftConnections ||
+        right.events - left.events ||
+        right.traces - left.traces ||
+        left.service.localeCompare(right.service)
+      );
+    })
+    .slice(0, 8);
+}
+
+function serviceConnectionCount(service: string, edges: ServiceEdge[]) {
+  return edges.filter((edge) => edge.from === service || edge.to === service)
+    .length;
+}
+
+function serviceGraphPositions(services: ServiceSummary[]) {
+  const positions = new Map<string, { x: number; y: number }>();
+  if (services.length === 1) {
+    positions.set(services[0].service, { x: 50, y: 50 });
+    return positions;
+  }
+  if (services.length === 2) {
+    positions.set(services[0].service, { x: 28, y: 50 });
+    positions.set(services[1].service, { x: 72, y: 50 });
+    return positions;
+  }
+
+  const radiusX = services.length > 6 ? 30 : 32;
+  const radiusY = services.length > 6 ? 32 : 30;
+  services.forEach((service, index) => {
+    const angle = -Math.PI / 2 + (2 * Math.PI * index) / services.length;
+    positions.set(service.service, {
+      x: 50 + Math.cos(angle) * radiusX,
+      y: 50 + Math.sin(angle) * radiusY,
+    });
+  });
+  return positions;
+}
+
+function relatedEventsForService(events: EventEnvelope[], service: string) {
+  return events
+    .filter((event) => {
+      if (event.normalized.service === service) return true;
+      if (extractSpans(event).some((span) => span.service === service)) {
+        return true;
+      }
+      return metricSamplesFromEvent(event).some(
+        (metric) => metric.service === service,
+      );
+    })
+    .sort(
+      (left, right) =>
+        timestampMs(right.receivedAt) - timestampMs(left.receivedAt),
+    );
+}
+
+function serviceTraceIds(
+  service: string,
+  events: EventEnvelope[],
+  edges: ServiceEdge[],
+) {
+  const values = new Set<string>();
+  for (const event of relatedEventsForService(events, service)) {
+    const traceId = traceIdentity(event.normalized.traceId);
+    if (traceId) values.add(traceId);
+    for (const span of extractSpans(event)) {
+      if (span.service !== service) continue;
+      const spanTraceId = traceIdentity(span.traceId);
+      if (spanTraceId) values.add(spanTraceId);
+    }
+  }
+  for (const edge of edges) {
+    if (edge.from !== service && edge.to !== service) continue;
+    edge.traces.forEach((traceId) => values.add(traceIdentity(traceId)));
+  }
+  return Array.from(values).filter(Boolean).slice(0, 8);
+}
+
+function sourceMixLabel(service: ServiceSummary) {
+  if (service.sources.length) return service.sources.join(", ");
+  if (service.traces) return "trace edge";
+  return "no source";
+}
+
 function buildObservabilityOverview(
   events: EventEnvelope[],
 ): ObservabilityOverviewData {
@@ -2549,8 +2918,17 @@ function buildObservabilityOverview(
   }
 
   const edges = serviceEdges(events);
+  for (const edge of edges) {
+    const from = ensureServiceSummary(serviceMap, edge.from);
+    const to = ensureServiceSummary(serviceMap, edge.to);
+    if (from.events === 0) from.traces += edge.count;
+    if (to.events === 0) to.traces += edge.count;
+  }
   const services = Array.from(serviceMap.values()).sort(
-    (left, right) => right.errors - left.errors || right.events - left.events,
+    (left, right) =>
+      right.errors - left.errors ||
+      right.events - left.events ||
+      right.traces - left.traces,
   );
   const routes = Array.from(routeMap.values())
     .map((route) => ({

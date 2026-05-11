@@ -333,7 +333,7 @@ Evidence note 2026-05-09:
 - [x] T131 Add browser session timeline grouping across RUM/Faro/replay and
   correlated logs, traces, and metrics.
 - [x] T132 Add E2E coverage for the intake health and session timeline panels.
-- [ ] T133 Promote the service map to an interactive graph after the dashboard
+- [x] T133 Promote the service map to an interactive graph after the dashboard
   has stable intake and session diagnostics.
 
 Gate:
@@ -347,6 +347,9 @@ Evidence note 2026-05-09:
 - Session timeline groups events by browser session and related correlation
   fields so frontend, log, trace, and metric signals can be inspected as one
   workflow.
+- Service map now renders retained telemetry as selectable service nodes with
+  trace-derived edges, upstream/downstream context, route summaries, and
+  evidence links back into matching retained events.
 
 ## Phase 14: Agent-Readable Live Diagnostics
 

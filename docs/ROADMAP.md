@@ -383,3 +383,23 @@ Status: complete.
 Why it matters: the public project should stay generic, and coding agents
 should be able to reuse realistic Datadog queries such as
 `@route:"/api/v1/orders"` without switching to Dogtap-specific APIs.
+
+### Chunk L: Interactive Service Map
+
+Goal: make retained traces and correlated signals easier to inspect from the
+dashboard.
+
+Status: complete.
+
+- Promote the service map from static service/edge lists into a selectable graph:
+  complete.
+- Show selected-service errors, metric count, latency, trace count,
+  upstream/downstream services, route summaries, and retained event evidence:
+  complete.
+- Keep the graph derived from retained telemetry only, using span parent/child
+  edges and bounded trace-correlation fallback instead of claiming full
+  production topology parity: complete.
+
+Why it matters: local and CI users need to answer whether frontend, backend,
+logs, traces, metrics, and replay evidence connect into a debuggable workflow
+without opening a separate observability backend.
