@@ -403,3 +403,23 @@ Status: complete.
 Why it matters: local and CI users need to answer whether frontend, backend,
 logs, traces, metrics, and replay evidence connect into a debuggable workflow
 without opening a separate observability backend.
+
+### Chunk M: Prefix-Aware Public Deployment
+
+Goal: make Dogtap mount cleanly behind a shared reverse proxy without HTML or
+JavaScript rewriting.
+
+Status: complete.
+
+- Add `PUBLIC_BASE_PATH`, `DOGTAP_PUBLIC_BASE_PATH`, and
+  `server.publicBasePath` config support: complete.
+- Honor `X-Forwarded-Prefix` for routing and generated diagnostics base URLs:
+  complete.
+- Make dashboard API calls and browser-facing intake links use prefix-aware URL
+  helpers: complete.
+- Configure Vite build `base` from `PUBLIC_BASE_PATH` so prefixed assets are
+  generated as `/dogtap/assets/...`: complete.
+
+Why it matters: teams can keep internal Compose traffic on
+`http://dogtap:8080` while exposing the browser UI and APIs at
+`https://localhost:8081/dogtap` through a simple path proxy.

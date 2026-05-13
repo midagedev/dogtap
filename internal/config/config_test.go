@@ -66,6 +66,39 @@ func TestLoadSafetyControlsFromEnv(t *testing.T) {
 	}
 }
 
+func TestLoadPublicBasePathFromEnv(t *testing.T) {
+	t.Setenv("PUBLIC_BASE_PATH", "dogtap/")
+
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Server.PublicBasePath != "/dogtap" {
+		t.Fatalf("public base path = %q, want /dogtap", cfg.Server.PublicBasePath)
+	}
+}
+
+func TestDogtapPublicBasePathEnvWins(t *testing.T) {
+	t.Setenv("PUBLIC_BASE_PATH", "/ignored")
+	t.Setenv("DOGTAP_PUBLIC_BASE_PATH", "/dogtap")
+
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Server.PublicBasePath != "/dogtap" {
+		t.Fatalf("public base path = %q, want /dogtap", cfg.Server.PublicBasePath)
+	}
+}
+
+func TestInvalidPublicBasePathFails(t *testing.T) {
+	t.Setenv("PUBLIC_BASE_PATH", "/dogtap?debug=true")
+
+	if _, err := Load(""); err == nil {
+		t.Fatalf("expected invalid public base path to fail")
+	}
+}
+
 func TestInvalidSafetyConfigFails(t *testing.T) {
 	cfg := Default()
 	invalidRate := 1.1

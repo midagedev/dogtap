@@ -226,6 +226,11 @@ Acceptance criteria:
 - FR-073: Provide an automated public hygiene check that keeps company- or
   project-specific service names out of the public repository while allowing
   private adoption evidence to remain under ignored local paths.
+- FR-074: Support a prefix-aware public base path contract for reverse-proxy
+  deployments, including `PUBLIC_BASE_PATH`, `DOGTAP_PUBLIC_BASE_PATH`,
+  `server.publicBasePath`, `X-Forwarded-Prefix`, prefixed dashboard assets,
+  prefixed dashboard API calls, and continued unprefixed internal service
+  communication.
 
 ## Non-Functional Requirements
 

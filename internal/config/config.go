@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -34,10 +35,11 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	HTTPAddr     string `yaml:"httpAddr" json:"httpAddr"`
-	APMAddr      string `yaml:"apmAddr" json:"apmAddr"`
-	OTLPHTTPAddr string `yaml:"otlpHttpAddr" json:"otlpHttpAddr"`
-	GRPCAddr     string `yaml:"grpcAddr" json:"grpcAddr"`
+	HTTPAddr       string `yaml:"httpAddr" json:"httpAddr"`
+	APMAddr        string `yaml:"apmAddr" json:"apmAddr"`
+	OTLPHTTPAddr   string `yaml:"otlpHttpAddr" json:"otlpHttpAddr"`
+	GRPCAddr       string `yaml:"grpcAddr" json:"grpcAddr"`
+	PublicBasePath string `yaml:"publicBasePath" json:"publicBasePath,omitempty"`
 }
 
 type StorageConfig struct {
@@ -142,6 +144,11 @@ func Load(path string) (Config, error) {
 		}
 	}
 	applyEnv(&cfg)
+	publicBasePath, err := NormalizePublicBasePath(cfg.Server.PublicBasePath)
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.Server.PublicBasePath = publicBasePath
 	if err := cfg.Validate(); err != nil {
 		return Config{}, err
 	}
@@ -187,6 +194,9 @@ func (c Config) Validate() error {
 	if c.Security.MaxBodyBytes <= 0 {
 		return fmt.Errorf("%w: security.maxBodyBytes must be positive", ErrInvalid)
 	}
+	if _, err := NormalizePublicBasePath(c.Server.PublicBasePath); err != nil {
+		return err
+	}
 	if c.Forwarding.Enabled {
 		switch c.Mode {
 		case ModeForward, ModeTee, ModeRedactOnly, ModeLocal:
@@ -201,6 +211,29 @@ func (c Config) Validate() error {
 		}
 	}
 	return nil
+}
+
+func NormalizePublicBasePath(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" || value == "/" {
+		return "", nil
+	}
+	if strings.ContainsAny(value, "?#") {
+		return "", fmt.Errorf("%w: server.publicBasePath must be a URL path, got %q", ErrInvalid, value)
+	}
+	if !strings.HasPrefix(value, "/") {
+		value = "/" + value
+	}
+	cleaned := path.Clean(value)
+	if cleaned == "." || cleaned == "/" {
+		return "", nil
+	}
+	for _, segment := range strings.Split(strings.Trim(cleaned, "/"), "/") {
+		if segment == "" || segment == "." || segment == ".." {
+			return "", fmt.Errorf("%w: server.publicBasePath contains an invalid segment: %q", ErrInvalid, value)
+		}
+	}
+	return cleaned, nil
 }
 
 func (c Config) RawPayloadsAllowed() bool {
@@ -237,6 +270,11 @@ func applyEnv(c *Config) {
 	}
 	if v := os.Getenv("DOGTAP_GRPC_ADDR"); v != "" {
 		c.Server.GRPCAddr = v
+	}
+	if v := os.Getenv("DOGTAP_PUBLIC_BASE_PATH"); v != "" {
+		c.Server.PublicBasePath = v
+	} else if v := os.Getenv("PUBLIC_BASE_PATH"); v != "" {
+		c.Server.PublicBasePath = v
 	}
 	if v := os.Getenv("DOGTAP_STORAGE_MAX_EVENTS"); v != "" {
 		if parsed, err := strconv.Atoi(v); err == nil {

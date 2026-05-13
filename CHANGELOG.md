@@ -64,6 +64,9 @@ All notable changes to Dogtap will be documented in this file.
 - Interactive retained-telemetry service map with selectable nodes,
   trace-derived edges, upstream/downstream context, route summaries, and
   event evidence links.
+- Prefix-aware public deployment support through `PUBLIC_BASE_PATH`,
+  `DOGTAP_PUBLIC_BASE_PATH`, `server.publicBasePath`, `X-Forwarded-Prefix`,
+  prefixed dashboard assets, and prefixed dashboard API calls.
 
 ### Notes
 

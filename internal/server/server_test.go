@@ -66,6 +66,116 @@ func TestRUMIntakeStoresEvent(t *testing.T) {
 	}
 }
 
+func TestPublicBasePathRoutesDashboardAPIAndIntake(t *testing.T) {
+	cfg := config.Default()
+	cfg.Server.HTTPAddr = ""
+	cfg.Server.APMAddr = ""
+	cfg.Server.OTLPHTTPAddr = ""
+	cfg.Server.GRPCAddr = ""
+	cfg.Server.PublicBasePath = "/dogtap/"
+	app, err := New(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dashboardReq := httptest.NewRequest(http.MethodGet, "/dogtap/", nil)
+	dashboardRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(dashboardRec, dashboardReq)
+	if dashboardRec.Code != http.StatusOK {
+		t.Fatalf("dashboard status = %d, want 200: %s", dashboardRec.Code, dashboardRec.Body.String())
+	}
+	if !strings.Contains(dashboardRec.Body.String(), "<title>Dogtap</title>") {
+		t.Fatalf("dashboard did not serve embedded index: %s", dashboardRec.Body.String())
+	}
+
+	logReq := httptest.NewRequest(http.MethodPost, "/dogtap/api/v2/logs", bytes.NewBufferString(`{"message":"hello","ddtags":"service:api,env:local,version:dev"}`))
+	logReq.Header.Set("Content-Type", "application/json")
+	logRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(logRec, logReq)
+	if logRec.Code != http.StatusAccepted {
+		t.Fatalf("prefixed logs intake status = %d, want 202: %s", logRec.Code, logRec.Body.String())
+	}
+
+	listReq := httptest.NewRequest(http.MethodGet, "/dogtap/api/events?source=logs", nil)
+	listRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(listRec, listReq)
+	if listRec.Code != http.StatusOK {
+		t.Fatalf("prefixed events API status = %d, want 200: %s", listRec.Code, listRec.Body.String())
+	}
+	var events []event.EventEnvelope
+	if err := json.Unmarshal(listRec.Body.Bytes(), &events); err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 || events[0].Normalized.Service != "api" {
+		t.Fatalf("unexpected prefixed events: %#v", events)
+	}
+
+	internalReq := httptest.NewRequest(http.MethodGet, "/api/events?source=logs", nil)
+	internalRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(internalRec, internalReq)
+	if internalRec.Code != http.StatusOK {
+		t.Fatalf("unprefixed internal events API status = %d, want 200: %s", internalRec.Code, internalRec.Body.String())
+	}
+}
+
+func TestPublicBasePathRedirectsBarePrefix(t *testing.T) {
+	cfg := config.Default()
+	cfg.Server.HTTPAddr = ""
+	cfg.Server.APMAddr = ""
+	cfg.Server.OTLPHTTPAddr = ""
+	cfg.Server.GRPCAddr = ""
+	cfg.Server.PublicBasePath = "/dogtap"
+	app, err := New(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/dogtap", nil)
+	rec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusPermanentRedirect {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusPermanentRedirect)
+	}
+	if got := rec.Header().Get("Location"); got != "/dogtap/" {
+		t.Fatalf("location = %q, want /dogtap/", got)
+	}
+}
+
+func TestForwardedPrefixRoutesAndDiagnosticsBaseURL(t *testing.T) {
+	app := newTestApp(t, config.ModeLocal)
+
+	req := httptest.NewRequest(http.MethodPost, "/dogtap/api/diagnostics", bytes.NewBufferString(`{}`))
+	req.Host = "localhost:8081"
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Forwarded-Prefix", "/dogtap")
+	req.Header.Set("X-Forwarded-Proto", "https")
+	req.Header.Set("X-Forwarded-Host", "localhost:8081")
+	rec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("diagnostics status = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	var snapshot diagnose.Snapshot
+	if err := json.Unmarshal(rec.Body.Bytes(), &snapshot); err != nil {
+		t.Fatal(err)
+	}
+	if snapshot.BaseURL != "https://localhost:8081/dogtap" {
+		t.Fatalf("base URL = %q, want https://localhost:8081/dogtap", snapshot.BaseURL)
+	}
+
+	strippedReq := httptest.NewRequest(http.MethodPost, "/api/diagnostics", bytes.NewBufferString(`{}`))
+	strippedReq.Host = "localhost:8081"
+	strippedReq.Header.Set("Content-Type", "application/json")
+	strippedReq.Header.Set("X-Forwarded-Prefix", "/dogtap")
+	strippedRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(strippedRec, strippedReq)
+	if strippedRec.Code != http.StatusOK {
+		t.Fatalf("stripped diagnostics status = %d, want 200: %s", strippedRec.Code, strippedRec.Body.String())
+	}
+}
+
 func TestLogsIntakeDecodesGzip(t *testing.T) {
 	app := newTestApp(t, config.ModeLocal)
 	var gz bytes.Buffer

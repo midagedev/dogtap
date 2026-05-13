@@ -622,3 +622,20 @@ Gate:
 
 - [x] G5 CI Contract Datadog API compatibility hardening subset
 - [x] G8 Release Candidate public hygiene subset
+
+## Phase 28: Prefix-Aware Public Deployment
+
+- [x] T280 Add `PUBLIC_BASE_PATH`, `DOGTAP_PUBLIC_BASE_PATH`, and
+  `server.publicBasePath` config support.
+- [x] T281 Make HTTP routing accept both unprefixed internal paths and prefixed
+  public paths for dashboard assets, Dogtap APIs, and intake endpoints.
+- [x] T282 Honor `X-Forwarded-Prefix` when stripping public paths and rendering
+  diagnostics base URLs.
+- [x] T283 Make the dashboard use Vite `base` and prefix-aware URL helpers for
+  API calls and browser-facing intake target links.
+- [x] T284 Document the reverse-proxy contract and record the deployment
+  compatibility decision.
+
+Gate:
+
+- [x] G8 Release Candidate public deployment prefix subset

@@ -15,6 +15,7 @@ public release.
 | Datadog API compatibility | Partial | Agent and tool debugging against local retained Dogtap telemetry | Read-only subset for logs/RUM/spans search and metric query; see `docs/DATADOG_API_COMPATIBILITY.md`. |
 | SQLite storage | Supported | Restart-safe local, CI, isolated E2E, and dev-cluster retained telemetry | Opt in with `storage.kind=sqlite`; retention remains bounded by TTL and max event count. |
 | EKS dev-cluster overlay | Supported static example | Shared dev-cluster inspection target | Kustomize overlay under `examples/deployment/eks-dev/`; private ClusterIP, PVC-backed SQLite, NetworkPolicy, and smoke runbook. |
+| Public base path | Supported | Shared reverse proxy mounts such as `/dogtap` | Use `PUBLIC_BASE_PATH`, `DOGTAP_PUBLIC_BASE_PATH`, `server.publicBasePath`, or `X-Forwarded-Prefix`; see `docs/runbooks/PUBLIC_BASE_PATH.md`. |
 | `forward` | Partial | Bounded RUM/log forwarding experiments | APM forwarding is deferred. |
 | `tee` | Experimental | Limited production diagnostic tap | Requires explicit sampling, retention, and fail-open review. |
 | `redact-only` | Experimental | Policy enforcement before forwarding | Treat as a controlled rollout mode, not a default path. |
