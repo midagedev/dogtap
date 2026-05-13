@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -53,6 +54,11 @@ type safetyController struct {
 }
 
 func New(cfg config.Config) (*App, error) {
+	publicBasePath, err := config.NormalizePublicBasePath(cfg.Server.PublicBasePath)
+	if err != nil {
+		return nil, err
+	}
+	cfg.Server.PublicBasePath = publicBasePath
 	assets, err := dashboardHandler()
 	if err != nil {
 		return nil, err
@@ -190,7 +196,7 @@ func (a *App) Handler() http.Handler {
 	a.registerIntake(mux, "/collect", event.SourceFaro)
 	a.registerIntake(mux, "/collect/", event.SourceFaro)
 	mux.Handle("/", a.assets)
-	return mux
+	return a.withPublicBasePath(mux)
 }
 
 func (a *App) httpServers() []*http.Server {
@@ -202,7 +208,7 @@ func (a *App) httpServers() []*http.Server {
 		a.registerIntake(apmMux, "/v0.3/traces", event.SourceAPM)
 		a.registerIntake(apmMux, "/v0.4/traces", event.SourceAPM)
 		a.registerIntake(apmMux, "/v0.5/traces", event.SourceAPM)
-		servers = append(servers, &http.Server{Addr: a.cfg.Server.APMAddr, Handler: apmMux})
+		servers = append(servers, &http.Server{Addr: a.cfg.Server.APMAddr, Handler: a.withPublicBasePath(apmMux)})
 	}
 	if a.cfg.Server.OTLPHTTPAddr != "" && a.cfg.Server.OTLPHTTPAddr != a.cfg.Server.HTTPAddr {
 		otlpMux := http.NewServeMux()
@@ -210,9 +216,41 @@ func (a *App) httpServers() []*http.Server {
 		a.registerIntake(otlpMux, "/v1/traces", event.SourceOTLP)
 		a.registerIntake(otlpMux, "/v1/logs", event.SourceOTLP)
 		a.registerIntake(otlpMux, "/v1/metrics", event.SourceOTLP)
-		servers = append(servers, &http.Server{Addr: a.cfg.Server.OTLPHTTPAddr, Handler: otlpMux})
+		servers = append(servers, &http.Server{Addr: a.cfg.Server.OTLPHTTPAddr, Handler: a.withPublicBasePath(otlpMux)})
 	}
 	return servers
+}
+
+func (a *App) withPublicBasePath(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		prefix := publicBasePathForRequest(r, a.cfg.Server.PublicBasePath)
+		if prefix == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if r.URL.Path == prefix {
+			http.Redirect(w, r, prefix+"/", http.StatusPermanentRedirect)
+			return
+		}
+		if !strings.HasPrefix(r.URL.Path, prefix+"/") {
+			next.ServeHTTP(w, r)
+			return
+		}
+		clone := new(http.Request)
+		*clone = *r
+		clone.URL = cloneURL(r)
+		clone.URL.Path = strings.TrimPrefix(r.URL.Path, prefix)
+		if clone.URL.Path == "" {
+			clone.URL.Path = "/"
+		}
+		if clone.URL.RawPath != "" {
+			clone.URL.RawPath = strings.TrimPrefix(clone.URL.RawPath, prefix)
+			if clone.URL.RawPath == "" {
+				clone.URL.RawPath = "/"
+			}
+		}
+		next.ServeHTTP(w, clone)
+	})
 }
 
 func (a *App) registerCommon(mux *http.ServeMux) {
@@ -555,7 +593,7 @@ func (a *App) diagnosticsSnapshot(w http.ResponseWriter, r *http.Request) (diagn
 	debugBundle := bundle.New(filter, events)
 	snapshot := diagnose.NewSnapshot(diagnose.SnapshotInput{
 		CreatedAt:   time.Now().UTC(),
-		BaseURL:     requestBaseURL(r),
+		BaseURL:     requestBaseURL(r, a.cfg.Server.PublicBasePath),
 		Request:     req,
 		Health:      map[string]string{"status": "ok"},
 		Readiness:   map[string]string{"status": "ready"},
@@ -610,7 +648,7 @@ func diagnosticsQuery(req diagnose.Request) store.Query {
 	}
 }
 
-func requestBaseURL(r *http.Request) string {
+func requestBaseURL(r *http.Request, configuredPrefix string) string {
 	scheme := "http"
 	if r.TLS != nil {
 		scheme = "https"
@@ -625,7 +663,37 @@ func requestBaseURL(r *http.Request) string {
 	if host == "" {
 		host = "127.0.0.1"
 	}
-	return scheme + "://" + strings.TrimSpace(host)
+	base := scheme + "://" + strings.TrimSpace(host)
+	if prefix := publicBasePathForRequest(r, configuredPrefix); prefix != "" {
+		base += prefix
+	}
+	return base
+}
+
+func publicBasePathForRequest(r *http.Request, configuredPrefix string) string {
+	if forwardedPrefix := firstHeaderValue(r.Header.Get("X-Forwarded-Prefix")); forwardedPrefix != "" {
+		if prefix, err := config.NormalizePublicBasePath(forwardedPrefix); err == nil {
+			return prefix
+		}
+	}
+	prefix, err := config.NormalizePublicBasePath(configuredPrefix)
+	if err != nil {
+		return ""
+	}
+	return prefix
+}
+
+func firstHeaderValue(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	return strings.TrimSpace(strings.Split(value, ",")[0])
+}
+
+func cloneURL(r *http.Request) *url.URL {
+	u := *r.URL
+	return &u
 }
 
 func (a *App) handleMetrics(w http.ResponseWriter, r *http.Request) {

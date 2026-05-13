@@ -356,6 +356,21 @@ const correlationFields = [
 type CorrelationField = (typeof correlationFields)[number]["key"];
 type StreamMode = "events" | "failures";
 
+const publicBasePath = normalizePublicBasePath(import.meta.env.BASE_URL);
+
+function normalizePublicBasePath(value: string | undefined) {
+  const raw = (value ?? "").trim();
+  if (!raw || raw === "/") return "";
+  const withLeadingSlash = raw.startsWith("/") ? raw : `/${raw}`;
+  return withLeadingSlash.replace(/\/+$/, "");
+}
+
+function publicURL(path: string) {
+  const suffix = path.startsWith("/") ? path : `/${path}`;
+  if (!publicBasePath) return suffix;
+  return `${publicBasePath}${suffix}`;
+}
+
 function App() {
   const [events, setEvents] = React.useState<EventEnvelope[]>([]);
   const [failures, setFailures] = React.useState<EventEnvelope[]>([]);
@@ -374,11 +389,11 @@ function App() {
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
-      const eventsRes = await fetch("/api/events?limit=100");
+      const eventsRes = await fetch(publicURL("/api/events?limit=100"));
       const nextEvents = (await eventsRes.json()) as EventEnvelope[];
       const [failuresResult, reportResult] = await Promise.allSettled([
-        fetch("/api/validation/failures"),
-        fetch("/api/reports/latest"),
+        fetch(publicURL("/api/validation/failures")),
+        fetch(publicURL("/api/reports/latest")),
       ]);
 
       let nextFailures = nextEvents.filter(
@@ -396,7 +411,7 @@ function App() {
       let nextWorkflowContracts: WorkflowContractResult[] = [];
       if (nextEvents.length > 0) {
         try {
-          const diagnosticsRes = await fetch("/api/diagnostics", {
+          const diagnosticsRes = await fetch(publicURL("/api/diagnostics"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -685,7 +700,9 @@ function IntegrationTargets() {
   const targets = React.useMemo(() => {
     const protocol = window.location.protocol === "https:" ? "https:" : "http:";
     const host = window.location.hostname || "localhost";
-    const rumProxy = `${window.location.origin}/datadog-intake-proxy`;
+    const rumProxy = `${window.location.origin}${publicURL(
+      "/datadog-intake-proxy",
+    )}`;
     return [
       {
         label: "Browser RUM",
