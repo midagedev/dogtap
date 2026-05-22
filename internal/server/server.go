@@ -267,6 +267,8 @@ func (a *App) registerCommon(mux *http.ServeMux) {
 	})
 	mux.HandleFunc("GET /api/events", a.handleListEvents)
 	mux.HandleFunc("GET /api/events/", a.handleGetEvent)
+	mux.HandleFunc("GET /api/accounts", a.handleListAccounts)
+	mux.HandleFunc("DELETE /api/accounts/{account}", a.handleDeleteAccount)
 	mux.HandleFunc("GET /api/validation/failures", a.handleValidationFailures)
 	mux.HandleFunc("GET /api/reports/latest", a.handleLatestReport)
 	mux.HandleFunc("POST /api/debug-bundles", a.handleCreateDebugBundle)
@@ -338,7 +340,7 @@ func (a *App) registerIntake(mux *http.ServeMux, pattern string, source event.So
 func setIntakeCORSHeaders(w http.ResponseWriter) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, PUT, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "content-type, content-encoding, dd-api-key, dd-evp-origin, dd-evp-origin-version, x-api-key, x-datadog-origin, x-datadog-parent-id, x-datadog-sampling-priority, x-datadog-trace-id, x-faro-session-id")
+	w.Header().Set("Access-Control-Allow-Headers", "content-type, content-encoding, dd-api-key, dd-evp-origin, dd-evp-origin-version, x-api-key, x-datadog-origin, x-datadog-parent-id, x-datadog-sampling-priority, x-datadog-trace-id, x-dogtap-account, x-faro-session-id")
 	w.Header().Set("Access-Control-Expose-Headers", "x-faro-session-status")
 	w.Header().Set("Access-Control-Max-Age", "600")
 }
@@ -473,6 +475,7 @@ func (a *App) handleListEvents(w http.ResponseWriter, r *http.Request) {
 	limit, _ := strconv.Atoi(q.Get("limit"))
 	events, err := a.store.List(r.Context(), store.Query{
 		Source:      event.Source(q.Get("source")),
+		Account:     accountFilter(r),
 		PayloadKind: q.Get("payloadKind"),
 		Service:     q.Get("service"),
 		Env:         q.Get("env"),
@@ -509,8 +512,51 @@ func (a *App) handleGetEvent(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, e)
 }
 
+// accountFilter resolves the tenant namespace a read request is scoped to: an
+// explicit ?account= query parameter, otherwise the X-Dogtap-Account header.
+// An empty result means "all accounts".
+func accountFilter(r *http.Request) string {
+	if v := intake.SanitizeAccount(r.URL.Query().Get("account")); v != "" {
+		return v
+	}
+	return intake.SanitizeAccount(r.Header.Get(intake.AccountHeader))
+}
+
+func (a *App) handleListAccounts(w http.ResponseWriter, r *http.Request) {
+	lister, ok := a.store.(store.AccountLister)
+	if !ok {
+		writeJSON(w, http.StatusNotImplemented, map[string]string{"error": "account listing is not supported by this storage backend"})
+		return
+	}
+	accounts, err := lister.Accounts(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, accounts)
+}
+
+func (a *App) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
+	account := intake.SanitizeAccount(r.PathValue("account"))
+	if account == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "account is required"})
+		return
+	}
+	deleter, ok := a.store.(store.AccountDeleter)
+	if !ok {
+		writeJSON(w, http.StatusNotImplemented, map[string]string{"error": "account deletion is not supported by this storage backend"})
+		return
+	}
+	deleted, err := deleter.DeleteAccount(r.Context(), account)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"account": account, "deleted": deleted})
+}
+
 func (a *App) handleValidationFailures(w http.ResponseWriter, r *http.Request) {
-	events, err := a.store.List(r.Context(), store.Query{Status: "fail", Limit: a.cfg.Storage.MaxEvents})
+	events, err := a.store.List(r.Context(), store.Query{Account: accountFilter(r), Status: "fail", Limit: a.cfg.Storage.MaxEvents})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
@@ -525,7 +571,7 @@ func (a *App) handleValidationFailures(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleLatestReport(w http.ResponseWriter, r *http.Request) {
-	events, err := a.store.List(r.Context(), store.Query{Limit: a.cfg.Storage.MaxEvents})
+	events, err := a.store.List(r.Context(), store.Query{Account: accountFilter(r), Limit: a.cfg.Storage.MaxEvents})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
@@ -632,6 +678,7 @@ func diagnosticsQuery(req diagnose.Request) store.Query {
 	filter := req.Filter
 	return store.Query{
 		Source:      filter.Source,
+		Account:     filter.Account,
 		PayloadKind: filter.PayloadKind,
 		Service:     filter.Service,
 		Env:         filter.Env,
@@ -697,7 +744,7 @@ func cloneURL(r *http.Request) *url.URL {
 }
 
 func (a *App) handleMetrics(w http.ResponseWriter, r *http.Request) {
-	events, err := a.store.List(r.Context(), store.Query{Limit: a.cfg.Storage.MaxEvents})
+	events, err := a.store.List(r.Context(), store.Query{Account: accountFilter(r), Limit: a.cfg.Storage.MaxEvents})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -792,6 +839,7 @@ func (a *App) handleCreateDebugBundle(w http.ResponseWriter, r *http.Request) {
 	}
 	events, err := a.store.List(r.Context(), store.Query{
 		Source:      req.Source,
+		Account:     req.Account,
 		PayloadKind: req.PayloadKind,
 		Service:     req.Service,
 		Env:         req.Env,

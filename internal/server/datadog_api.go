@@ -73,7 +73,7 @@ func (a *App) handleDatadogLogsSearch(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	events, err := a.store.List(r.Context(), store.Query{Limit: a.cfg.Storage.MaxEvents})
+	events, err := a.store.List(r.Context(), store.Query{Account: accountFilter(r), Limit: a.cfg.Storage.MaxEvents})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
@@ -92,7 +92,7 @@ func (a *App) handleDatadogRUMSearch(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	events, err := a.store.List(r.Context(), store.Query{Source: event.SourceRUM, Limit: a.cfg.Storage.MaxEvents})
+	events, err := a.store.List(r.Context(), store.Query{Source: event.SourceRUM, Account: accountFilter(r), Limit: a.cfg.Storage.MaxEvents})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
@@ -105,7 +105,7 @@ func (a *App) handleDatadogSpansSearch(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	events, err := a.store.List(r.Context(), store.Query{Limit: a.cfg.Storage.MaxEvents})
+	events, err := a.store.List(r.Context(), store.Query{Account: accountFilter(r), Limit: a.cfg.Storage.MaxEvents})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
@@ -129,7 +129,7 @@ func (a *App) handleDatadogMetricQuery(w http.ResponseWriter, r *http.Request) {
 	toSeconds, _ := strconv.ParseInt(r.URL.Query().Get("to"), 10, 64)
 	metricName, scope := parseMetricExpression(query)
 
-	events, err := a.store.List(r.Context(), store.Query{PayloadKind: "metric", Limit: a.cfg.Storage.MaxEvents})
+	events, err := a.store.List(r.Context(), store.Query{Account: accountFilter(r), PayloadKind: "metric", Limit: a.cfg.Storage.MaxEvents})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return

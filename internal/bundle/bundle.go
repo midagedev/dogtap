@@ -14,6 +14,7 @@ import (
 
 type Request struct {
 	Source      event.Source `json:"source,omitempty"`
+	Account     string       `json:"account,omitempty"`
 	PayloadKind string       `json:"payloadKind,omitempty"`
 	Service     string       `json:"service,omitempty"`
 	Env         string       `json:"env,omitempty"`

@@ -66,6 +66,89 @@ func TestRUMIntakeStoresEvent(t *testing.T) {
 	}
 }
 
+func TestAccountNamespaceIsolatesServices(t *testing.T) {
+	app := newTestApp(t, config.ModeLocal)
+
+	post := func(account string) {
+		t.Helper()
+		req := httptest.NewRequest(http.MethodPost, "/rum",
+			bytes.NewBufferString(`{"service":"web","env":"local","view":{"url_path":"/"}}`))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Dogtap-Account", account)
+		rec := httptest.NewRecorder()
+		app.Handler().ServeHTTP(rec, req)
+		if rec.Code != http.StatusAccepted {
+			t.Fatalf("intake for %s: status %d: %s", account, rec.Code, rec.Body.String())
+		}
+	}
+	post("set-a")
+	post("set-a")
+	post("set-b")
+
+	list := func(query string) []event.EventEnvelope {
+		t.Helper()
+		req := httptest.NewRequest(http.MethodGet, "/api/events"+query, nil)
+		rec := httptest.NewRecorder()
+		app.Handler().ServeHTTP(rec, req)
+		var events []event.EventEnvelope
+		if err := json.Unmarshal(rec.Body.Bytes(), &events); err != nil {
+			t.Fatalf("decode events: %v", err)
+		}
+		return events
+	}
+
+	if got := list("?account=set-a"); len(got) != 2 {
+		t.Fatalf("account set-a: got %d events, want 2", len(got))
+	}
+	if got := list("?account=set-b"); len(got) != 1 {
+		t.Fatalf("account set-b: got %d events, want 1", len(got))
+	}
+	if got := list(""); len(got) != 3 {
+		t.Fatalf("unscoped list: got %d events, want 3", len(got))
+	}
+
+	accReq := httptest.NewRequest(http.MethodGet, "/api/accounts", nil)
+	accRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(accRec, accReq)
+	if accRec.Code != http.StatusOK {
+		t.Fatalf("list accounts: status %d: %s", accRec.Code, accRec.Body.String())
+	}
+	var accounts []store.AccountSummary
+	if err := json.Unmarshal(accRec.Body.Bytes(), &accounts); err != nil {
+		t.Fatalf("decode accounts: %v", err)
+	}
+	counts := map[string]int{}
+	for _, a := range accounts {
+		counts[a.Account] = a.Events
+	}
+	if counts["set-a"] != 2 || counts["set-b"] != 1 {
+		t.Fatalf("account summary mismatch: %+v", accounts)
+	}
+
+	delReq := httptest.NewRequest(http.MethodDelete, "/api/accounts/set-a", nil)
+	delRec := httptest.NewRecorder()
+	app.Handler().ServeHTTP(delRec, delReq)
+	if delRec.Code != http.StatusOK {
+		t.Fatalf("delete account: status %d: %s", delRec.Code, delRec.Body.String())
+	}
+	var delResp struct {
+		Account string `json:"account"`
+		Deleted int    `json:"deleted"`
+	}
+	if err := json.Unmarshal(delRec.Body.Bytes(), &delResp); err != nil {
+		t.Fatalf("decode delete response: %v", err)
+	}
+	if delResp.Deleted != 2 {
+		t.Fatalf("deleted %d events, want 2", delResp.Deleted)
+	}
+	if got := list("?account=set-a"); len(got) != 0 {
+		t.Fatalf("account set-a not cleared: %d events remain", len(got))
+	}
+	if got := list("?account=set-b"); len(got) != 1 {
+		t.Fatalf("account set-b affected by set-a deletion: %d events", len(got))
+	}
+}
+
 func TestPublicBasePathRoutesDashboardAPIAndIntake(t *testing.T) {
 	cfg := config.Default()
 	cfg.Server.HTTPAddr = ""

@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 
 type Query struct {
 	Source      event.Source
+	Account     string
 	PayloadKind string
 	Service     string
 	Env         string
@@ -31,6 +33,33 @@ type Store interface {
 	Add(context.Context, event.EventEnvelope) error
 	List(context.Context, Query) ([]event.EventEnvelope, error)
 	Get(context.Context, string) (event.EventEnvelope, bool, error)
+}
+
+// AccountSummary describes one tenant namespace's retained footprint.
+type AccountSummary struct {
+	Account string    `json:"account"`
+	Events  int       `json:"events"`
+	Oldest  time.Time `json:"oldest"`
+	Newest  time.Time `json:"newest"`
+}
+
+// AccountLister is implemented by stores that can enumerate tenant namespaces.
+type AccountLister interface {
+	Accounts(context.Context) ([]AccountSummary, error)
+}
+
+// AccountDeleter is implemented by stores that can drop a tenant namespace,
+// giving test suites a clean slate without a global reset.
+type AccountDeleter interface {
+	DeleteAccount(context.Context, string) (int, error)
+}
+
+// accountOf normalizes a possibly-empty stored account to its effective label.
+func accountOf(e event.EventEnvelope) string {
+	if e.Account == "" {
+		return event.DefaultAccount
+	}
+	return e.Account
 }
 
 type Memory struct {
@@ -102,6 +131,55 @@ func (m *Memory) Snapshot() []event.EventEnvelope {
 	return out
 }
 
+func (m *Memory) Accounts(_ context.Context) ([]AccountSummary, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.pruneLocked(time.Now())
+	byAccount := map[string]*AccountSummary{}
+	for _, e := range m.events {
+		account := accountOf(e)
+		summary, ok := byAccount[account]
+		if !ok {
+			summary = &AccountSummary{Account: account, Oldest: e.ReceivedAt, Newest: e.ReceivedAt}
+			byAccount[account] = summary
+		}
+		summary.Events++
+		if e.ReceivedAt.Before(summary.Oldest) {
+			summary.Oldest = e.ReceivedAt
+		}
+		if e.ReceivedAt.After(summary.Newest) {
+			summary.Newest = e.ReceivedAt
+		}
+	}
+	out := make([]AccountSummary, 0, len(byAccount))
+	for _, summary := range byAccount {
+		out = append(out, *summary)
+	}
+	slices.SortFunc(out, func(a, b AccountSummary) int {
+		return strings.Compare(a.Account, b.Account)
+	})
+	return out, nil
+}
+
+func (m *Memory) DeleteAccount(_ context.Context, account string) (int, error) {
+	if account == "" {
+		return 0, nil
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	kept := m.events[:0]
+	removed := 0
+	for _, e := range m.events {
+		if accountOf(e) == account {
+			removed++
+			continue
+		}
+		kept = append(kept, e)
+	}
+	m.events = kept
+	return removed, nil
+}
+
 func (m *Memory) pruneLocked(now time.Time) {
 	if m.ttl <= 0 || len(m.events) == 0 {
 		return
@@ -123,6 +201,9 @@ func (m *Memory) pruneLocked(now time.Time) {
 func matches(e event.EventEnvelope, q Query) bool {
 	n := e.Normalized
 	if q.Source != "" && e.Source != q.Source {
+		return false
+	}
+	if q.Account != "" && accountOf(e) != q.Account {
 		return false
 	}
 	if q.PayloadKind != "" && e.PayloadKind != q.PayloadKind {
