@@ -91,6 +91,7 @@ func CaptureRequest(r *http.Request, opts CaptureOptions) (CaptureResult, error)
 		ID:               NewID(opts.Source),
 		ReceivedAt:       time.Now().UTC(),
 		Source:           opts.Source,
+		Account:          AccountFromRequest(r),
 		PayloadKind:      payloadKind,
 		Endpoint:         r.URL.Path,
 		Method:           r.Method,

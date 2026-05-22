@@ -68,13 +68,14 @@ func (s *SQLite) Add(ctx context.Context, e event.EventEnvelope) error {
 	n := e.Normalized
 	_, err = tx.ExecContext(ctx, `
 INSERT OR REPLACE INTO events (
-	id, received_at_unix_nano, source, payload_kind, service, env, user_id,
+	id, received_at_unix_nano, source, account, payload_kind, service, env, user_id,
 	account_id, workspace_id, case_id, trace_id, span_id, session_id, view_id,
 	route, status, envelope_json
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		e.ID,
 		e.ReceivedAt.UnixNano(),
 		string(e.Source),
+		accountOf(e),
 		e.PayloadKind,
 		n.Service,
 		n.Env,
@@ -160,8 +161,70 @@ func (s *SQLite) Get(ctx context.Context, id string) (event.EventEnvelope, bool,
 	return e, true, nil
 }
 
+// sqliteAccountExpr resolves NULL/empty stored accounts (rows written before
+// the account column existed) to the default namespace. The literal must stay
+// in sync with event.DefaultAccount.
+const sqliteAccountExpr = `COALESCE(NULLIF(account, ''), 'default')`
+
+func (s *SQLite) Accounts(ctx context.Context) ([]AccountSummary, error) {
+	if err := s.prune(ctx); err != nil {
+		return nil, err
+	}
+	rows, err := s.db.QueryContext(ctx, `
+SELECT `+sqliteAccountExpr+` AS account,
+       COUNT(*),
+       MIN(received_at_unix_nano),
+       MAX(received_at_unix_nano)
+FROM events
+GROUP BY account
+ORDER BY account`)
+	if err != nil {
+		return nil, fmt.Errorf("list sqlite accounts: %w", err)
+	}
+	defer rows.Close()
+	out := make([]AccountSummary, 0)
+	for rows.Next() {
+		var (
+			account     string
+			count       int
+			oldestNanos int64
+			newestNanos int64
+		)
+		if err := rows.Scan(&account, &count, &oldestNanos, &newestNanos); err != nil {
+			return nil, fmt.Errorf("scan sqlite account: %w", err)
+		}
+		out = append(out, AccountSummary{
+			Account: account,
+			Events:  count,
+			Oldest:  time.Unix(0, oldestNanos).UTC(),
+			Newest:  time.Unix(0, newestNanos).UTC(),
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate sqlite accounts: %w", err)
+	}
+	return out, nil
+}
+
+func (s *SQLite) DeleteAccount(ctx context.Context, account string) (int, error) {
+	if account == "" {
+		return 0, nil
+	}
+	res, err := s.db.ExecContext(ctx, `DELETE FROM events WHERE `+sqliteAccountExpr+` = ?`, account)
+	if err != nil {
+		return 0, fmt.Errorf("delete sqlite account %q: %w", account, err)
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("count deleted sqlite events: %w", err)
+	}
+	return int(affected), nil
+}
+
 func (s *SQLite) init(ctx context.Context) error {
-	for _, stmt := range []string{
+	// The table is created before indexes so the migration below can add the
+	// account column to event stores created by an older Dogtap build.
+	setup := []string{
 		`PRAGMA busy_timeout = 5000`,
 		`PRAGMA journal_mode = WAL`,
 		`PRAGMA secure_delete = ON`,
@@ -169,6 +232,7 @@ func (s *SQLite) init(ctx context.Context) error {
 			id TEXT PRIMARY KEY,
 			received_at_unix_nano INTEGER NOT NULL,
 			source TEXT NOT NULL,
+			account TEXT,
 			payload_kind TEXT,
 			service TEXT,
 			env TEXT,
@@ -184,16 +248,63 @@ func (s *SQLite) init(ctx context.Context) error {
 			status TEXT,
 			envelope_json TEXT NOT NULL
 		)`,
+	}
+	for _, stmt := range setup {
+		if _, err := s.db.ExecContext(ctx, stmt); err != nil {
+			return fmt.Errorf("initialize sqlite event store: %w", err)
+		}
+	}
+	if err := s.migrate(ctx); err != nil {
+		return err
+	}
+	indexes := []string{
 		`CREATE INDEX IF NOT EXISTS idx_events_received ON events(received_at_unix_nano DESC)`,
+		`CREATE INDEX IF NOT EXISTS idx_events_account ON events(account)`,
 		`CREATE INDEX IF NOT EXISTS idx_events_source_kind ON events(source, payload_kind)`,
 		`CREATE INDEX IF NOT EXISTS idx_events_service_env ON events(service, env)`,
 		`CREATE INDEX IF NOT EXISTS idx_events_trace_span ON events(trace_id, span_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_events_session_view ON events(session_id, view_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_events_context ON events(user_id, account_id, workspace_id, case_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_events_route_status ON events(route, status)`,
-	} {
+	}
+	for _, stmt := range indexes {
 		if _, err := s.db.ExecContext(ctx, stmt); err != nil {
 			return fmt.Errorf("initialize sqlite event store: %w", err)
+		}
+	}
+	return nil
+}
+
+// migrate brings older event stores up to the current schema.
+func (s *SQLite) migrate(ctx context.Context) error {
+	rows, err := s.db.QueryContext(ctx, `PRAGMA table_info(events)`)
+	if err != nil {
+		return fmt.Errorf("inspect sqlite event store schema: %w", err)
+	}
+	defer rows.Close()
+	hasAccount := false
+	for rows.Next() {
+		var (
+			cid        int
+			name       string
+			ctype      string
+			notNull    int
+			dflt       sql.NullString
+			primaryKey int
+		)
+		if err := rows.Scan(&cid, &name, &ctype, &notNull, &dflt, &primaryKey); err != nil {
+			return fmt.Errorf("scan sqlite event store schema: %w", err)
+		}
+		if name == "account" {
+			hasAccount = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("read sqlite event store schema: %w", err)
+	}
+	if !hasAccount {
+		if _, err := s.db.ExecContext(ctx, `ALTER TABLE events ADD COLUMN account TEXT`); err != nil {
+			return fmt.Errorf("add account column to sqlite event store: %w", err)
 		}
 	}
 	return nil
@@ -236,6 +347,10 @@ func sqliteWhere(q Query) (string, []any) {
 		args = append(args, value)
 	}
 	add("source", string(q.Source))
+	if q.Account != "" {
+		clauses = append(clauses, sqliteAccountExpr+" = ?")
+		args = append(args, q.Account)
+	}
 	add("payload_kind", q.PayloadKind)
 	add("service", q.Service)
 	add("env", q.Env)

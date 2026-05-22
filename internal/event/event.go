@@ -13,10 +13,15 @@ const (
 	SourceUnknown Source = "unknown"
 )
 
+// DefaultAccount is the tenant namespace used when an intake request carries no
+// account routing hint. It keeps single-service setups working unchanged.
+const DefaultAccount = "default"
+
 type EventEnvelope struct {
 	ID               string              `json:"id"`
 	ReceivedAt       time.Time           `json:"receivedAt"`
 	Source           Source              `json:"source"`
+	Account          string              `json:"account,omitempty"`
 	PayloadKind      string              `json:"payloadKind,omitempty"`
 	Endpoint         string              `json:"endpoint"`
 	Method           string              `json:"method"`

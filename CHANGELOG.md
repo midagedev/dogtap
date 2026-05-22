@@ -6,6 +6,11 @@ All notable changes to Dogtap will be documented in this file.
 
 ### Added
 
+- Account namespaces so multiple services or test sets share one Dogtap
+  instance without their telemetry mixing. Intake routes by an explicit
+  `X-Dogtap-Account` header or a hashed `dd-api-key`; read endpoints accept an
+  `?account=` filter; `GET /api/accounts` lists namespaces and
+  `DELETE /api/accounts/{account}` clears one for a fresh test set.
 - Go backend with embedded React dashboard.
 - RUM, logs, Datadog APM HTTP, OTLP HTTP, and OTLP gRPC intake.
 - RUM Session Replay payload timeline viewer.

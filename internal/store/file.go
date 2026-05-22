@@ -48,6 +48,26 @@ func (f *File) Get(ctx context.Context, id string) (event.EventEnvelope, bool, e
 	return f.mem.Get(ctx, id)
 }
 
+func (f *File) Accounts(ctx context.Context) ([]AccountSummary, error) {
+	return f.mem.Accounts(ctx)
+}
+
+func (f *File) DeleteAccount(ctx context.Context, account string) (int, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	removed, err := f.mem.DeleteAccount(ctx, account)
+	if err != nil {
+		return removed, err
+	}
+	if removed == 0 {
+		return 0, nil
+	}
+	if err := f.persist(); err != nil {
+		return removed, err
+	}
+	return removed, nil
+}
+
 func (f *File) load() error {
 	file, err := os.Open(f.path)
 	if err != nil {

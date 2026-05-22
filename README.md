@@ -384,6 +384,41 @@ the supported query subset and limits.
 See [docs/SUPPORT_MATRIX.md](docs/SUPPORT_MATRIX.md) for the full support
 matrix, verification evidence, and explicit limitations.
 
+## Account Namespaces
+
+One Dogtap instance can serve multiple services or multiple test sets at once.
+Each intake request is routed into an *account* (a tenant namespace) so their
+telemetry never mixes, and a test set gets a clean slate by switching accounts
+instead of issuing a global reset.
+
+How the account is resolved for each intake request:
+
+1. An explicit `X-Dogtap-Account` header (gRPC: the same key in metadata) —
+   recommended, used verbatim. Example: `X-Dogtap-Account: checkout-suite`.
+2. Otherwise the Datadog client token (`dd-api-key`, including the browser RUM
+   query parameter) hashed into a stable `key-<hash>` id, so a real API key is
+   never stored or listed in clear text. Give each test set its own client
+   token and it lands in its own account.
+3. Otherwise the `default` account, so single-service setups are unchanged.
+
+Read endpoints are account-scoped with an `?account=` query parameter (or the
+`X-Dogtap-Account` header); omitting it returns every account:
+
+```bash
+# events for one namespace only
+curl 'http://127.0.0.1:8080/api/events?account=checkout-suite'
+
+# list namespaces and their retained footprint
+curl http://127.0.0.1:8080/api/accounts
+
+# clear one namespace before the next test set (no global reset needed)
+curl -X DELETE http://127.0.0.1:8080/api/accounts/checkout-suite
+```
+
+The `?account=` filter also applies to `/api/validation/failures`,
+`/api/reports/latest`, `/metrics`, the debug bundle and diagnostics requests
+(`account` field), and the read-only Datadog search APIs.
+
 ## CI And Fixture Replay
 
 Replay bundled fixtures and generate a report:

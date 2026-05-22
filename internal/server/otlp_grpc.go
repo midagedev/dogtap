@@ -14,6 +14,7 @@ import (
 	collectormetrics "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	collectortrace "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
@@ -81,6 +82,24 @@ func (s metricsService) Export(ctx context.Context, req *collectormetrics.Export
 	return &collectormetrics.ExportMetricsServiceResponse{}, nil
 }
 
+// accountFromGRPC derives the tenant namespace from incoming gRPC metadata,
+// mirroring the HTTP intake path (x-dogtap-account header, then dd-api-key).
+func accountFromGRPC(ctx context.Context) string {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return event.DefaultAccount
+	}
+	explicit := ""
+	if vals := md.Get(strings.ToLower(intake.AccountHeader)); len(vals) > 0 {
+		explicit = vals[0]
+	}
+	apiKey := ""
+	if vals := md.Get("dd-api-key"); len(vals) > 0 {
+		apiKey = vals[0]
+	}
+	return intake.AccountFromValues(explicit, apiKey)
+}
+
 func (a *App) ingestGRPC(ctx context.Context, endpoint string, msg proto.Message) error {
 	admission, release := a.safety.admit()
 	if !admission.Accepted {
@@ -116,6 +135,7 @@ func (a *App) ingestGRPC(ctx context.Context, endpoint string, msg proto.Message
 		ID:               intake.NewID(event.SourceOTLP),
 		ReceivedAt:       time.Now().UTC(),
 		Source:           event.SourceOTLP,
+		Account:          accountFromGRPC(ctx),
 		PayloadKind:      payloadKind,
 		Endpoint:         endpoint,
 		Method:           "gRPC",
